@@ -8,6 +8,7 @@
 
 export * from './dashboardSummary';
 export * from './error';
+export * from './errorEnvelope';
 export * from './game';
 export * from './gameInput';
 export * from './getTopPlayersParams';
@@ -26,3 +27,5 @@ export * from './reportUpdate';
 export * from './team';
 export * from './teamInput';
 export * from './teamUpdate';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';
