@@ -3,13 +3,9 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Layout } from "@/components/layout";
-import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
-import Players from "@/pages/players";
-import PlayerDetail from "@/pages/player-detail";
+import Scout from "@/pages/scout";
 import PlayerNew from "@/pages/player-new";
-import Teams from "@/pages/teams";
+import PlayerDetail from "@/pages/player-detail";
 import TeamNew from "@/pages/team-new";
 import TeamDetail from "@/pages/team-detail";
 import Games from "@/pages/games";
@@ -17,37 +13,45 @@ import GameNew from "@/pages/game-new";
 import Reports from "@/pages/reports";
 import ReportNew from "@/pages/report-new";
 import ReportDetail from "@/pages/report-detail";
+import { SubLayout } from "@/components/sub-layout";
 
 const queryClient = new QueryClient();
 
-function RedirectToDashboard() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/dashboard");
-  }, [setLocation]);
-  return null;
-}
-
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={RedirectToDashboard} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/players/new" component={PlayerNew} />
-        <Route path="/players/:id" component={PlayerDetail} />
-        <Route path="/players" component={Players} />
-        <Route path="/teams/new" component={TeamNew} />
-        <Route path="/teams/:id" component={TeamDetail} />
-        <Route path="/teams" component={Teams} />
-        <Route path="/games/new" component={GameNew} />
-        <Route path="/games" component={Games} />
-        <Route path="/reports/new" component={ReportNew} />
-        <Route path="/reports/:id" component={ReportDetail} />
-        <Route path="/reports" component={Reports} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      {/* Main 3-column scout view */}
+      <Route path="/" component={Scout} />
+
+      {/* Sub-pages use a simple layout with back navigation */}
+      <Route path="/players/new">
+        <SubLayout backTo="/" backLabel="Back to Scout"><PlayerNew /></SubLayout>
+      </Route>
+      <Route path="/players/:id">
+        {(params) => <SubLayout backTo="/" backLabel="Back to Scout"><PlayerDetail /></SubLayout>}
+      </Route>
+      <Route path="/teams/new">
+        <SubLayout backTo="/" backLabel="Back to Scout"><TeamNew /></SubLayout>
+      </Route>
+      <Route path="/teams/:id">
+        {(params) => <SubLayout backTo="/" backLabel="Back to Scout"><TeamDetail /></SubLayout>}
+      </Route>
+      <Route path="/games/new">
+        <SubLayout backTo="/games" backLabel="Games"><GameNew /></SubLayout>
+      </Route>
+      <Route path="/games">
+        <SubLayout backTo="/" backLabel="Back to Scout"><Games /></SubLayout>
+      </Route>
+      <Route path="/reports/new">
+        <SubLayout backTo="/" backLabel="Back to Scout"><ReportNew /></SubLayout>
+      </Route>
+      <Route path="/reports/:id">
+        {(params) => <SubLayout backTo="/" backLabel="Back to Scout"><ReportDetail /></SubLayout>}
+      </Route>
+      <Route path="/reports">
+        <SubLayout backTo="/" backLabel="Back to Scout"><Reports /></SubLayout>
+      </Route>
+    </Switch>
   );
 }
 
