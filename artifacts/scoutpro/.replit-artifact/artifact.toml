@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ScoutPro"
+version = "1.0.0"
+id = "artifacts/scoutpro"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20694
+
+[services.development]
+run = "pnpm --filter @workspace/scoutpro run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/scoutpro", "run", "build" ]
+publicDir = "artifacts/scoutpro/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20694"
+BASE_PATH = "/"

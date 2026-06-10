@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ScoutPro Basketball Scouting API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: players
+    description: Player management
+  - name: teams
+    description: Team management
+  - name: reports
+    description: Scouting reports
+  - name: games
+    description: Game records
+  - name: dashboard
+    description: Summary and analytics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,415 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [teams]
+      summary: List all teams
+      responses:
+        "200":
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+    post:
+      operationId: createTeam
+      tags: [teams]
+      summary: Create a team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInput"
+      responses:
+        "201":
+          description: Created team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  /teams/{id}:
+    get:
+      operationId: getTeam
+      tags: [teams]
+      summary: Get a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Team found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateTeam
+      tags: [teams]
+      summary: Update a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamUpdate"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+    delete:
+      operationId: deleteTeam
+      tags: [teams]
+      summary: Delete a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /players:
+    get:
+      operationId: listPlayers
+      tags: [players]
+      summary: List all players
+      parameters:
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: position
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+    post:
+      operationId: createPlayer
+      tags: [players]
+      summary: Create a player
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerInput"
+      responses:
+        "201":
+          description: Created player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /players/{id}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      summary: Get a player
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Player found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updatePlayer
+      tags: [players]
+      summary: Update a player
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerUpdate"
+      responses:
+        "200":
+          description: Updated player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+    delete:
+      operationId: deletePlayer
+      tags: [players]
+      summary: Delete a player
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /players/{id}/stats:
+    get:
+      operationId: getPlayerStats
+      tags: [players]
+      summary: Get aggregated stats for a player
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Player stats summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerStatsSummary"
+
+  /players/top:
+    get:
+      operationId: getTopPlayers
+      tags: [players]
+      summary: Get top performing players
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Top players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlayerWithStats"
+
+  /games:
+    get:
+      operationId: listGames
+      tags: [games]
+      summary: List all games
+      responses:
+        "200":
+          description: List of games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Game"
+    post:
+      operationId: createGame
+      tags: [games]
+      summary: Create a game record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameInput"
+      responses:
+        "201":
+          description: Created game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+
+  /games/{id}:
+    get:
+      operationId: getGame
+      tags: [games]
+      summary: Get a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Game found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+    delete:
+      operationId: deleteGame
+      tags: [games]
+      summary: Delete a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List all scouting reports
+      parameters:
+        - name: playerId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of scouting reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Create a scouting report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Created report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a scouting report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    patch:
+      operationId: updateReport
+      tags: [reports]
+      summary: Update a scouting report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUpdate"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a scouting report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +451,426 @@ components:
       required:
         - status
 
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Team:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        league:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    TeamInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        league:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: string
+
+    TeamUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        league:
+          type: string
+        city:
+          type: string
+        logoUrl:
+          type: string
+
+    Player:
+      type: object
+      required: [id, name, position, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        position:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        teamName:
+          type: ["string", "null"]
+        jerseyNumber:
+          type: ["integer", "null"]
+        age:
+          type: ["integer", "null"]
+        height:
+          type: ["string", "null"]
+        weight:
+          type: ["integer", "null"]
+        nationality:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PlayerInput:
+      type: object
+      required: [name, position]
+      properties:
+        name:
+          type: string
+        position:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        jerseyNumber:
+          type: ["integer", "null"]
+        age:
+          type: ["integer", "null"]
+        height:
+          type: string
+        weight:
+          type: ["integer", "null"]
+        nationality:
+          type: string
+        photoUrl:
+          type: string
+        notes:
+          type: string
+
+    PlayerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        position:
+          type: string
+        teamId:
+          type: ["integer", "null"]
+        jerseyNumber:
+          type: ["integer", "null"]
+        age:
+          type: ["integer", "null"]
+        height:
+          type: string
+        weight:
+          type: ["integer", "null"]
+        nationality:
+          type: string
+        photoUrl:
+          type: string
+        notes:
+          type: string
+
+    PlayerStatsSummary:
+      type: object
+      required: [playerId, gamesPlayed, avgPoints, avgRebounds, avgAssists, avgSteals, avgBlocks, avgMinutes]
+      properties:
+        playerId:
+          type: integer
+        gamesPlayed:
+          type: integer
+        avgPoints:
+          type: number
+        avgRebounds:
+          type: number
+        avgAssists:
+          type: number
+        avgSteals:
+          type: number
+        avgBlocks:
+          type: number
+        avgMinutes:
+          type: number
+        avgFieldGoalPct:
+          type: ["number", "null"]
+        avgThreePointPct:
+          type: ["number", "null"]
+        avgFreeThrowPct:
+          type: ["number", "null"]
+
+    PlayerWithStats:
+      type: object
+      required: [id, name, position, avgPoints, avgRebounds, avgAssists]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        position:
+          type: string
+        teamName:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        avgPoints:
+          type: number
+        avgRebounds:
+          type: number
+        avgAssists:
+          type: number
+
+    Game:
+      type: object
+      required: [id, date, homeTeam, awayTeam, createdAt]
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        homeScore:
+          type: ["integer", "null"]
+        awayScore:
+          type: ["integer", "null"]
+        location:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    GameInput:
+      type: object
+      required: [date, homeTeam, awayTeam]
+      properties:
+        date:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        homeScore:
+          type: ["integer", "null"]
+        awayScore:
+          type: ["integer", "null"]
+        location:
+          type: string
+        notes:
+          type: string
+
+    Report:
+      type: object
+      required: [id, playerId, scoutName, rating, createdAt]
+      properties:
+        id:
+          type: integer
+        playerId:
+          type: integer
+        playerName:
+          type: ["string", "null"]
+        gameId:
+          type: ["integer", "null"]
+        scoutName:
+          type: string
+        date:
+          type: string
+        rating:
+          type: integer
+        offensiveRating:
+          type: ["integer", "null"]
+        defensiveRating:
+          type: ["integer", "null"]
+        athleticismRating:
+          type: ["integer", "null"]
+        iQRating:
+          type: ["integer", "null"]
+        points:
+          type: ["integer", "null"]
+        rebounds:
+          type: ["integer", "null"]
+        assists:
+          type: ["integer", "null"]
+        steals:
+          type: ["integer", "null"]
+        blocks:
+          type: ["integer", "null"]
+        turnovers:
+          type: ["integer", "null"]
+        minutesPlayed:
+          type: ["integer", "null"]
+        fieldGoalsMade:
+          type: ["integer", "null"]
+        fieldGoalsAttempted:
+          type: ["integer", "null"]
+        threesMade:
+          type: ["integer", "null"]
+        threesAttempted:
+          type: ["integer", "null"]
+        freeThrowsMade:
+          type: ["integer", "null"]
+        freeThrowsAttempted:
+          type: ["integer", "null"]
+        strengths:
+          type: ["string", "null"]
+        weaknesses:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ReportInput:
+      type: object
+      required: [playerId, scoutName, rating]
+      properties:
+        playerId:
+          type: integer
+        gameId:
+          type: ["integer", "null"]
+        scoutName:
+          type: string
+        date:
+          type: string
+        rating:
+          type: integer
+        offensiveRating:
+          type: ["integer", "null"]
+        defensiveRating:
+          type: ["integer", "null"]
+        athleticismRating:
+          type: ["integer", "null"]
+        iQRating:
+          type: ["integer", "null"]
+        points:
+          type: ["integer", "null"]
+        rebounds:
+          type: ["integer", "null"]
+        assists:
+          type: ["integer", "null"]
+        steals:
+          type: ["integer", "null"]
+        blocks:
+          type: ["integer", "null"]
+        turnovers:
+          type: ["integer", "null"]
+        minutesPlayed:
+          type: ["integer", "null"]
+        fieldGoalsMade:
+          type: ["integer", "null"]
+        fieldGoalsAttempted:
+          type: ["integer", "null"]
+        threesMade:
+          type: ["integer", "null"]
+        threesAttempted:
+          type: ["integer", "null"]
+        freeThrowsMade:
+          type: ["integer", "null"]
+        freeThrowsAttempted:
+          type: ["integer", "null"]
+        strengths:
+          type: string
+        weaknesses:
+          type: string
+        summary:
+          type: string
+        recommendation:
+          type: string
+
+    ReportUpdate:
+      type: object
+      properties:
+        scoutName:
+          type: string
+        date:
+          type: string
+        rating:
+          type: integer
+        offensiveRating:
+          type: ["integer", "null"]
+        defensiveRating:
+          type: ["integer", "null"]
+        athleticismRating:
+          type: ["integer", "null"]
+        iQRating:
+          type: ["integer", "null"]
+        points:
+          type: ["integer", "null"]
+        rebounds:
+          type: ["integer", "null"]
+        assists:
+          type: ["integer", "null"]
+        steals:
+          type: ["integer", "null"]
+        blocks:
+          type: ["integer", "null"]
+        turnovers:
+          type: ["integer", "null"]
+        minutesPlayed:
+          type: ["integer", "null"]
+        fieldGoalsMade:
+          type: ["integer", "null"]
+        fieldGoalsAttempted:
+          type: ["integer", "null"]
+        threesMade:
+          type: ["integer", "null"]
+        threesAttempted:
+          type: ["integer", "null"]
+        freeThrowsMade:
+          type: ["integer", "null"]
+        freeThrowsAttempted:
+          type: ["integer", "null"]
+        strengths:
+          type: string
+        weaknesses:
+          type: string
+        summary:
+          type: string
+        recommendation:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required: [totalPlayers, totalTeams, totalReports, totalGames, recentReports, positionBreakdown]
+      properties:
+        totalPlayers:
+          type: integer
+        totalTeams:
+          type: integer
+        totalReports:
+          type: integer
+        totalGames:
+          type: integer
+        avgRating:
+          type: ["number", "null"]
+        recentReports:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        positionBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PositionCount"
+
+    PositionCount:
+      type: object
+      required: [position, count]
+      properties:
+        position:
+          type: string
+        count:
+          type: integer

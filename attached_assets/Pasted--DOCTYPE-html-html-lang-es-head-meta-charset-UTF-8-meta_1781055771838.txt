@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastScout Pro - Baloncesto</title>
+    <script src="https://tailwindcss.com"></script>
+    <style>
+        .fs-sidebar { background: #111827; height: 100vh; width: 260px; flex-shrink: 0; }
+        .fs-roster { background: #ffffff; border-right: 1px solid #e5e7eb; width: 350px; flex-shrink: 0; }
+        .fs-profile { background: #ffffff; flex-grow: 1; overflow-y: auto; }
+        .active-team { background: #374151; border-left: 4px solid #f97316; }
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 font-sans antialiased overflow-hidden">
+
+    <!-- COLUMNA 1: EQUIPOS -->
+    <aside class="fs-sidebar flex flex-col">
+        <div class="p-6 text-orange-500 font-black text-xl tracking-tighter">FASTSCOUT PRO</div>
+        <div class="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Mi Equipo</div>
+        <div class="px-4 py-2 text-gray-300 hover:bg-gray-800 cursor-pointer rounded-md mx-2">🏠 Panel Local</div>
+        
+        <div class="mt-8 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Rivales</div>
+        <div id="team-list" class="space-y-1 px-2">
+            <div class="p-3 text-gray-300 hover:bg-gray-800 cursor-pointer rounded-md flex items-center gap-2">🏀 Real Madrid</div>
+        </div>
+        <button onclick="addTeam()" class="mt-4 mx-4 border border-gray-700 text-gray-400 p-2 rounded text-sm hover:text-white hover:border-orange-500 transition">+ Agregar Rival</button>
+    </aside>
+
+    <!-- COLUMNA 2: ROSTER -->
+    <section class="fs-roster flex flex-col p-6">
+        <h2 class="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Jugadores</h2>
+        <button onclick="openPlayerModal()" class="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-200 mb-6">+ AÑADIR JUGADOR</button>
+        <div id="player-list" class="space-y-3 overflow-y-auto pr-2">
+            <!-- Los jugadores aparecerán aquí -->
+        </div>
+    </section>
+
+    <!-- COLUMNA 3: SCOUTING REPORT -->
+    <main class="fs-profile p-12">
+        <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-gray-400">
+            <span class="text-6xl mb-4">📋</span>
+            <p class="text-lg">Selecciona un jugador para iniciar el análisis táctico</p>
+        </div>
+        <div id="scouting-content" class="hidden">
+            <h1 id="p-display-name" class="text-5xl font-black uppercase italic mb-1"></h1>
+            <p id="p-display-pos" class="text-orange-600 font-bold text-lg mb-8"></p>
+            <div class="grid grid-cols-2 gap-8">
+                <div class="bg-gray-50 p-6 rounded-xl border-l-8 border-gray-900 shadow-sm">
+                    <h3 class="text-xs font-black text-gray-400 uppercase mb-3 tracking-widest">Fortalezas</h3>
+                    <p id="p-display-str" class="text-gray-700 leading-relaxed"></p>
+                </div>
+                <div class="bg-red-50 p-6 rounded-xl border-l-8 border-red-500 shadow-sm">
+                    <h3 class="text-xs font-black text-red-400 uppercase mb-3 tracking-widest">Debilidades</h3>
+                    <p id="p-display-weak" class="text-gray-700 leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL JUGADOR -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-8">
+            <h2 class="text-2xl font-bold mb-6">Nuevo Jugador</h2>
+            <input type="text" id="in-name" placeholder="Nombre" class="w-full mb-4 p-3 border rounded-lg outline-orange-500">
+            <input type="text" id="in-num" placeholder="Dorsal" class="w-full mb-4 p-3 border rounded-lg outline-orange-500">
+            <input type="text" id="in-pos" placeholder="Posición (ej: BASE | 6'2'')" class="w-full mb-4 p-3 border rounded-lg outline-orange-500">
+            <textarea id="in-str" placeholder="Fortalezas" class="w-full mb-4 p-3 border rounded-lg outline-orange-500 h-24"></textarea>
+            <textarea id="in-weak" placeholder="Debilidades" class="w-full mb-4 p-3 border rounded-lg outline-orange-500 h-24"></textarea>
+            <div class="flex gap-4">
+                <button onclick="savePlayer()" class="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600">Guardar</button>
+                <button onclick="closePlayerModal()" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+
+        function addTeam() {
+            const teamName = prompt("Nombre del equipo rival:");
+            if (teamName) {
+                const div = document.createElement('div');
+                div.className = "p-3 text-gray-300 hover:bg-gray-800 cursor-pointer rounded-md flex items-center gap-2";
+                div.innerHTML = "🏀 " + teamName;
+                document.getElementById('team-list').appendChild(div);
+            }
+        }
+
+        function openPlayerModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closePlayerModal() { document.getElementById('modal').classList.add('hidden'); }
+
+        function savePlayer() {
+            const player = {
+                id: Date.now(),
+                name: document.getElementById('in-name').value.toUpperCase(),
+                num: document.getElementById('in-num').value,
+                pos: document.getElementById('in-pos').value,
+                str: document.getElementById('in-str').value,
+                weak: document.getElementById('in-weak').value
+            };
+            if(player.name) {
+                players.push(player);
+                renderPlayers();
+                closePlayerModal();
+                document.querySelectorAll('#modal input, #modal textarea').forEach(i => i.value = '');
+            }
+        }
+
+        function renderPlayers() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = players.map(p => `
+                <div onclick="viewPlayer(${p.id})" class="p-4 bg-white border border-gray-200 rounded-xl hover:border-orange-500 hover:shadow-md cursor-pointer transition flex items-center gap-4">
+                    <span class="text-xl font-black text-orange-500">#${p.num}</span>
+                    <span class="font-bold text-gray-800">${p.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function viewPlayer(id) {
+            const p = players.find(x => x.id === id);
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('scouting-content').classList.remove('hidden');
+            document.getElementById('p-display-name').innerText = p.name;
+            document.getElementById('p-display-pos').innerText = p.pos;
+            document.getElementById('p-display-str').innerText = p.str;
+            document.getElementById('p-display-weak').innerText = p.weak;
+        }
+    </script>
+</body>
+</html>
