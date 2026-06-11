@@ -591,6 +591,10 @@ components:
           type: ["integer", "null"]
         nationality:
           type: ["string", "null"]
+        handedness:
+          type: ["string", "null"]
+        teamLogoUrl:
+          type: ["string", "null"]
         photoUrl:
           type: ["string", "null"]
         notes:
@@ -620,6 +624,8 @@ components:
           type: ["integer", "null"]
         nationality:
           type: string
+        handedness:
+          type: string
         photoUrl:
           type: string
         notes:
@@ -645,6 +651,8 @@ components:
         weight:
           type: ["integer", "null"]
         nationality:
+          type: string
+        handedness:
           type: string
         photoUrl:
           type: string
@@ -773,6 +781,10 @@ components:
           type: ["integer", "null"]
         rebounds:
           type: ["integer", "null"]
+        offensiveRebounds:
+          type: ["integer", "null"]
+        defensiveRebounds:
+          type: ["integer", "null"]
         assists:
           type: ["integer", "null"]
         steals:
@@ -832,6 +844,10 @@ components:
           type: ["integer", "null"]
         rebounds:
           type: ["integer", "null"]
+        offensiveRebounds:
+          type: ["integer", "null"]
+        defensiveRebounds:
+          type: ["integer", "null"]
         assists:
           type: ["integer", "null"]
         steals:
@@ -883,6 +899,10 @@ components:
         points:
           type: ["integer", "null"]
         rebounds:
+          type: ["integer", "null"]
+        offensiveRebounds:
+          type: ["integer", "null"]
+        defensiveRebounds:
           type: ["integer", "null"]
         assists:
           type: ["integer", "null"]

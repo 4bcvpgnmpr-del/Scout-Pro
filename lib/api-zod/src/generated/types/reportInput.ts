@@ -26,6 +26,10 @@ export interface ReportInput {
   /** @nullable */
   rebounds?: number | null;
   /** @nullable */
+  offensiveRebounds?: number | null;
+  /** @nullable */
+  defensiveRebounds?: number | null;
+  /** @nullable */
   assists?: number | null;
   /** @nullable */
   steals?: number | null;

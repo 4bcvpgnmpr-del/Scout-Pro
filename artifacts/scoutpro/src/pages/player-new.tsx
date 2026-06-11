@@ -22,6 +22,7 @@ type FormData = {
   height?: string;
   weight?: string;
   nationality?: string;
+  handedness?: string;
   notes?: string;
 };
 
@@ -44,6 +45,7 @@ export default function PlayerNew() {
         height: data.height || undefined,
         weight: data.weight ? parseInt(data.weight) : null,
         nationality: data.nationality || undefined,
+        handedness: data.handedness || undefined,
         notes: data.notes || undefined,
       },
     }, {
@@ -122,6 +124,16 @@ export default function PlayerNew() {
               <div className="space-y-1.5">
                 <Label>Nationality</Label>
                 <Input {...register("nationality")} placeholder="e.g. USA" className="bg-card" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Mano dominante</Label>
+                <Select onValueChange={(v) => setValue("handedness", v)}>
+                  <SelectTrigger className="bg-card"><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Derecha">Derecha</SelectItem>
+                    <SelectItem value="Izquierda">Izquierda</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label>Scout Notes</Label>

@@ -19,6 +19,7 @@ export interface PlayerInput {
   /** @nullable */
   weight?: number | null;
   nationality?: string;
+  handedness?: string;
   photoUrl?: string;
   notes?: string;
   watchlisted?: boolean;

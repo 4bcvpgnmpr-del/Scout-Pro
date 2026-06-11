@@ -15,6 +15,8 @@ export const reportsTable = pgTable("reports", {
   iQRating: integer("iq_rating"),
   points: integer("points"),
   rebounds: integer("rebounds"),
+  offensiveRebounds: integer("offensive_rebounds"),
+  defensiveRebounds: integer("defensive_rebounds"),
   assists: integer("assists"),
   steals: integer("steals"),
   blocks: integer("blocks"),

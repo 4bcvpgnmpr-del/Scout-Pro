@@ -16,7 +16,7 @@ import { useState } from "react";
 type FormData = {
   scoutName: string; date: string; rating: string;
   offensiveRating?: string; defensiveRating?: string; athleticismRating?: string; iQRating?: string;
-  points?: string; rebounds?: string; assists?: string; steals?: string; blocks?: string; turnovers?: string; minutesPlayed?: string;
+  points?: string; offensiveRebounds?: string; defensiveRebounds?: string; assists?: string; steals?: string; blocks?: string; turnovers?: string; minutesPlayed?: string;
   fieldGoalsMade?: string; fieldGoalsAttempted?: string; threesMade?: string; threesAttempted?: string; freeThrowsMade?: string; freeThrowsAttempted?: string;
   strengths?: string; weaknesses?: string; summary?: string; recommendation?: string;
 };
@@ -44,6 +44,9 @@ export default function ReportNew() {
   const onSubmit = (data: FormData) => {
     if (!selectedPlayerId) { toast({ title: "Select a player", variant: "destructive" }); return; }
     const n = (v?: string) => v ? parseInt(v) : null;
+    const oreb = n(data.offensiveRebounds);
+    const dreb = n(data.defensiveRebounds);
+    const totalReb = oreb != null || dreb != null ? (oreb ?? 0) + (dreb ?? 0) : null;
     createReport.mutate({
       data: {
         playerId: parseInt(selectedPlayerId),
@@ -56,7 +59,9 @@ export default function ReportNew() {
         athleticismRating: n(data.athleticismRating),
         iQRating: n(data.iQRating),
         points: n(data.points),
-        rebounds: n(data.rebounds),
+        rebounds: totalReb,
+        offensiveRebounds: oreb,
+        defensiveRebounds: dreb,
         assists: n(data.assists),
         steals: n(data.steals),
         blocks: n(data.blocks),
@@ -147,7 +152,7 @@ export default function ReportNew() {
         <Card>
           <CardHeader><CardTitle>Game Stats</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-3 gap-4">
-            {[["points","PTS"],["rebounds","REB"],["assists","AST"],["steals","STL"],["blocks","BLK"],["turnovers","TO"],["minutesPlayed","MIN"],["fieldGoalsMade","FGM"],["fieldGoalsAttempted","FGA"],["threesMade","3PM"],["threesAttempted","3PA"],["freeThrowsMade","FTM"],["freeThrowsAttempted","FTA"]].map(([field, label]) => (
+            {[["minutesPlayed","MIN"],["points","PTS"],["offensiveRebounds","REB OF"],["defensiveRebounds","REB DEF"],["assists","AST"],["steals","ROB"],["blocks","TAP"],["turnovers","PÉR"],["fieldGoalsMade","TC C"],["fieldGoalsAttempted","TC I"],["threesMade","T3 C"],["threesAttempted","T3 I"],["freeThrowsMade","TL C"],["freeThrowsAttempted","TL I"]].map(([field, label]) => (
               <div key={field} className="space-y-1.5">
                 <Label className="text-xs">{label}</Label>
                 <Input {...register(field as keyof FormData)} type="number" min="0" placeholder="0" className="bg-card" />

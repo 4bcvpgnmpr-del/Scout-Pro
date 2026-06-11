@@ -85,6 +85,10 @@ export interface Player {
   /** @nullable */
   nationality?: string | null;
   /** @nullable */
+  handedness?: string | null;
+  /** @nullable */
+  teamLogoUrl?: string | null;
+  /** @nullable */
   photoUrl?: string | null;
   /** @nullable */
   notes?: string | null;
@@ -105,6 +109,7 @@ export interface PlayerInput {
   /** @nullable */
   weight?: number | null;
   nationality?: string;
+  handedness?: string;
   photoUrl?: string;
   notes?: string;
   watchlisted?: boolean;
@@ -123,6 +128,7 @@ export interface PlayerUpdate {
   /** @nullable */
   weight?: number | null;
   nationality?: string;
+  handedness?: string;
   photoUrl?: string;
   notes?: string;
   watchlisted?: boolean;
@@ -209,6 +215,10 @@ export interface Report {
   /** @nullable */
   rebounds?: number | null;
   /** @nullable */
+  offensiveRebounds?: number | null;
+  /** @nullable */
+  defensiveRebounds?: number | null;
+  /** @nullable */
   assists?: number | null;
   /** @nullable */
   steals?: number | null;
@@ -261,6 +271,10 @@ export interface ReportInput {
   /** @nullable */
   rebounds?: number | null;
   /** @nullable */
+  offensiveRebounds?: number | null;
+  /** @nullable */
+  defensiveRebounds?: number | null;
+  /** @nullable */
   assists?: number | null;
   /** @nullable */
   steals?: number | null;
@@ -304,6 +318,10 @@ export interface ReportUpdate {
   points?: number | null;
   /** @nullable */
   rebounds?: number | null;
+  /** @nullable */
+  offensiveRebounds?: number | null;
+  /** @nullable */
+  defensiveRebounds?: number | null;
   /** @nullable */
   assists?: number | null;
   /** @nullable */

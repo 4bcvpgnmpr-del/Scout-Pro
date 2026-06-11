@@ -40,10 +40,10 @@ type SidebarView =
 
 // ─── Player Avatar ─────────────────────────────────────────────────────────────
 function PlayerAvatar({
-  playerId, name, photoUrl, size = "md", editable = false,
+  playerId, name, photoUrl, size = "md", editable = false, shape = "circle",
 }: {
   playerId: number; name: string; photoUrl?: string | null;
-  size?: "sm" | "md" | "lg"; editable?: boolean;
+  size?: "sm" | "md" | "lg" | "xl"; editable?: boolean; shape?: "circle" | "square";
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -52,7 +52,8 @@ function PlayerAvatar({
   const [uploading, setUploading] = useState(false);
 
   const initials = name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
-  const sizeClass = { sm: "h-10 w-10 text-sm", md: "h-14 w-14 text-lg", lg: "h-20 w-20 text-2xl" }[size];
+  const sizeClass = { sm: "h-10 w-10 text-sm", md: "h-14 w-14 text-lg", lg: "h-20 w-20 text-2xl", xl: "h-28 w-28 text-3xl" }[size];
+  const roundClass = shape === "square" ? "rounded-2xl" : "rounded-full";
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,7 +80,7 @@ function PlayerAvatar({
   };
 
   return (
-    <div className={`relative flex-shrink-0 ${sizeClass} rounded-full overflow-hidden`}>
+    <div className={`relative flex-shrink-0 ${sizeClass} ${roundClass} overflow-hidden`}>
       {photoUrl ? (
         <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
       ) : (
@@ -90,7 +91,7 @@ function PlayerAvatar({
       {editable && (
         <>
           <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition flex items-center justify-center rounded-full">
+            className={`absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition flex items-center justify-center ${roundClass}`}>
             {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -359,8 +360,17 @@ function PlayerPickerModal({ excludeId, onSelect, onClose }: {
 // ─── Comparison View ───────────────────────────────────────────────────────────
 type PlayerData = {
   id: number; name: string; position: string;
-  teamName?: string | null; photoUrl?: string | null; watchlisted?: boolean | null;
+  teamId?: number | null; teamName?: string | null; teamLogoUrl?: string | null;
+  handedness?: string | null; photoUrl?: string | null; watchlisted?: boolean | null;
 };
+
+function nameSizeClass(name: string): string {
+  const len = name.length;
+  if (len > 24) return "text-base";
+  if (len > 18) return "text-lg";
+  if (len > 13) return "text-xl";
+  return "text-2xl";
+}
 
 function CompareBar({ labelA, labelB, valA, valB, max = 10 }: {
   labelA: string; labelB: string; valA: number | null | undefined; valB: number | null | undefined; max?: number;
@@ -451,11 +461,12 @@ function ComparisonView({ playerA, playerB, onClose }: {
         <div className="grid grid-cols-2 border-b border-gray-100">
           {[{ player: playerA, report: reportA, color: "orange" }, { player: playerB, report: reportB, color: "blue" }].map(({ player, report, color }, idx) => (
             <div key={player.id} className={`px-8 pt-6 pb-5 flex items-start gap-4 ${idx === 0 ? "border-r border-gray-100" : ""}`}>
-              <PlayerAvatar playerId={player.id} name={player.name} photoUrl={player.photoUrl} size="md" editable />
+              <PlayerAvatar playerId={player.id} name={player.name} photoUrl={player.photoUrl} size="md" shape="square" editable />
               <div className="min-w-0">
-                <h2 className="text-2xl font-black uppercase italic text-gray-900 leading-tight truncate">{player.name}</h2>
-                <p className={`font-bold text-sm mt-0.5 ${color === "orange" ? "text-orange-500" : "text-blue-500"}`}>
-                  {player.position}{player.teamName ? ` · ${player.teamName}` : ""}
+                <h2 className={`font-black uppercase italic text-gray-900 leading-tight break-words ${nameSizeClass(player.name)}`}>{player.name}</h2>
+                <p className={`font-bold text-sm mt-0.5 flex items-center gap-2 ${color === "orange" ? "text-orange-500" : "text-blue-500"}`}>
+                  {player.teamLogoUrl && <img src={player.teamLogoUrl} alt={player.teamName ?? ""} className="h-5 w-5 rounded object-cover" />}
+                  <span>{player.position}{player.teamName ? ` · ${player.teamName}` : ""}</span>
                 </p>
                 {report ? (
                   <div className={`mt-2 inline-flex items-baseline gap-1 ${color === "orange" ? "text-orange-500" : "text-blue-500"}`}>
@@ -571,9 +582,98 @@ function ComparisonView({ playerA, playerB, onClose }: {
   );
 }
 
+// ─── Box Score (complete pro stats) ────────────────────────────────────────────
+type BoxScoreReport = {
+  minutesPlayed?: number | null; points?: number | null;
+  rebounds?: number | null; offensiveRebounds?: number | null; defensiveRebounds?: number | null;
+  assists?: number | null; steals?: number | null; blocks?: number | null; turnovers?: number | null;
+  fieldGoalsMade?: number | null; fieldGoalsAttempted?: number | null;
+  threesMade?: number | null; threesAttempted?: number | null;
+  freeThrowsMade?: number | null; freeThrowsAttempted?: number | null;
+};
+function shootingPct(made?: number | null, att?: number | null): string | null {
+  if (made == null || att == null || att === 0) return null;
+  return ((made / att) * 100).toFixed(1) + "%";
+}
+function valoracion(r: BoxScoreReport): number | null {
+  const reb = r.rebounds ?? (r.offensiveRebounds != null || r.defensiveRebounds != null ? (r.offensiveRebounds ?? 0) + (r.defensiveRebounds ?? 0) : null);
+  const any = [r.points, r.assists, r.steals, r.blocks, r.turnovers, reb, r.fieldGoalsAttempted, r.freeThrowsAttempted].some((v) => v != null);
+  if (!any) return null;
+  const missedFG = (r.fieldGoalsAttempted ?? 0) - (r.fieldGoalsMade ?? 0);
+  const missedFT = (r.freeThrowsAttempted ?? 0) - (r.freeThrowsMade ?? 0);
+  return (r.points ?? 0) + (reb ?? 0) + (r.assists ?? 0) + (r.steals ?? 0) + (r.blocks ?? 0) - missedFG - missedFT - (r.turnovers ?? 0);
+}
+function BoxScore({ report }: { report: BoxScoreReport }) {
+  const oreb = report.offensiveRebounds;
+  const dreb = report.defensiveRebounds;
+  const totalReb = report.rebounds ?? (oreb != null || dreb != null ? (oreb ?? 0) + (dreb ?? 0) : null);
+  const fgm = report.fieldGoalsMade, fga = report.fieldGoalsAttempted;
+  const t3m = report.threesMade, t3a = report.threesAttempted;
+  const t2m = fgm != null && t3m != null ? fgm - t3m : null;
+  const t2a = fga != null && t3a != null ? fga - t3a : null;
+  const val = valoracion(report);
+
+  const primary: [string, number | null | undefined, boolean][] = [
+    ["MIN", report.minutesPlayed, false],
+    ["PTS", report.points, false],
+    ["REB", totalReb, false],
+    ["AST", report.assists, false],
+    ["ROB", report.steals, false],
+    ["TAP", report.blocks, false],
+    ["PÉR", report.turnovers, false],
+    ["VAL", val, true],
+  ];
+  const hasPrimary = primary.some(([, v]) => v != null);
+
+  const shooting: [string, string, number | null | undefined, number | null | undefined][] = [
+    ["T2", "Tiros de 2", t2m, t2a],
+    ["T3", "Triples", t3m, t3a],
+    ["TL", "Tiros libres", report.freeThrowsMade, report.freeThrowsAttempted],
+    ["TC", "Tiros de campo", fgm, fga],
+  ];
+  const hasShooting = shooting.some(([, , m, a]) => m != null || a != null);
+
+  if (!hasPrimary && !hasShooting) return null;
+
+  return (
+    <div className="space-y-3">
+      {hasPrimary && (
+        <div className="grid grid-cols-4 gap-2">
+          {primary.map(([label, v, accent]) => (
+            <div key={label} className={`rounded-xl p-3 text-center border ${accent ? "bg-primary/10 border-primary/30" : "bg-gray-50 border-gray-100"}`}>
+              <div className={`text-xl font-black ${accent ? "text-primary" : "text-gray-900"}`}>{v ?? "—"}</div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</div>
+              {label === "REB" && (oreb != null || dreb != null) && (
+                <div className="text-[9px] text-gray-400 font-semibold mt-0.5">OF {oreb ?? 0} · DEF {dreb ?? 0}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {hasShooting && (
+        <div className="rounded-xl border border-gray-100 overflow-hidden">
+          <div className="grid grid-cols-[1fr_5rem_4rem] bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest">
+            <div className="px-3 py-2">Tiro</div>
+            <div className="px-3 py-2 text-center">C–I</div>
+            <div className="px-3 py-2 text-center">%</div>
+          </div>
+          {shooting.map(([key, label, m, a]) => (
+            <div key={key} className="grid grid-cols-[1fr_5rem_4rem] border-t border-gray-100 text-sm">
+              <div className="px-3 py-2 font-semibold text-gray-700">{label}</div>
+              <div className="px-3 py-2 text-center font-black text-gray-900">{m != null || a != null ? `${m ?? 0}–${a ?? 0}` : "—"}</div>
+              <div className="px-3 py-2 text-center font-bold text-primary">{shootingPct(m, a) ?? "—"}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Report Panel (single player) ─────────────────────────────────────────────
-function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchlisted, onCompare }: {
+function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHandedness, playerTeamName, playerTeamLogoUrl, isWatchlisted, onCompare }: {
   playerId: number; playerName: string; playerPos: string;
+  playerHandedness?: string | null; playerTeamName?: string | null; playerTeamLogoUrl?: string | null;
   playerPhotoUrl?: string | null; isWatchlisted?: boolean; onCompare: () => void;
 }) {
   const { contentRef, exportPdf, exporting } = useExportPdf(`informe-${playerName}`);
@@ -702,12 +802,16 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
             <div className="space-y-4">
               {/* Overall grade header */}
               <div className="flex items-center gap-6 p-5 bg-gray-900 text-white rounded-2xl">
-                <PlayerAvatar playerId={playerId} name={playerName} photoUrl={playerPhotoUrl} size="lg" editable />
+                <PlayerAvatar playerId={playerId} name={playerName} photoUrl={playerPhotoUrl} size="xl" shape="square" editable />
                 <div className="flex-1 min-w-0">
-                  <div className="text-2xl font-black uppercase italic leading-tight truncate">{playerName}</div>
+                  <div className="text-3xl font-black uppercase italic leading-tight text-primary">{playerName}</div>
                   <div className="text-sm text-gray-400 mt-0.5">{playerPos}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-gray-500">{report.scoutName} · {report.date}</span>
+                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                    {playerTeamLogoUrl && <img src={playerTeamLogoUrl} alt={playerTeamName ?? ""} className="h-7 w-7 rounded object-cover bg-white/10" />}
+                    {playerHandedness && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300 bg-white/10 px-2 py-1 rounded-full">Mano: {playerHandedness}</span>
+                    )}
+                    <span className="text-xs text-gray-500">{report.date}</span>
                   </div>
                 </div>
                 <div className="text-center flex-shrink-0">
@@ -716,17 +820,8 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
                 </div>
               </div>
 
-              {/* Stats row */}
-              {sections.estadisticas && ([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).some(([, v]) => v != null) && (
-                <div className="grid grid-cols-6 gap-2">
-                  {([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).map(([label, val]) => (
-                    <div key={label} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                      <div className="text-xl font-black text-gray-900">{val ?? "—"}</div>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Stats — complete box score */}
+              {sections.estadisticas && <BoxScore report={report} />}
 
               {/* Skill grades */}
               {sections.valoraciones && (report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
@@ -778,6 +873,19 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
           ) : (
             /* ─ Standard format ─ */
             <div className="space-y-5">
+              <div className="flex items-center gap-4">
+                <PlayerAvatar playerId={playerId} name={playerName} photoUrl={playerPhotoUrl} size="lg" shape="square" editable />
+                <div className="flex-1 min-w-0">
+                  <div className="text-3xl font-black uppercase italic text-gray-900 leading-tight">{playerName}</div>
+                  <div className="text-primary font-bold text-sm mt-0.5">{playerPos}</div>
+                  {(playerTeamLogoUrl || playerHandedness) && (
+                    <div className="flex items-center gap-3 mt-1.5">
+                      {playerTeamLogoUrl && <img src={playerTeamLogoUrl} alt={playerTeamName ?? ""} className="h-7 w-7 rounded object-cover" />}
+                      {playerHandedness && <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mano: {playerHandedness}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="text-5xl font-black text-primary">{report.rating}/10</div>
@@ -793,18 +901,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
                 </Link>
               </div>
 
-              {sections.estadisticas && (report.points != null || report.rebounds != null || report.assists != null) && (
-                <div className="flex gap-5 bg-gray-50 rounded-xl px-6 py-4 border border-gray-100 flex-wrap">
-                  {([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).map(([label, val]) =>
-                    val != null ? (
-                      <div key={label} className="text-center">
-                        <div className="text-2xl font-black text-gray-900">{val}</div>
-                        <div className="text-xs text-gray-500 font-semibold uppercase tracking-widest">{label}</div>
-                      </div>
-                    ) : null
-                  )}
-                </div>
-              )}
+              {sections.estadisticas && <BoxScore report={report} />}
 
               {sections.valoraciones && (report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
                 <div className="grid grid-cols-2 gap-3">
@@ -1132,6 +1229,9 @@ export default function Scout() {
             playerName={selectedPlayer.name}
             playerPos={selectedPlayer.position + (selectedPlayer.teamName ? ` · ${selectedPlayer.teamName}` : "")}
             playerPhotoUrl={selectedPlayer.photoUrl}
+            playerHandedness={selectedPlayer.handedness}
+            playerTeamName={selectedPlayer.teamName}
+            playerTeamLogoUrl={selectedPlayer.teamLogoUrl}
             isWatchlisted={selectedPlayer.watchlisted ?? false}
             onCompare={() => setShowPicker(true)}
           />

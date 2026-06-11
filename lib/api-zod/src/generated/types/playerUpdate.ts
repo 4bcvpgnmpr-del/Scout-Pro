@@ -19,6 +19,7 @@ export interface PlayerUpdate {
   /** @nullable */
   weight?: number | null;
   nationality?: string;
+  handedness?: string;
   photoUrl?: string;
   notes?: string;
   watchlisted?: boolean;

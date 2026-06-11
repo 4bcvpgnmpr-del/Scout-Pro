@@ -12,6 +12,7 @@ export const playersTable = pgTable("players", {
   height: text("height"),
   weight: integer("weight"),
   nationality: text("nationality"),
+  handedness: text("handedness"),
   photoUrl: text("photo_url"),
   notes: text("notes"),
   watchlisted: boolean("watchlisted").notNull().default(false),

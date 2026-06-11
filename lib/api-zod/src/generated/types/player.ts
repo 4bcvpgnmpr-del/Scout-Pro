@@ -25,6 +25,10 @@ export interface Player {
   /** @nullable */
   nationality?: string | null;
   /** @nullable */
+  handedness?: string | null;
+  /** @nullable */
+  teamLogoUrl?: string | null;
+  /** @nullable */
   photoUrl?: string | null;
   /** @nullable */
   notes?: string | null;
