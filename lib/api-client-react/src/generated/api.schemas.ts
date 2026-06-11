@@ -66,6 +66,90 @@ export interface TeamUpdate {
   teamType?: TeamUpdateTeamType;
 }
 
+export type TeamMediaCategory = typeof TeamMediaCategory[keyof typeof TeamMediaCategory];
+
+
+export const TeamMediaCategory = {
+  photo: 'photo',
+  video: 'video',
+  system: 'system',
+  highlight: 'highlight',
+} as const;
+
+export type TeamMediaSourceType = typeof TeamMediaSourceType[keyof typeof TeamMediaSourceType];
+
+
+export const TeamMediaSourceType = {
+  upload: 'upload',
+  link: 'link',
+} as const;
+
+export interface TeamMedia {
+  id: number;
+  teamId: number;
+  category: TeamMediaCategory;
+  /** @nullable */
+  title?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  url?: string | null;
+  sourceType: TeamMediaSourceType;
+  createdAt: string;
+}
+
+export type TeamMediaInputCategory = typeof TeamMediaInputCategory[keyof typeof TeamMediaInputCategory];
+
+
+export const TeamMediaInputCategory = {
+  photo: 'photo',
+  video: 'video',
+  system: 'system',
+  highlight: 'highlight',
+} as const;
+
+export type TeamMediaInputSourceType = typeof TeamMediaInputSourceType[keyof typeof TeamMediaInputSourceType];
+
+
+export const TeamMediaInputSourceType = {
+  upload: 'upload',
+  link: 'link',
+} as const;
+
+export interface TeamMediaInput {
+  category: TeamMediaInputCategory;
+  title?: string;
+  description?: string;
+  url?: string;
+  sourceType?: TeamMediaInputSourceType;
+}
+
+export type TeamMediaUpdateCategory = typeof TeamMediaUpdateCategory[keyof typeof TeamMediaUpdateCategory];
+
+
+export const TeamMediaUpdateCategory = {
+  photo: 'photo',
+  video: 'video',
+  system: 'system',
+  highlight: 'highlight',
+} as const;
+
+export type TeamMediaUpdateSourceType = typeof TeamMediaUpdateSourceType[keyof typeof TeamMediaUpdateSourceType];
+
+
+export const TeamMediaUpdateSourceType = {
+  upload: 'upload',
+  link: 'link',
+} as const;
+
+export interface TeamMediaUpdate {
+  category?: TeamMediaUpdateCategory;
+  title?: string;
+  description?: string;
+  url?: string;
+  sourceType?: TeamMediaUpdateSourceType;
+}
+
 export interface Player {
   id: number;
   name: string;
@@ -177,6 +261,8 @@ export interface Game {
   location?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  difficulty?: string | null;
   createdAt: string;
 }
 
@@ -190,6 +276,20 @@ export interface GameInput {
   awayScore?: number | null;
   location?: string;
   notes?: string;
+  difficulty?: string;
+}
+
+export interface GameUpdate {
+  date?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  /** @nullable */
+  homeScore?: number | null;
+  /** @nullable */
+  awayScore?: number | null;
+  location?: string;
+  notes?: string;
+  difficulty?: string;
 }
 
 export interface Report {

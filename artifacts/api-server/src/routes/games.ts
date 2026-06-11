@@ -4,6 +4,8 @@ import { db, gamesTable } from "@workspace/db";
 import {
   CreateGameBody,
   GetGameParams,
+  UpdateGameParams,
+  UpdateGameBody,
   DeleteGameParams,
 } from "@workspace/api-zod";
 
@@ -31,6 +33,25 @@ router.get("/games/:id", async (req, res): Promise<void> => {
     return;
   }
   const [game] = await db.select().from(gamesTable).where(eq(gamesTable.id, params.data.id));
+  if (!game) {
+    res.status(404).json({ error: "Game not found" });
+    return;
+  }
+  res.json(game);
+});
+
+router.patch("/games/:id", async (req, res): Promise<void> => {
+  const params = UpdateGameParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const parsed = UpdateGameBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [game] = await db.update(gamesTable).set(parsed.data).where(eq(gamesTable.id, params.data.id)).returning();
   if (!game) {
     res.status(404).json({ error: "Game not found" });
     return;

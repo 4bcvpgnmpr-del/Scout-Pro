@@ -6,6 +6,7 @@ import gamesRouter from "./games";
 import reportsRouter from "./reports";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
+import teamMediaRouter from "./team-media";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.use(healthRouter);
 router.use(storageRouter);
 router.use(dashboardRouter);
 router.use(teamsRouter);
+router.use(teamMediaRouter);
 router.use(playersRouter);
 router.use(gamesRouter);
 router.use(reportsRouter);

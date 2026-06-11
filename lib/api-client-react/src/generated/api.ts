@@ -25,6 +25,7 @@ import type {
   ErrorEnvelope,
   Game,
   GameInput,
+  GameUpdate,
   GetTopPlayersParams,
   HealthStatus,
   ListPlayersParams,
@@ -39,6 +40,9 @@ import type {
   ReportUpdate,
   Team,
   TeamInput,
+  TeamMedia,
+  TeamMediaInput,
+  TeamMediaUpdate,
   TeamUpdate,
   UploadUrlRequest,
   UploadUrlResponse
@@ -646,6 +650,301 @@ export const useDeleteTeam = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteTeamMutationOptions(options));
+    }
+
+export const getListTeamMediaUrl = (id: number,) => {
+
+
+
+
+  return `/api/teams/${id}/media`
+}
+
+/**
+ * @summary List media for a team
+ */
+export const listTeamMedia = async (id: number, options?: RequestInit): Promise<TeamMedia[]> => {
+
+  return customFetch<TeamMedia[]>(getListTeamMediaUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeamMediaQueryKey = (id: number,) => {
+    return [
+    `/api/teams/${id}/media`
+    ] as const;
+    }
+
+
+export const getListTeamMediaQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMedia>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeamMediaQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMedia>>> = ({ signal }) => listTeamMedia(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeamMediaQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamMedia>>>
+export type ListTeamMediaQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List media for a team
+ */
+
+export function useListTeamMedia<TData = Awaited<ReturnType<typeof listTeamMedia>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeamMediaQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTeamMediaUrl = (id: number,) => {
+
+
+
+
+  return `/api/teams/${id}/media`
+}
+
+/**
+ * @summary Add media to a team
+ */
+export const createTeamMedia = async (id: number,
+    teamMediaInput: TeamMediaInput, options?: RequestInit): Promise<TeamMedia> => {
+
+  return customFetch<TeamMedia>(getCreateTeamMediaUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      teamMediaInput,)
+  }
+);}
+
+
+
+
+export const getCreateTeamMediaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeamMedia>>, TError,{id: number;data: BodyType<TeamMediaInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTeamMedia>>, TError,{id: number;data: BodyType<TeamMediaInput>}, TContext> => {
+
+const mutationKey = ['createTeamMedia'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTeamMedia>>, {id: number;data: BodyType<TeamMediaInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createTeamMedia(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTeamMediaMutationResult = NonNullable<Awaited<ReturnType<typeof createTeamMedia>>>
+    export type CreateTeamMediaMutationBody = BodyType<TeamMediaInput>
+    export type CreateTeamMediaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add media to a team
+ */
+export const useCreateTeamMedia = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeamMedia>>, TError,{id: number;data: BodyType<TeamMediaInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTeamMedia>>,
+        TError,
+        {id: number;data: BodyType<TeamMediaInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTeamMediaMutationOptions(options));
+    }
+
+export const getUpdateTeamMediaUrl = (id: number,
+    mediaId: number,) => {
+
+
+
+
+  return `/api/teams/${id}/media/${mediaId}`
+}
+
+/**
+ * @summary Update team media
+ */
+export const updateTeamMedia = async (id: number,
+    mediaId: number,
+    teamMediaUpdate: TeamMediaUpdate, options?: RequestInit): Promise<TeamMedia> => {
+
+  return customFetch<TeamMedia>(getUpdateTeamMediaUrl(id,mediaId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      teamMediaUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateTeamMediaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMedia>>, TError,{id: number;mediaId: number;data: BodyType<TeamMediaUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTeamMedia>>, TError,{id: number;mediaId: number;data: BodyType<TeamMediaUpdate>}, TContext> => {
+
+const mutationKey = ['updateTeamMedia'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTeamMedia>>, {id: number;mediaId: number;data: BodyType<TeamMediaUpdate>}> = (props) => {
+          const {id,mediaId,data} = props ?? {};
+
+          return  updateTeamMedia(id,mediaId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTeamMediaMutationResult = NonNullable<Awaited<ReturnType<typeof updateTeamMedia>>>
+    export type UpdateTeamMediaMutationBody = BodyType<TeamMediaUpdate>
+    export type UpdateTeamMediaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update team media
+ */
+export const useUpdateTeamMedia = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamMedia>>, TError,{id: number;mediaId: number;data: BodyType<TeamMediaUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTeamMedia>>,
+        TError,
+        {id: number;mediaId: number;data: BodyType<TeamMediaUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateTeamMediaMutationOptions(options));
+    }
+
+export const getDeleteTeamMediaUrl = (id: number,
+    mediaId: number,) => {
+
+
+
+
+  return `/api/teams/${id}/media/${mediaId}`
+}
+
+/**
+ * @summary Delete team media
+ */
+export const deleteTeamMedia = async (id: number,
+    mediaId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteTeamMediaUrl(id,mediaId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteTeamMediaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeamMedia>>, TError,{id: number;mediaId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTeamMedia>>, TError,{id: number;mediaId: number}, TContext> => {
+
+const mutationKey = ['deleteTeamMedia'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTeamMedia>>, {id: number;mediaId: number}> = (props) => {
+          const {id,mediaId} = props ?? {};
+
+          return  deleteTeamMedia(id,mediaId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTeamMediaMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTeamMedia>>>
+
+    export type DeleteTeamMediaMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete team media
+ */
+export const useDeleteTeamMedia = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTeamMedia>>, TError,{id: number;mediaId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTeamMedia>>,
+        TError,
+        {id: number;mediaId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteTeamMediaMutationOptions(options));
     }
 
 export const getListPlayersUrl = (params?: ListPlayersParams,) => {
@@ -1407,6 +1706,78 @@ export function useGetGame<TData = Awaited<ReturnType<typeof getGame>>, TError =
 
 
 
+
+export const getUpdateGameUrl = (id: number,) => {
+
+
+
+
+  return `/api/games/${id}`
+}
+
+/**
+ * @summary Update a game
+ */
+export const updateGame = async (id: number,
+    gameUpdate: GameUpdate, options?: RequestInit): Promise<Game> => {
+
+  return customFetch<Game>(getUpdateGameUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      gameUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateGameMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGame>>, TError,{id: number;data: BodyType<GameUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGame>>, TError,{id: number;data: BodyType<GameUpdate>}, TContext> => {
+
+const mutationKey = ['updateGame'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGame>>, {id: number;data: BodyType<GameUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGame(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGameMutationResult = NonNullable<Awaited<ReturnType<typeof updateGame>>>
+    export type UpdateGameMutationBody = BodyType<GameUpdate>
+    export type UpdateGameMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a game
+ */
+export const useUpdateGame = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGame>>, TError,{id: number;data: BodyType<GameUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGame>>,
+        TError,
+        {id: number;data: BodyType<GameUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateGameMutationOptions(options));
+    }
 
 export const getDeleteGameUrl = (id: number,) => {
 

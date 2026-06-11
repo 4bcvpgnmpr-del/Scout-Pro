@@ -11,6 +11,7 @@ export const gamesTable = pgTable("games", {
   awayScore: integer("away_score"),
   location: text("location"),
   notes: text("notes"),
+  difficulty: text("difficulty"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

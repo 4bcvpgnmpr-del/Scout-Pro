@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 
@@ -88,6 +88,9 @@ export default function ReportDetail() {
         </div>
         <div className="flex items-center gap-3">
           <div className="text-5xl font-display text-primary bg-primary/10 rounded-xl px-6 py-3">{report.rating}</div>
+          <Link href={`/reports/${reportId}/edit`}>
+            <Button variant="outline" size="icon" title="Editar"><Pencil className="h-4 w-4" /></Button>
+          </Link>
           <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>

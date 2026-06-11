@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 
@@ -50,6 +50,9 @@ export default function TeamDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/teams/${teamId}/edit`}>
+            <Button variant="outline" className="font-display tracking-wide uppercase"><Pencil className="mr-2 h-4 w-4" /> Editar</Button>
+          </Link>
           <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>

@@ -178,6 +178,98 @@ paths:
         "204":
           description: Deleted
 
+  /teams/{id}/media:
+    get:
+      operationId: listTeamMedia
+      tags: [teams]
+      summary: List media for a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of team media
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMedia"
+    post:
+      operationId: createTeamMedia
+      tags: [teams]
+      summary: Add media to a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMediaInput"
+      responses:
+        "201":
+          description: Created team media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMedia"
+
+  /teams/{id}/media/{mediaId}:
+    patch:
+      operationId: updateTeamMedia
+      tags: [teams]
+      summary: Update team media
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMediaUpdate"
+      responses:
+        "200":
+          description: Updated team media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMedia"
+    delete:
+      operationId: deleteTeamMedia
+      tags: [teams]
+      summary: Delete team media
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /players:
     get:
       operationId: listPlayers
@@ -378,6 +470,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Game"
+    patch:
+      operationId: updateGame
+      tags: [games]
+      summary: Update a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameUpdate"
+      responses:
+        "200":
+          description: Updated game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
     delete:
       operationId: deleteGame
       tags: [games]
@@ -567,6 +682,62 @@ components:
           type: string
           enum: [own, rival]
 
+    TeamMedia:
+      type: object
+      required: [id, teamId, category, sourceType, createdAt]
+      properties:
+        id:
+          type: integer
+        teamId:
+          type: integer
+        category:
+          type: string
+          enum: [photo, video, system, highlight]
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        url:
+          type: ["string", "null"]
+        sourceType:
+          type: string
+          enum: [upload, link]
+        createdAt:
+          type: string
+
+    TeamMediaInput:
+      type: object
+      required: [category]
+      properties:
+        category:
+          type: string
+          enum: [photo, video, system, highlight]
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        sourceType:
+          type: string
+          enum: [upload, link]
+
+    TeamMediaUpdate:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [photo, video, system, highlight]
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        sourceType:
+          type: string
+          enum: [upload, link]
+
     Player:
       type: object
       required: [id, name, position, createdAt]
@@ -729,6 +900,8 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        difficulty:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -749,6 +922,28 @@ components:
         location:
           type: string
         notes:
+          type: string
+        difficulty:
+          type: string
+
+    GameUpdate:
+      type: object
+      properties:
+        date:
+          type: string
+        homeTeam:
+          type: string
+        awayTeam:
+          type: string
+        homeScore:
+          type: ["integer", "null"]
+        awayScore:
+          type: ["integer", "null"]
+        location:
+          type: string
+        notes:
+          type: string
+        difficulty:
           type: string
 
     Report:

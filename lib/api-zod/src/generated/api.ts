@@ -134,6 +134,79 @@ export const DeleteTeamParams = zod.object({
 
 
 /**
+ * @summary List media for a team
+ */
+export const ListTeamMediaParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListTeamMediaResponseItem = zod.object({
+  "id": zod.number(),
+  "teamId": zod.number(),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "title": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "sourceType": zod.enum(['upload', 'link']),
+  "createdAt": zod.string()
+})
+export const ListTeamMediaResponse = zod.array(ListTeamMediaResponseItem)
+
+
+/**
+ * @summary Add media to a team
+ */
+export const CreateTeamMediaParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateTeamMediaBody = zod.object({
+  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "url": zod.string().optional(),
+  "sourceType": zod.enum(['upload', 'link']).optional()
+})
+
+
+/**
+ * @summary Update team media
+ */
+export const UpdateTeamMediaParams = zod.object({
+  "id": zod.coerce.number(),
+  "mediaId": zod.coerce.number()
+})
+
+export const UpdateTeamMediaBody = zod.object({
+  "category": zod.enum(['photo', 'video', 'system', 'highlight']).optional(),
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "url": zod.string().optional(),
+  "sourceType": zod.enum(['upload', 'link']).optional()
+})
+
+export const UpdateTeamMediaResponse = zod.object({
+  "id": zod.number(),
+  "teamId": zod.number(),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "title": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "sourceType": zod.enum(['upload', 'link']),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete team media
+ */
+export const DeleteTeamMediaParams = zod.object({
+  "id": zod.coerce.number(),
+  "mediaId": zod.coerce.number()
+})
+
+
+/**
  * @summary List all players
  */
 export const ListPlayersQueryParams = zod.object({
@@ -315,6 +388,7 @@ export const ListGamesResponseItem = zod.object({
   "awayScore": zod.number().nullish(),
   "location": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "difficulty": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListGamesResponse = zod.array(ListGamesResponseItem)
@@ -330,7 +404,8 @@ export const CreateGameBody = zod.object({
   "homeScore": zod.number().nullish(),
   "awayScore": zod.number().nullish(),
   "location": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "difficulty": zod.string().optional()
 })
 
 
@@ -350,6 +425,39 @@ export const GetGameResponse = zod.object({
   "awayScore": zod.number().nullish(),
   "location": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "difficulty": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update a game
+ */
+export const UpdateGameParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateGameBody = zod.object({
+  "date": zod.string().optional(),
+  "homeTeam": zod.string().optional(),
+  "awayTeam": zod.string().optional(),
+  "homeScore": zod.number().nullish(),
+  "awayScore": zod.number().nullish(),
+  "location": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "difficulty": zod.string().optional()
+})
+
+export const UpdateGameResponse = zod.object({
+  "id": zod.number(),
+  "date": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "homeScore": zod.number().nullish(),
+  "awayScore": zod.number().nullish(),
+  "location": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "difficulty": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

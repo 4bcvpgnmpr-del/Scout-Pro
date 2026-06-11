@@ -17,12 +17,13 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Trophy, Plus, Search, Trash2, ClipboardList, X, ChevronRight,
+  Trophy, Plus, Search, Trash2, ClipboardList, X, ChevronRight, ChevronDown,
   Camera, Loader2, Star, Users, Swords, UserSearch, GitCompare,
   TrendingUp, TrendingDown, Minus, Settings, Download, SlidersHorizontal,
-  Eye, EyeOff,
+  Eye, EyeOff, Calendar,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { TeamScoutingView, TEAM_SECTIONS, type TeamSection } from "@/components/team-scouting";
 import { THEMES, FONTS } from "@/lib/themes";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 import { useReportPrefs, REPORT_SECTIONS } from "@/hooks/use-report-prefs";
@@ -34,8 +35,8 @@ const POSITION_LABELS: Record<string, string> = {
 
 type SidebarView =
   | { kind: "all" }
-  | { kind: "own"; teamId?: number }
-  | { kind: "rival"; teamId?: number }
+  | { kind: "own"; teamId?: number; section?: TeamSection }
+  | { kind: "rival"; teamId?: number; section?: TeamSection }
   | { kind: "watchlist" };
 
 // ─── Player Avatar ─────────────────────────────────────────────────────────────
@@ -1042,6 +1043,45 @@ export default function Scout() {
     </button>
   );
 
+  const renderTeamRow = (
+    team: { id: number; name: string; logoUrl?: string | null; teamType?: string | null },
+    kind: "own" | "rival",
+  ) => {
+    const active = (view.kind === "own" || view.kind === "rival") && view.kind === kind && view.teamId === team.id;
+    const currentSection: TeamSection =
+      (view.kind === "own" || view.kind === "rival") && view.kind === kind && view.teamId === team.id && view.section
+        ? view.section
+        : "roster";
+    return (
+      <div key={team.id}>
+        <div className="flex items-center gap-1">
+          <TeamLogoUpload team={team} />
+          <button
+            onClick={() => { setView({ kind, teamId: team.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+            className={`flex-1 min-w-0 text-left px-3 py-2.5 rounded-md flex items-center gap-2 transition-all text-sm
+              ${active ? "text-white border-l-4 border-orange-500 bg-white/10" : "text-gray-300 hover:bg-white/5"}`}>
+            <span className="truncate flex-1">{team.name}</span>
+            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition ${active ? "rotate-180 text-orange-400" : "text-gray-500"}`} />
+          </button>
+        </div>
+        {active && (
+          <div className="ml-7 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+            {TEAM_SECTIONS.map((s) => {
+              const Icon = s.icon;
+              return (
+                <button key={s.key}
+                  onClick={() => { setView({ kind, teamId: team.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                  className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition ${currentSection === s.key ? "text-white bg-white/10 font-semibold" : "text-gray-400 hover:bg-white/5"}`}>
+                  <Icon className="h-3.5 w-3.5" /> {s.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderPlayerCard = (player: (typeof filteredPlayers)[0]) => {
     const isSelected = selectedPlayerId === player.id;
     const isCompare = comparePlayerId === player.id;
@@ -1082,6 +1122,17 @@ export default function Scout() {
 
   const showComparison = !!(selectedPlayer && comparePlayerData);
 
+  const teamKind: "own" | "rival" = view.kind === "rival" ? "rival" : "own";
+  const activeTeam =
+    (view.kind === "own" || view.kind === "rival") && view.teamId != null
+      ? teams?.find((t) => t.id === view.teamId)
+      : undefined;
+  const teamMediaSection: TeamSection | null =
+    (view.kind === "own" || view.kind === "rival") && view.section && view.section !== "roster"
+      ? view.section
+      : null;
+  const showTeamScouting = !!(activeTeam && teamMediaSection);
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans antialiased overflow-hidden">
 
@@ -1097,12 +1148,7 @@ export default function Scout() {
             <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mi Equipo</span>
           </div>
           {ownTeams.length === 0 && <p className="text-gray-600 text-xs px-2 py-1">Sin equipo propio</p>}
-          {ownTeams.map((team) => (
-            <div key={team.id} className="flex items-center gap-1">
-              <TeamLogoUpload team={team} />
-              <div className="flex-1 min-w-0">{navBtn({ kind: "own", teamId: team.id }, <span className="truncate">{team.name}</span>)}</div>
-            </div>
-          ))}
+          {ownTeams.map((team) => renderTeamRow(team, "own"))}
         </div>
         <div className="px-4 pb-2">
           <button onClick={() => setShowAddTeam("own")}
@@ -1117,12 +1163,7 @@ export default function Scout() {
             <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Equipos Rivales</span>
           </div>
           {rivalTeams.length === 0 && <p className="text-gray-600 text-xs px-2 py-1">Sin rivales</p>}
-          {rivalTeams.map((team) => (
-            <div key={team.id} className="flex items-center gap-1">
-              <TeamLogoUpload team={team} />
-              <div className="flex-1 min-w-0">{navBtn({ kind: "rival", teamId: team.id }, <span className="truncate">{team.name}</span>)}</div>
-            </div>
-          ))}
+          {rivalTeams.map((team) => renderTeamRow(team, "rival"))}
         </div>
         <div className="px-4 pb-2">
           <button onClick={() => setShowAddTeam("rival")}
@@ -1151,6 +1192,11 @@ export default function Scout() {
               🏆 Partidos
             </button>
           </Link>
+          <Link href="/calendar">
+            <button className="w-full text-left text-gray-500 text-xs hover:text-gray-300 transition py-1 flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5" /> Calendario
+            </button>
+          </Link>
           <button onClick={() => setShowSettings(true)}
             className="w-full text-left text-gray-500 text-xs hover:text-orange-400 transition py-1 flex items-center gap-2">
             <Settings className="h-3.5 w-3.5" /> Personalizar
@@ -1158,6 +1204,14 @@ export default function Scout() {
         </div>
       </aside>
 
+      {showTeamScouting ? (
+        <TeamScoutingView
+          team={activeTeam!}
+          section={teamMediaSection!}
+          onSectionChange={(s) => { setView({ kind: teamKind, teamId: activeTeam!.id, section: s }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+        />
+      ) : (
+      <>
       {/* ── COL 2: ROSTER ─────────────────────────────────────────────────── */}
       <section className="flex flex-col bg-white flex-shrink-0 border-r border-gray-200" style={{ width: 320 }}>
         <div className="px-5 pt-5 pb-4 border-b border-gray-100">
@@ -1237,6 +1291,8 @@ export default function Scout() {
           />
         )}
       </main>
+      </>
+      )}
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {showAddTeam !== false && <AddTeamModal defaultType={showAddTeam} onClose={() => setShowAddTeam(false)} />}

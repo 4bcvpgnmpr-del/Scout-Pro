@@ -19,5 +19,7 @@ export interface Game {
   location?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  difficulty?: string | null;
   createdAt: string;
 }

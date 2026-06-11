@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GameInput {
-  date: string;
-  homeTeam: string;
-  awayTeam: string;
+export interface GameUpdate {
+  date?: string;
+  homeTeam?: string;
+  awayTeam?: string;
   /** @nullable */
   homeScore?: number | null;
   /** @nullable */
