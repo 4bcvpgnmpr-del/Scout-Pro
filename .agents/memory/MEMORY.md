@@ -1,0 +1,2 @@
+- [ScoutPro theme system](scoutpro-theme.md) — CSS vars set on documentElement, persisted in localStorage, call useTheme() once in Scout component.
+- [ScoutPro PDF removal](scoutpro-pdf.md) — PDF export fully removed; stale contentRef divs must also be removed from all page components.

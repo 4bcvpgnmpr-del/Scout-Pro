@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Users, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useExportPdf } from "@/hooks/use-export-pdf";
 
 export default function TeamDetail() {
   const [, params] = useRoute("/teams/:id");
@@ -16,7 +15,6 @@ export default function TeamDetail() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { contentRef, exportPdf, exporting } = useExportPdf(`equipo-${teamId}`);
 
   const { data: team, isLoading } = useGetTeam(teamId, { query: { enabled: !!teamId, queryKey: getGetTeamQueryKey(teamId) } });
   const { data: players } = useListPlayers({ teamId }, { query: { enabled: !!teamId, queryKey: getListPlayersQueryKey({ teamId }) } });
@@ -37,7 +35,7 @@ export default function TeamDetail() {
   if (!team) return <div className="text-muted-foreground py-12 text-center">Team not found.</div>;
 
   return (
-    <div ref={contentRef} className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/teams"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -49,14 +47,9 @@ export default function TeamDetail() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="outline" size="icon" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       <Card>
