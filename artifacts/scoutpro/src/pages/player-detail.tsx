@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, FileText, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, FileText, TrendingUp, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useExportPdf } from "@/hooks/use-export-pdf";
 
 function StatBox({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
@@ -24,6 +25,7 @@ export default function PlayerDetail() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { contentRef, exportPdf, exporting } = useExportPdf(`perfil-jugador-${playerId}`);
 
   const { data: player, isLoading } = useGetPlayer(playerId, { query: { enabled: !!playerId, queryKey: getGetPlayerQueryKey(playerId) } });
   const { data: stats } = useGetPlayerStats(playerId, { query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId) } });
@@ -57,7 +59,7 @@ export default function PlayerDetail() {
   const ftPct = stats?.avgFreeThrowPct != null ? (Number(stats.avgFreeThrowPct) * 100).toFixed(1) + "%" : null;
 
   return (
-    <div className="space-y-6">
+    <div ref={contentRef} className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/players">
@@ -85,8 +87,11 @@ export default function PlayerDetail() {
         </div>
         <div className="flex gap-2">
           <Link href={`/reports/new?playerId=${playerId}`}>
-            <Button className="font-display tracking-wide uppercase"><Plus className="mr-2 h-4 w-4" /> New Report</Button>
+            <Button className="font-display tracking-wide uppercase"><Plus className="mr-2 h-4 w-4" /> Nuevo informe</Button>
           </Link>
+          <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          </Button>
           <Button variant="outline" size="icon" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
             <Trash2 className="h-4 w-4" />
           </Button>
