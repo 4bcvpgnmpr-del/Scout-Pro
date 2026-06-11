@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain } from "lucide-react";
+import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useExportPdf } from "@/hooks/use-export-pdf";
 
 function RatingBar({ label, value, icon: Icon }: { label: string; value: number | null | undefined; icon: React.ElementType }) {
   if (value == null) return null;
@@ -40,6 +41,7 @@ export default function ReportDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const { contentRef, exportPdf, exporting } = useExportPdf(`informe-scouting-${reportId}`);
   const { data: report, isLoading } = useGetReport(reportId, { query: { enabled: !!reportId, queryKey: getGetReportQueryKey(reportId) } });
   const deleteReport = useDeleteReport();
 
@@ -86,12 +88,16 @@ export default function ReportDetail() {
         </div>
         <div className="flex items-center gap-3">
           <div className="text-5xl font-display text-primary bg-primary/10 rounded-xl px-6 py-3">{report.rating}</div>
+          <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          </Button>
           <Button variant="outline" size="icon" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
+      <div ref={contentRef}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <Card>
           <CardHeader><CardTitle>Component Ratings</CardTitle></CardHeader>
@@ -152,6 +158,7 @@ export default function ReportDetail() {
           <CardContent><p className="font-semibold text-primary">{report.recommendation}</p></CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

@@ -19,10 +19,11 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Trophy, Plus, Search, Trash2, ClipboardList, X, ChevronRight,
   Camera, Loader2, Star, Users, Swords, UserSearch, GitCompare,
-  TrendingUp, TrendingDown, Minus, Settings,
+  TrendingUp, TrendingDown, Minus, Settings, Download,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { THEMES, FONTS } from "@/lib/themes";
+import { useExportPdf } from "@/hooks/use-export-pdf";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const POSITION_LABELS: Record<string, string> = {
@@ -394,6 +395,7 @@ function CompareBar({ labelA, labelB, valA, valB, max = 10 }: {
 function ComparisonView({ playerA, playerB, onClose }: {
   playerA: PlayerData; playerB: PlayerData; onClose: () => void;
 }) {
+  const { contentRef, exportPdf, exporting } = useExportPdf(`comparativa-${playerA.name}-vs-${playerB.name}`);
   const { data: reportsA } = useListReports({ playerId: playerA.id }, { query: { queryKey: getListReportsQueryKey({ playerId: playerA.id }) } });
   const { data: reportsB } = useListReports({ playerId: playerB.id }, { query: { queryKey: getListReportsQueryKey({ playerId: playerB.id }) } });
 
@@ -429,13 +431,20 @@ function ComparisonView({ playerA, playerB, onClose }: {
         <div className="flex items-center gap-2 text-orange-500 font-black text-sm uppercase tracking-widest">
           <GitCompare className="h-4 w-4" /> Comparativa
         </div>
-        <button onClick={onClose}
-          className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 font-medium px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
-          <X className="h-3.5 w-3.5" /> Cerrar comparativa
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportPdf} disabled={exporting}
+            className="text-xs text-gray-500 hover:text-orange-600 flex items-center gap-1.5 font-medium px-3 py-1.5 rounded-lg hover:bg-orange-50 transition disabled:opacity-50">
+            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {exporting ? "Exportando..." : "Exportar PDF"}
+          </button>
+          <button onClick={onClose}
+            className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1.5 font-medium px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
+            <X className="h-3.5 w-3.5" /> Cerrar
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div ref={contentRef} className="flex-1 overflow-y-auto">
         {/* Player headers — side by side */}
         <div className="grid grid-cols-2 border-b border-gray-100">
           {[{ player: playerA, report: reportA, color: "orange" }, { player: playerB, report: reportB, color: "blue" }].map(({ player, report, color }, idx) => (
@@ -565,6 +574,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
   playerId: number; playerName: string; playerPos: string;
   playerPhotoUrl?: string | null; isWatchlisted?: boolean; onCompare: () => void;
 }) {
+  const { contentRef, exportPdf, exporting } = useExportPdf(`informe-${playerName}`);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updatePlayer = useUpdatePlayer();
@@ -602,6 +612,11 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
             <button onClick={() => setFormat("estandar")} className={`px-3 py-2 transition ${format === "estandar" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Estándar</button>
             <button onClick={() => setFormat("fastscout")} className={`px-3 py-2 transition border-l border-gray-200 ${format === "fastscout" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>FastScout</button>
           </div>
+          <button onClick={exportPdf} disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition disabled:opacity-50">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {exporting ? "..." : "PDF"}
+          </button>
           <button onClick={onCompare}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition">
             <GitCompare className="h-4 w-4" /> Comparar
@@ -616,7 +631,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div ref={contentRef} className="flex-1 overflow-y-auto px-8 py-6">
         {!reports || reports.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
             <ClipboardList className="h-12 w-12 mb-3 opacity-40" />
