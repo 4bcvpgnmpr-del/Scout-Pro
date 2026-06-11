@@ -28,5 +28,6 @@ export interface Player {
   photoUrl?: string | null;
   /** @nullable */
   notes?: string | null;
+  watchlisted?: boolean;
   createdAt: string;
 }

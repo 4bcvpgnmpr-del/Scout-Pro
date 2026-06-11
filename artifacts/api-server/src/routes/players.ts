@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db, playersTable, teamsTable, reportsTable } from "@workspace/db";
 import {
   CreatePlayerBody,
@@ -72,8 +72,12 @@ router.get("/players", async (req, res): Promise<void> => {
     conditions.push(eq(playersTable.position, query.data.position));
   }
 
+  if (query.success && query.data.watchlisted != null) {
+    conditions.push(eq(playersTable.watchlisted, query.data.watchlisted));
+  }
+
   if (conditions.length > 0) {
-    baseQuery = baseQuery.where(conditions.length === 1 ? conditions[0] : sql`${conditions[0]} AND ${conditions[1]}`);
+    baseQuery = baseQuery.where(conditions.length === 1 ? conditions[0] : and(...conditions));
   }
 
   const players = await baseQuery.orderBy(playersTable.name);

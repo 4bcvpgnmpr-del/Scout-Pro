@@ -21,4 +21,5 @@ export interface PlayerUpdate {
   nationality?: string;
   photoUrl?: string;
   notes?: string;
+  watchlisted?: boolean;
 }

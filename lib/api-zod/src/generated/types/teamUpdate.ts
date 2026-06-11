@@ -5,10 +5,12 @@
  * ScoutPro Basketball Scouting API
  * OpenAPI spec version: 0.1.0
  */
+import type { TeamUpdateTeamType } from './teamUpdateTeamType';
 
 export interface TeamUpdate {
   name?: string;
   league?: string;
   city?: string;
   logoUrl?: string;
+  teamType?: TeamUpdateTeamType;
 }

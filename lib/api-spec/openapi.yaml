@@ -194,6 +194,11 @@ paths:
           required: false
           schema:
             type: ["string", "null"]
+        - name: watchlisted
+          in: query
+          required: false
+          schema:
+            type: ["boolean", "null"]
       responses:
         "200":
           description: List of players
@@ -525,6 +530,9 @@ components:
           type: ["string", "null"]
         logoUrl:
           type: ["string", "null"]
+        teamType:
+          type: string
+          enum: [own, rival]
         createdAt:
           type: string
 
@@ -540,6 +548,9 @@ components:
           type: string
         logoUrl:
           type: string
+        teamType:
+          type: string
+          enum: [own, rival]
 
     TeamUpdate:
       type: object
@@ -552,6 +563,9 @@ components:
           type: string
         logoUrl:
           type: string
+        teamType:
+          type: string
+          enum: [own, rival]
 
     Player:
       type: object
@@ -581,6 +595,8 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        watchlisted:
+          type: boolean
         createdAt:
           type: string
 
@@ -608,6 +624,8 @@ components:
           type: string
         notes:
           type: string
+        watchlisted:
+          type: boolean
 
     PlayerUpdate:
       type: object
@@ -632,6 +650,8 @@ components:
           type: string
         notes:
           type: string
+        watchlisted:
+          type: boolean
 
     PlayerStatsSummary:
       type: object

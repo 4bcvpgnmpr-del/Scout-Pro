@@ -5,6 +5,7 @@
  * ScoutPro Basketball Scouting API
  * OpenAPI spec version: 0.1.0
  */
+import type { TeamTeamType } from './teamTeamType';
 
 export interface Team {
   id: number;
@@ -15,5 +16,6 @@ export interface Team {
   city?: string | null;
   /** @nullable */
   logoUrl?: string | null;
+  teamType?: TeamTeamType;
   createdAt: string;
 }

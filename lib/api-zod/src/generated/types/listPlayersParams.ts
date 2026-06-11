@@ -15,4 +15,8 @@ teamId?: number | null;
  * @nullable
  */
 position?: string | null;
+/**
+ * @nullable
+ */
+watchlisted?: boolean | null;
 };

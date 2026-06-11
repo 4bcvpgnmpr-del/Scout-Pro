@@ -21,4 +21,5 @@ export interface PlayerInput {
   nationality?: string;
   photoUrl?: string;
   notes?: string;
+  watchlisted?: boolean;
 }

@@ -63,6 +63,7 @@ export const ListTeamsResponseItem = zod.object({
   "league": zod.string().nullish(),
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "teamType": zod.enum(['own', 'rival']).optional(),
   "createdAt": zod.string()
 })
 export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
@@ -75,7 +76,8 @@ export const CreateTeamBody = zod.object({
   "name": zod.string(),
   "league": zod.string().optional(),
   "city": zod.string().optional(),
-  "logoUrl": zod.string().optional()
+  "logoUrl": zod.string().optional(),
+  "teamType": zod.enum(['own', 'rival']).optional()
 })
 
 
@@ -92,6 +94,7 @@ export const GetTeamResponse = zod.object({
   "league": zod.string().nullish(),
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "teamType": zod.enum(['own', 'rival']).optional(),
   "createdAt": zod.string()
 })
 
@@ -107,7 +110,8 @@ export const UpdateTeamBody = zod.object({
   "name": zod.string().optional(),
   "league": zod.string().optional(),
   "city": zod.string().optional(),
-  "logoUrl": zod.string().optional()
+  "logoUrl": zod.string().optional(),
+  "teamType": zod.enum(['own', 'rival']).optional()
 })
 
 export const UpdateTeamResponse = zod.object({
@@ -116,6 +120,7 @@ export const UpdateTeamResponse = zod.object({
   "league": zod.string().nullish(),
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "teamType": zod.enum(['own', 'rival']).optional(),
   "createdAt": zod.string()
 })
 
@@ -133,7 +138,8 @@ export const DeleteTeamParams = zod.object({
  */
 export const ListPlayersQueryParams = zod.object({
   "teamId": zod.coerce.number().nullish(),
-  "position": zod.coerce.string().nullish()
+  "position": zod.coerce.string().nullish(),
+  "watchlisted": zod.coerce.boolean().nullish()
 })
 
 export const ListPlayersResponseItem = zod.object({
@@ -149,6 +155,7 @@ export const ListPlayersResponseItem = zod.object({
   "nationality": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "watchlisted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 export const ListPlayersResponse = zod.array(ListPlayersResponseItem)
@@ -167,7 +174,8 @@ export const CreatePlayerBody = zod.object({
   "weight": zod.number().nullish(),
   "nationality": zod.string().optional(),
   "photoUrl": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "watchlisted": zod.boolean().optional()
 })
 
 
@@ -191,6 +199,7 @@ export const GetPlayerResponse = zod.object({
   "nationality": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "watchlisted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 
@@ -212,7 +221,8 @@ export const UpdatePlayerBody = zod.object({
   "weight": zod.number().nullish(),
   "nationality": zod.string().optional(),
   "photoUrl": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "watchlisted": zod.boolean().optional()
 })
 
 export const UpdatePlayerResponse = zod.object({
@@ -228,6 +238,7 @@ export const UpdatePlayerResponse = zod.object({
   "nationality": zod.string().nullish(),
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
+  "watchlisted": zod.boolean().optional(),
   "createdAt": zod.string()
 })
 

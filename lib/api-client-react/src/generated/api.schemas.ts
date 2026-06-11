@@ -13,6 +13,14 @@ export interface Error {
   error: string;
 }
 
+export type TeamTeamType = typeof TeamTeamType[keyof typeof TeamTeamType];
+
+
+export const TeamTeamType = {
+  own: 'own',
+  rival: 'rival',
+} as const;
+
 export interface Team {
   id: number;
   name: string;
@@ -22,21 +30,40 @@ export interface Team {
   city?: string | null;
   /** @nullable */
   logoUrl?: string | null;
+  teamType?: TeamTeamType;
   createdAt: string;
 }
+
+export type TeamInputTeamType = typeof TeamInputTeamType[keyof typeof TeamInputTeamType];
+
+
+export const TeamInputTeamType = {
+  own: 'own',
+  rival: 'rival',
+} as const;
 
 export interface TeamInput {
   name: string;
   league?: string;
   city?: string;
   logoUrl?: string;
+  teamType?: TeamInputTeamType;
 }
+
+export type TeamUpdateTeamType = typeof TeamUpdateTeamType[keyof typeof TeamUpdateTeamType];
+
+
+export const TeamUpdateTeamType = {
+  own: 'own',
+  rival: 'rival',
+} as const;
 
 export interface TeamUpdate {
   name?: string;
   league?: string;
   city?: string;
   logoUrl?: string;
+  teamType?: TeamUpdateTeamType;
 }
 
 export interface Player {
@@ -61,6 +88,7 @@ export interface Player {
   photoUrl?: string | null;
   /** @nullable */
   notes?: string | null;
+  watchlisted?: boolean;
   createdAt: string;
 }
 
@@ -79,6 +107,7 @@ export interface PlayerInput {
   nationality?: string;
   photoUrl?: string;
   notes?: string;
+  watchlisted?: boolean;
 }
 
 export interface PlayerUpdate {
@@ -96,6 +125,7 @@ export interface PlayerUpdate {
   nationality?: string;
   photoUrl?: string;
   notes?: string;
+  watchlisted?: boolean;
 }
 
 export interface PlayerStatsSummary {
@@ -346,6 +376,10 @@ teamId?: number | null;
  * @nullable
  */
 position?: string | null;
+/**
+ * @nullable
+ */
+watchlisted?: boolean | null;
 };
 
 export type GetTopPlayersParams = {
