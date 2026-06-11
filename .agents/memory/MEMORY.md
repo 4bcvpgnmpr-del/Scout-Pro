@@ -1,2 +1,2 @@
 - [ScoutPro theme system](scoutpro-theme.md) — CSS vars set on documentElement, persisted in localStorage, call useTheme() once in Scout component.
-- [ScoutPro PDF removal](scoutpro-pdf.md) — PDF export fully removed; stale contentRef divs must also be removed from all page components.
+- [PDF/canvas export with Tailwind v4](pdf-export-tailwind-v4.md) — plain html2canvas silently fails on oklch()/color-mix() colors; use html2canvas-pro.

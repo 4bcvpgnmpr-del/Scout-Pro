@@ -10,7 +10,7 @@ export function useExportPdf(filename: string) {
     setExporting(true);
     try {
       const [html2canvas, jspdfModule] = await Promise.all([
-        import("html2canvas").then((m) => m.default),
+        import("html2canvas-pro").then((m) => m.default),
         import("jspdf"),
       ]);
       const jsPDF = jspdfModule.default;
@@ -62,6 +62,7 @@ export function useExportPdf(filename: string) {
       pdf.save(`${filename}.pdf`);
     } catch (err) {
       console.error("PDF export failed", err);
+      alert("No se pudo generar el PDF. Inténtalo de nuevo.");
     } finally {
       setExporting(false);
     }

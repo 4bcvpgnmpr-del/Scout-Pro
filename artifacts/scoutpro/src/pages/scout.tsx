@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useListTeams,
@@ -19,11 +19,13 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Trophy, Plus, Search, Trash2, ClipboardList, X, ChevronRight,
   Camera, Loader2, Star, Users, Swords, UserSearch, GitCompare,
-  TrendingUp, TrendingDown, Minus, Settings, Download,
+  TrendingUp, TrendingDown, Minus, Settings, Download, SlidersHorizontal,
+  Eye, EyeOff,
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { THEMES, FONTS } from "@/lib/themes";
 import { useExportPdf } from "@/hooks/use-export-pdf";
+import { useReportPrefs, REPORT_SECTIONS } from "@/hooks/use-report-prefs";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const POSITION_LABELS: Record<string, string> = {
@@ -578,7 +580,21 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updatePlayer = useUpdatePlayer();
-  const [format, setFormat] = useState<"estandar" | "fastscout">("estandar");
+  const [format, setFormat] = useState<"estandar" | "pro">("estandar");
+  const { themeId, setTheme, fontId, setFont } = useTheme();
+  const { sections, toggleSection } = useReportPrefs();
+  const [showCustomize, setShowCustomize] = useState(false);
+  const customizeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showCustomize) return;
+    const onDown = (e: MouseEvent) => {
+      if (customizeRef.current && !customizeRef.current.contains(e.target as Node)) setShowCustomize(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowCustomize(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [showCustomize]);
   const { data: reports } = useListReports({ playerId }, { query: { queryKey: getListReportsQueryKey({ playerId }) } });
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const report = selectedReportId ? reports?.find((r) => r.id === selectedReportId) : reports?.[0];
@@ -595,7 +611,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
         <PlayerAvatar playerId={playerId} name={playerName} photoUrl={playerPhotoUrl} size="md" editable />
         <div className="flex-1 min-w-0 pt-0.5">
           <h1 className="text-4xl font-black uppercase italic text-gray-900 leading-none truncate">{playerName}</h1>
-          <p className="text-orange-600 font-bold text-base mt-1">{playerPos}</p>
+          <p className="text-primary font-bold text-base mt-1">{playerPos}</p>
           {reports && reports.length > 1 && (
             <div className="flex gap-2 mt-2.5 flex-wrap">
               {reports.map((r) => (
@@ -610,7 +626,45 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
         <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
           <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold">
             <button onClick={() => setFormat("estandar")} className={`px-3 py-2 transition ${format === "estandar" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Estándar</button>
-            <button onClick={() => setFormat("fastscout")} className={`px-3 py-2 transition border-l border-gray-200 ${format === "fastscout" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>FastScout</button>
+            <button onClick={() => setFormat("pro")} className={`px-3 py-2 transition border-l border-gray-200 ${format === "pro" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>PRO</button>
+          </div>
+          <div className="relative" ref={customizeRef}>
+            <button onClick={() => setShowCustomize((v) => !v)} aria-expanded={showCustomize}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition ${showCustomize ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-600 hover:bg-primary/10 hover:text-primary"}`}>
+              <SlidersHorizontal className="h-4 w-4" /> Personalizar
+            </button>
+            {showCustomize && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 p-5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Color de acento</p>
+                  <div className="flex gap-2 mb-5">
+                    {THEMES.map((t) => (
+                      <button key={t.id} onClick={() => setTheme(t.id)} title={t.name}
+                        className={`h-7 w-7 rounded-full transition ring-2 ring-offset-2 ${themeId === t.id ? "ring-gray-900 scale-110" : "ring-transparent hover:scale-105"}`}
+                        style={{ background: t.swatch }} />
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tipografía</p>
+                  <div className="flex flex-col gap-1 mb-5">
+                    {FONTS.map((f) => (
+                      <button key={f.id} onClick={() => setFont(f.id)}
+                        className={`text-left px-3 py-2 rounded-lg text-sm transition ${fontId === f.id ? "bg-primary/10 text-primary font-bold" : "text-gray-600 hover:bg-gray-100"}`}
+                        style={{ fontFamily: f.family }}>
+                        {f.label} — <span className="text-gray-400 text-xs normal-case font-normal">{f.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Secciones visibles</p>
+                  <div className="flex flex-col gap-1">
+                    {REPORT_SECTIONS.map((s) => (
+                      <button key={s.key} onClick={() => toggleSection(s.key)}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold transition ${sections[s.key] ? "bg-gray-50 text-gray-900" : "text-gray-400 hover:bg-gray-50"}`}>
+                        {s.label}
+                        {sections[s.key] ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+            )}
           </div>
           <button onClick={exportPdf} disabled={exporting}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition disabled:opacity-50">
@@ -631,20 +685,20 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
         </div>
       </div>
 
-      <div ref={contentRef} className="flex-1 overflow-y-auto px-8 py-6">
+      <div ref={contentRef} className="flex-1 overflow-y-auto px-8 py-6" style={{ fontFamily: "var(--app-font-display)" }}>
         {!reports || reports.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
             <ClipboardList className="h-12 w-12 mb-3 opacity-40" />
             <p className="text-base">Sin informes de scouting.</p>
             <Link href={`/reports/new?playerId=${playerId}`}>
-              <button className="mt-4 bg-orange-500 text-white font-bold px-5 py-2.5 rounded-lg hover:bg-orange-600 transition text-sm flex items-center gap-2">
+              <button className="mt-4 bg-primary text-white font-bold px-5 py-2.5 rounded-lg hover:bg-primary/90 transition text-sm flex items-center gap-2">
                 <Plus className="h-4 w-4" /> Crear Primer Informe
               </button>
             </Link>
           </div>
         ) : report ? (
-          format === "fastscout" ? (
-            /* ─ FastScout compact format ─ */
+          format === "pro" ? (
+            /* ─ PRO compact format ─ */
             <div className="space-y-4">
               {/* Overall grade header */}
               <div className="flex items-center gap-6 p-5 bg-gray-900 text-white rounded-2xl">
@@ -663,7 +717,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
               </div>
 
               {/* Stats row */}
-              {([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).some(([, v]) => v != null) && (
+              {sections.estadisticas && ([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).some(([, v]) => v != null) && (
                 <div className="grid grid-cols-6 gap-2">
                   {([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).map(([label, val]) => (
                     <div key={label} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
@@ -675,7 +729,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
               )}
 
               {/* Skill grades */}
-              {(report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
+              {sections.valoraciones && (report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
                 <div className="grid grid-cols-4 gap-2">
                   {([["Ataque", report.offensiveRating], ["Defensa", report.defensiveRating], ["Atletismo", report.athleticismRating], ["IQ", report.iQRating]] as [string, number | null | undefined][]).map(([label, val]) => (
                     <div key={label} className="bg-white rounded-xl p-4 border border-gray-200 text-center shadow-sm">
@@ -687,15 +741,15 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
               )}
 
               {/* Strengths & Weaknesses */}
-              {(report.strengths || report.weaknesses) && (
+              {((sections.fortalezas && report.strengths) || (sections.debilidades && report.weaknesses)) && (
                 <div className="grid grid-cols-2 gap-3">
-                  {report.strengths && (
+                  {sections.fortalezas && report.strengths && (
                     <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500">
                       <div className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">✓ Fortalezas</div>
                       <p className="text-gray-700 text-sm leading-relaxed">{report.strengths}</p>
                     </div>
                   )}
-                  {report.weaknesses && (
+                  {sections.debilidades && report.weaknesses && (
                     <div className="bg-red-50 p-4 rounded-xl border-l-4 border-red-500">
                       <div className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">✗ Debilidades</div>
                       <p className="text-gray-700 text-sm leading-relaxed">{report.weaknesses}</p>
@@ -705,18 +759,18 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
               )}
 
               {/* Summary & Rec */}
-              {report.summary && (
+              {sections.resumen && report.summary && (
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm text-gray-700 leading-relaxed">{report.summary}</div>
               )}
-              {report.recommendation && (
+              {sections.recomendacion && report.recommendation && (
                 <div className="bg-gray-900 text-white p-4 rounded-xl flex items-start gap-3">
-                  <span className="text-orange-500 font-black text-xs uppercase tracking-widest flex-shrink-0 mt-0.5">REC.</span>
+                  <span className="text-primary font-black text-xs uppercase tracking-widest flex-shrink-0 mt-0.5">REC.</span>
                   <p className="font-semibold text-sm leading-relaxed">{report.recommendation}</p>
                 </div>
               )}
 
               <Link href={`/reports/new?playerId=${playerId}`}>
-                <button className="w-full bg-orange-500 text-white font-bold py-2.5 rounded-xl hover:bg-orange-600 transition text-sm flex items-center justify-center gap-2">
+                <button className="w-full bg-primary text-white font-bold py-2.5 rounded-xl hover:bg-primary/90 transition text-sm flex items-center justify-center gap-2">
                   <Plus className="h-4 w-4" /> Nuevo Informe
                 </button>
               </Link>
@@ -726,20 +780,20 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="text-5xl font-black text-orange-500">{report.rating}/10</div>
+                  <div className="text-5xl font-black text-primary">{report.rating}/10</div>
                   <div className="text-sm text-gray-500">
                     <div className="font-semibold text-gray-700">{report.scoutName}</div>
                     <div>{report.date}</div>
                   </div>
                 </div>
                 <Link href={`/reports/new?playerId=${playerId}`}>
-                  <button className="bg-orange-500 text-white font-bold px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm flex items-center gap-1.5">
+                  <button className="bg-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-primary/90 transition text-sm flex items-center gap-1.5">
                     <Plus className="h-3.5 w-3.5" /> Nuevo Informe
                   </button>
                 </Link>
               </div>
 
-              {(report.points != null || report.rebounds != null || report.assists != null) && (
+              {sections.estadisticas && (report.points != null || report.rebounds != null || report.assists != null) && (
                 <div className="flex gap-5 bg-gray-50 rounded-xl px-6 py-4 border border-gray-100 flex-wrap">
                   {([["PTS", report.points], ["REB", report.rebounds], ["AST", report.assists], ["ROB", report.steals], ["TAP", report.blocks], ["MIN", report.minutesPlayed]] as [string, number | null | undefined][]).map(([label, val]) =>
                     val != null ? (
@@ -752,17 +806,17 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
                 </div>
               )}
 
-              {(report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
+              {sections.valoraciones && (report.offensiveRating || report.defensiveRating || report.athleticismRating || report.iQRating) && (
                 <div className="grid grid-cols-2 gap-3">
                   {([["Ataque", report.offensiveRating], ["Defensa", report.defensiveRating], ["Atletismo", report.athleticismRating], ["IQ Baloncesto", report.iQRating]] as [string, number | null | undefined][]).map(([label, val]) =>
                     val != null ? (
                       <div key={label} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{label}</span>
-                          <span className="text-orange-500 font-black">{val}/10</span>
+                          <span className="text-primary font-black">{val}/10</span>
                         </div>
                         <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-500 rounded-full" style={{ width: `${(val as number) * 10}%` }} />
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${(val as number) * 10}%` }} />
                         </div>
                       </div>
                     ) : null
@@ -770,30 +824,32 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, isWatchl
                 </div>
               )}
 
+              {((sections.fortalezas && report.strengths) || (sections.debilidades && report.weaknesses)) && (
               <div className="grid grid-cols-2 gap-4">
-                {report.strengths && (
+                {sections.fortalezas && report.strengths && (
                   <div className="bg-gray-50 p-6 rounded-xl border-l-8 border-gray-900">
                     <h3 className="text-xs font-black text-gray-400 uppercase mb-3 tracking-widest">Fortalezas</h3>
                     <p className="text-gray-700 leading-relaxed text-sm">{report.strengths}</p>
                   </div>
                 )}
-                {report.weaknesses && (
+                {sections.debilidades && report.weaknesses && (
                   <div className="bg-red-50 p-6 rounded-xl border-l-8 border-red-500">
                     <h3 className="text-xs font-black text-red-400 uppercase mb-3 tracking-widest">Debilidades</h3>
                     <p className="text-gray-700 leading-relaxed text-sm">{report.weaknesses}</p>
                   </div>
                 )}
               </div>
+              )}
 
-              {report.summary && (
+              {sections.resumen && report.summary && (
                 <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
                   <h3 className="text-xs font-black text-gray-400 uppercase mb-3 tracking-widest">Resumen del Scout</h3>
                   <p className="text-gray-700 leading-relaxed text-sm">{report.summary}</p>
                 </div>
               )}
-              {report.recommendation && (
-                <div className="bg-orange-50 p-6 rounded-xl border-l-8 border-orange-500">
-                  <h3 className="text-xs font-black text-orange-500 uppercase mb-2 tracking-widest">Recomendación</h3>
+              {sections.recomendacion && report.recommendation && (
+                <div className="bg-primary/10 p-6 rounded-xl border-l-8 border-primary">
+                  <h3 className="text-xs font-black text-primary uppercase mb-2 tracking-widest">Recomendación</h3>
                   <p className="text-gray-900 font-bold">{report.recommendation}</p>
                 </div>
               )}
