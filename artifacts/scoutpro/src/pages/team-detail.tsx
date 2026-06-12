@@ -4,6 +4,7 @@ import {
   useGetTeam,
   useListPlayers,
   useDeleteTeam,
+  useCreateReport,
   useListTeamMedia,
   useListReports,
   getListTeamsQueryKey,
@@ -15,11 +16,15 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil, Plus,
   Image as ImageIcon, Video, BarChart2, ClipboardList, FileText, TrendingUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -56,7 +61,43 @@ export default function TeamDetail() {
   });
 
   const deleteTeam = useDeleteTeam();
+  const createReport = useCreateReport();
   const [sortBy, setSortBy] = useState<"name" | "jersey" | "position">("name");
+
+  const [quickStat, setQuickStat] = useState<{ playerId: number; name: string } | null>(null);
+  const [qs, setQs] = useState({ pts: "", reb: "", ast: "", stl: "", blk: "", to: "", min: "" });
+
+  const openQuickStat = (playerId: number, name: string) => {
+    setQuickStat({ playerId, name });
+    setQs({ pts: "", reb: "", ast: "", stl: "", blk: "", to: "", min: "" });
+  };
+
+  const handleSaveQuickStat = () => {
+    if (!quickStat) return;
+    const today = new Date().toISOString().split("T")[0];
+    createReport.mutate({
+      data: {
+        playerId: quickStat.playerId,
+        scoutName: "Equipo",
+        rating: 5,
+        date: today,
+        points: qs.pts ? parseInt(qs.pts) : null,
+        rebounds: qs.reb ? parseInt(qs.reb) : null,
+        assists: qs.ast ? parseInt(qs.ast) : null,
+        steals: qs.stl ? parseInt(qs.stl) : null,
+        blocks: qs.blk ? parseInt(qs.blk) : null,
+        turnovers: qs.to ? parseInt(qs.to) : null,
+        minutesPlayed: qs.min ? parseInt(qs.min) : null,
+      },
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
+        toast({ title: "Estadística añadida" });
+        setQuickStat(null);
+      },
+      onError: () => toast({ title: "Error al guardar", variant: "destructive" }),
+    });
+  };
 
   const videos = (allMedia ?? []).filter((m) => m.category === "video");
   const systems = (allMedia ?? []).filter((m) => m.category === "system");
@@ -304,7 +345,7 @@ export default function TeamDetail() {
               <CardTitle className="flex items-center gap-2 text-base">
                 <TrendingUp className="h-4 w-4 text-primary" /> Estadísticas por Jugador
               </CardTitle>
-              <span className="text-[11px] text-muted-foreground">Promedio por partido (de informes)</span>
+              <span className="text-[11px] text-muted-foreground">Promedio por partido · pulsa <Plus className="h-3 w-3 inline" /> para añadir</span>
             </CardHeader>
             <CardContent>
               {!players || players.length === 0 ? (
@@ -326,6 +367,7 @@ export default function TeamDetail() {
                         <th className="text-center py-2.5 px-2 font-medium">MIN</th>
                         <th className="text-center py-2.5 px-2 font-medium text-primary">VAL</th>
                         <th className="text-center py-2.5 pl-2 font-medium text-muted-foreground/60">Part</th>
+                        <th className="w-8" />
                       </tr>
                     </thead>
                     <tbody>
@@ -366,6 +408,15 @@ export default function TeamDetail() {
                             <td className="text-center py-2.5 px-2">{avg(s?.min ?? 0)}</td>
                             <td className="text-center py-2.5 px-2 font-semibold text-primary">{avg(s?.val ?? 0)}</td>
                             <td className="text-center py-2.5 pl-2 text-muted-foreground text-xs">{n || "—"}</td>
+                            <td className="text-center py-2.5 pl-1">
+                              <button
+                                onClick={() => openQuickStat(p.id, p.name)}
+                                title="Añadir estadística"
+                                className="text-muted-foreground/40 hover:text-primary transition p-1 rounded hover:bg-primary/10"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -384,13 +435,14 @@ export default function TeamDetail() {
                           <td className="text-center py-2.5 px-2">{teamTotals.min.toFixed(1)}</td>
                           <td className="text-center py-2.5 px-2 text-primary">{teamTotals.val.toFixed(1)}</td>
                           <td />
+                          <td />
                         </tr>
                       )}
                     </tbody>
                   </table>
                   {Object.keys(playerStatsMap).length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground text-sm mt-4 border-t">
-                      No hay informes de partido para los jugadores de este equipo. Las estadísticas se generan automáticamente al crear informes.
+                    <div className="text-center py-6 text-muted-foreground text-sm mt-4 border-t space-y-2">
+                      <p>Sin estadísticas todavía. Pulsa <Plus className="h-3 w-3 inline" /> junto al jugador para añadir la primera.</p>
                     </div>
                   )}
                 </div>
@@ -557,6 +609,48 @@ export default function TeamDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* ── Quick stats dialog ── */}
+      <Dialog open={!!quickStat} onOpenChange={(open) => { if (!open) setQuickStat(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Añadir estadística — {quickStat?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="grid grid-cols-4 gap-3">
+              {([
+                { key: "pts", label: "PTS" },
+                { key: "min", label: "MIN" },
+                { key: "reb", label: "REB" },
+                { key: "ast", label: "AST" },
+                { key: "stl", label: "ROB" },
+                { key: "blk", label: "TAP" },
+                { key: "to", label: "PÉR" },
+              ] as const).map(({ key, label }) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block text-center">{label}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={qs[key]}
+                    onChange={(e) => setQs((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder="0"
+                    className="text-center px-1"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground/70 text-center">Fecha: hoy · Se guarda como informe rápido</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setQuickStat(null)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSaveQuickStat} disabled={createReport.isPending}>
+              {createReport.isPending && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

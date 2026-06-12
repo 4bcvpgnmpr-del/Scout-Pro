@@ -33,6 +33,21 @@ export const TEAM_SECTIONS: { key: TeamSection; label: string; icon: React.Eleme
   { key: "highlights", label: "Highlights", icon: Sparkles },
 ];
 
+const VIDEO_CATS: string[] = ["video", "video_partido", "video_rival", "video_propio"];
+
+const TIPO_OPTIONS = [
+  { value: "video_partido", label: "Partido" },
+  { value: "video_rival", label: "Scouting Rival" },
+  { value: "video_propio", label: "Scouting Propio" },
+] as const;
+
+const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
+  video_partido: { label: "Partido", cls: "bg-purple-500/80 text-white" },
+  video_rival: { label: "S. Rival", cls: "bg-red-500/80 text-white" },
+  video_propio: { label: "S. Propio", cls: "bg-emerald-500/80 text-white" },
+  video: { label: "Vídeo", cls: "bg-gray-500/70 text-white" },
+};
+
 async function uploadFile(file: File): Promise<string> {
   const metaRes = await fetch("/api/storage/uploads/request-url", {
     method: "POST",
@@ -81,6 +96,7 @@ function SmartMedia({ url }: { url: string }) {
 // ─── Video / Highlight card ──────────────────────────────────────────────────
 function VideoCard({ media, onDelete }: { media: TeamMedia; onDelete: () => void }) {
   const embed = media.url && media.sourceType === "link" ? toEmbedUrl(media.url) : null;
+  const badge = TIPO_BADGE[media.category];
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
       <div className="aspect-video bg-black relative">
@@ -94,14 +110,24 @@ function VideoCard({ media, onDelete }: { media: TeamMedia; onDelete: () => void
             <Link2 className="h-4 w-4" /> Abrir enlace
           </a>
         ) : null}
+        {badge && (
+          <div className="absolute top-2 left-2">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
+          </div>
+        )}
       </div>
-      <div className="flex items-center justify-between gap-2 p-3">
-        <span className="font-semibold text-sm text-gray-800 truncate">
-          {media.title || (media.sourceType === "link" ? "Enlace" : "Vídeo")}
-        </span>
-        <button onClick={onDelete} className="text-gray-300 hover:text-red-500 transition flex-shrink-0">
-          <Trash2 className="h-4 w-4" />
-        </button>
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-semibold text-sm text-gray-800 truncate">
+            {media.title || (media.sourceType === "link" ? "Enlace" : "Vídeo")}
+          </span>
+          <button onClick={onDelete} className="text-gray-300 hover:text-red-500 transition flex-shrink-0 mt-0.5">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+        {media.description && (
+          <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-3">{media.description}</p>
+        )}
       </div>
     </div>
   );
@@ -116,11 +142,17 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
   });
   const createMedia = useCreateTeamMedia();
   const deleteMedia = useDeleteTeamMedia();
-  const items = (allMedia ?? []).filter((m) => m.category === category);
+
+  const isVideoSection = category === "video";
+  const items = (allMedia ?? []).filter((m) =>
+    isVideoSection ? VIDEO_CATS.includes(m.category) : m.category === category
+  );
 
   const [mode, setMode] = useState<"link" | "upload">("link");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [videoTipo, setVideoTipo] = useState<string>("video_partido");
   const [sysDesc, setSysDesc] = useState("");
   const [sysFile, setSysFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -161,14 +193,28 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
     setUploading(true);
     try {
       const path = await uploadFile(file);
-      create({ category, url: path, sourceType: "upload", title: title.trim() || undefined }, () => setTitle(""));
+      const effectiveCategory = isVideoSection ? (videoTipo as MediaCategory) : category;
+      create({
+        category: effectiveCategory,
+        url: path,
+        sourceType: "upload",
+        title: title.trim() || undefined,
+        description: isVideoSection && notes.trim() ? notes.trim() : undefined,
+      }, () => { setTitle(""); setNotes(""); });
     } catch { toast({ title: "Error al subir vídeo", variant: "destructive" }); }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const handleAddLink = () => {
     if (!url.trim()) return;
-    create({ category, url: url.trim(), sourceType: "link", title: title.trim() || undefined }, () => { setUrl(""); setTitle(""); });
+    const effectiveCategory = isVideoSection ? (videoTipo as MediaCategory) : category;
+    create({
+      category: effectiveCategory,
+      url: url.trim(),
+      sourceType: "link",
+      title: title.trim() || undefined,
+      description: isVideoSection && notes.trim() ? notes.trim() : undefined,
+    }, () => { setUrl(""); setTitle(""); setNotes(""); });
   };
 
   const handleAddSystem = async () => {
@@ -202,8 +248,23 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
         </div>
       )}
 
-      {(category === "video" || category === "highlight") && (
+      {(isVideoSection || category === "highlight") && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+          {/* Tipo selector — only for video section */}
+          {isVideoSection && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tipo de vídeo</p>
+              <div className="flex gap-2 flex-wrap">
+                {TIPO_OPTIONS.map(({ value, label }) => (
+                  <button key={value} onClick={() => setVideoTipo(value)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${videoTipo === value ? "bg-orange-100 text-orange-600 ring-1 ring-orange-300" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Link / Upload mode toggle */}
           <div className="flex gap-2">
             <button onClick={() => setMode("link")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${mode === "link" ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
@@ -215,6 +276,12 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
             </button>
           </div>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título (opcional)" className={inputCls} />
+          {/* Notes textarea — only for video section */}
+          {isVideoSection && (
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notas (opcional): contexto, observaciones tácticas, jugadas a destacar…"
+              className={`${inputCls} h-20 resize-none`} />
+          )}
           {mode === "link" ? (
             <div className="flex flex-col sm:flex-row gap-2">
               <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=… o vimeo.com/…" className={`${inputCls} sm:flex-1`} />

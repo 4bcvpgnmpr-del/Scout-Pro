@@ -3,11 +3,21 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, Plus, Users, TrendingUp, ArrowRight, Search } from "lucide-react";
+import { Star, Plus, Users, TrendingUp, ArrowRight, Search, Film, X } from "lucide-react";
 import { useListPlayers, useListTeams, useListReports, getListPlayersQueryKey, getListReportsQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+interface PlayerHL { id: string; url: string; title: string; addedAt: string }
+function getHLs(pid: number): PlayerHL[] {
+  try { return JSON.parse(localStorage.getItem(`sp-hl-${pid}`) ?? "[]") as PlayerHL[]; }
+  catch { return []; }
+}
+function saveHLs(pid: number, hls: PlayerHL[]) {
+  localStorage.setItem(`sp-hl-${pid}`, JSON.stringify(hls));
+}
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 
@@ -126,6 +136,43 @@ export default function Fichajes() {
     setNationalityFilter("");
     setTipoFilter("ALL");
     setSearch("");
+  };
+
+  const [hlPid, setHlPid] = useState<number | null>(null);
+  const [hlItems, setHlItems] = useState<PlayerHL[]>([]);
+  const [hlUrl, setHlUrl] = useState("");
+  const [hlTitle, setHlTitle] = useState("");
+  const [hlVersion, setHlVersion] = useState(0);
+
+  const hlCountMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    filteredPlayers.forEach((p) => { map[p.id] = getHLs(p.id).length; });
+    return map;
+  }, [filteredPlayers, hlVersion]);
+
+  const openHlDialog = (e: React.MouseEvent, pid: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setHlPid(pid);
+    setHlItems(getHLs(pid));
+    setHlUrl("");
+    setHlTitle("");
+  };
+
+  const addHL = () => {
+    if (!hlUrl.trim() || hlPid == null) return;
+    const newItems: PlayerHL[] = [...hlItems, { id: Date.now().toString(), url: hlUrl.trim(), title: hlTitle.trim(), addedAt: new Date().toISOString() }];
+    saveHLs(hlPid, newItems);
+    setHlItems(newItems);
+    setHlUrl("");
+    setHlTitle("");
+  };
+
+  const deleteHL = (id: string) => {
+    if (hlPid == null) return;
+    const newItems = hlItems.filter((h) => h.id !== id);
+    saveHLs(hlPid, newItems);
+    setHlItems(newItems);
   };
 
   return (
@@ -270,13 +317,14 @@ export default function Fichajes() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="hidden sm:grid grid-cols-[auto_1fr_80px_80px_120px_100px_auto] items-center gap-3 px-3 pb-1 text-[11px] text-muted-foreground uppercase tracking-wider border-b">
+              <div className="hidden sm:grid grid-cols-[auto_1fr_80px_80px_120px_100px_40px_auto] items-center gap-3 px-3 pb-1 text-[11px] text-muted-foreground uppercase tracking-wider border-b">
                 <div className="w-10" />
                 <div>Jugador</div>
                 <div>Pos</div>
                 <div>Edad</div>
                 <div>Nación / Tipo</div>
                 <div>VAL</div>
+                <div className="text-center w-10">HL</div>
                 <div className="w-5" />
               </div>
               {filteredPlayers.map((p) => {
@@ -285,7 +333,7 @@ export default function Fichajes() {
                 const tipo = playerTipo(p.nationality);
                 return (
                   <Link key={p.id} href={`/players/${p.id}`}>
-                    <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_80px_80px_120px_100px_auto] items-center gap-3 p-3 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
+                    <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_80px_80px_120px_100px_40px_auto] items-center gap-3 p-3 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
                       <Avatar className="h-10 w-10">
                         {p.photoUrl && <AvatarImage src={p.photoUrl} alt={p.name} className="object-cover" />}
                         <AvatarFallback className="bg-primary/10 text-primary font-display text-sm">
@@ -317,6 +365,18 @@ export default function Fichajes() {
                       <div className="hidden sm:block">
                         <ValStars rating={val} />
                       </div>
+                      <button
+                        onClick={(e) => openHlDialog(e, p.id)}
+                        title="Highlights del jugador"
+                        className="hidden sm:flex items-center justify-center relative text-muted-foreground/40 hover:text-primary transition"
+                      >
+                        <Film className="h-4 w-4" />
+                        {(hlCountMap[p.id] ?? 0) > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-primary text-[9px] font-bold text-primary-foreground rounded-full flex items-center justify-center">
+                            {hlCountMap[p.id]}
+                          </span>
+                        )}
+                      </button>
                       <ArrowRight className="hidden sm:block h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </Link>
@@ -326,6 +386,64 @@ export default function Fichajes() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Highlights dialog ── */}
+      <Dialog open={hlPid !== null} onOpenChange={(open) => { if (!open) { setHlPid(null); setHlVersion((v) => v + 1); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Film className="h-4 w-4 text-primary" />
+              Highlights · {filteredPlayers.find((p) => p.id === hlPid)?.name ?? "Jugador"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Add form */}
+            <div className="bg-muted/30 rounded-lg p-3 space-y-2 border">
+              <Input
+                value={hlTitle}
+                onChange={(e) => setHlTitle(e.target.value)}
+                placeholder="Título (opcional)"
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <Input
+                  value={hlUrl}
+                  onChange={(e) => setHlUrl(e.target.value)}
+                  placeholder="URL de YouTube, Vimeo o enlace directo…"
+                  className="text-sm flex-1"
+                  onKeyDown={(e) => { if (e.key === "Enter") addHL(); }}
+                />
+                <Button size="sm" onClick={addHL} disabled={!hlUrl.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {/* List */}
+            {hlItems.length === 0 ? (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                Sin highlights todavía. Añade un enlace arriba.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {hlItems.map((h) => (
+                  <div key={h.id} className="flex items-center gap-2 p-2.5 border rounded-lg bg-card">
+                    <Film className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      {h.title && <div className="text-sm font-medium truncate">{h.title}</div>}
+                      <a href={h.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block">
+                        {h.url}
+                      </a>
+                    </div>
+                    <button onClick={() => deleteHL(h.id)} className="text-muted-foreground/40 hover:text-destructive transition shrink-0">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

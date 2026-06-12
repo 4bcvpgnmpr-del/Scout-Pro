@@ -14,4 +14,7 @@ export const TeamMediaInputCategory = {
   video: 'video',
   system: 'system',
   highlight: 'highlight',
+  video_partido: 'video_partido',
+  video_rival: 'video_rival',
+  video_propio: 'video_propio',
 } as const;

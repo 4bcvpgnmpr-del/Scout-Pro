@@ -143,7 +143,7 @@ export const ListTeamMediaParams = zod.object({
 export const ListTeamMediaResponseItem = zod.object({
   "id": zod.number(),
   "teamId": zod.number(),
-  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight', 'video_partido', 'video_rival', 'video_propio']),
   "title": zod.string().nullish(),
   "description": zod.string().nullish(),
   "url": zod.string().nullish(),
@@ -161,7 +161,7 @@ export const CreateTeamMediaParams = zod.object({
 })
 
 export const CreateTeamMediaBody = zod.object({
-  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight', 'video_partido', 'video_rival', 'video_propio']),
   "title": zod.string().optional(),
   "description": zod.string().optional(),
   "url": zod.string().optional(),
@@ -178,7 +178,7 @@ export const UpdateTeamMediaParams = zod.object({
 })
 
 export const UpdateTeamMediaBody = zod.object({
-  "category": zod.enum(['photo', 'video', 'system', 'highlight']).optional(),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight', 'video_partido', 'video_rival', 'video_propio']).optional(),
   "title": zod.string().optional(),
   "description": zod.string().optional(),
   "url": zod.string().optional(),
@@ -188,7 +188,7 @@ export const UpdateTeamMediaBody = zod.object({
 export const UpdateTeamMediaResponse = zod.object({
   "id": zod.number(),
   "teamId": zod.number(),
-  "category": zod.enum(['photo', 'video', 'system', 'highlight']),
+  "category": zod.enum(['photo', 'video', 'system', 'highlight', 'video_partido', 'video_rival', 'video_propio']),
   "title": zod.string().nullish(),
   "description": zod.string().nullish(),
   "url": zod.string().nullish(),

@@ -692,7 +692,7 @@ components:
           type: integer
         category:
           type: string
-          enum: [photo, video, system, highlight]
+          enum: [photo, video, system, highlight, video_partido, video_rival, video_propio]
         title:
           type: ["string", "null"]
         description:
@@ -711,7 +711,7 @@ components:
       properties:
         category:
           type: string
-          enum: [photo, video, system, highlight]
+          enum: [photo, video, system, highlight, video_partido, video_rival, video_propio]
         title:
           type: string
         description:
@@ -727,7 +727,7 @@ components:
       properties:
         category:
           type: string
-          enum: [photo, video, system, highlight]
+          enum: [photo, video, system, highlight, video_partido, video_rival, video_propio]
         title:
           type: string
         description:

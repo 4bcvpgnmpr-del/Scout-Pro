@@ -3,10 +3,12 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Video, Film, Layers, Sparkles, ArrowRight, Plus } from "lucide-react";
+import { Video, Film, Layers, Sparkles, ArrowRight, Plus, Eye, Shield } from "lucide-react";
 import { useListTeams, useListTeamMedia, getListTeamsQueryKey } from "@workspace/api-client-react";
 
-type Category = "video" | "system" | "highlight";
+type Category = "video" | "video_partido" | "video_rival" | "video_propio" | "system" | "highlight";
+
+const VIDEO_CATS = new Set(["video", "video_partido", "video_rival", "video_propio"]);
 
 function toEmbedUrl(url: string): string | null {
   try {
@@ -28,6 +30,13 @@ function toEmbedUrl(url: string): string | null {
   return null;
 }
 
+const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
+  video_partido: { label: "Partido", cls: "bg-purple-500/80 text-white" },
+  video_rival: { label: "S. Rival", cls: "bg-red-500/80 text-white" },
+  video_propio: { label: "S. Propio", cls: "bg-emerald-500/80 text-white" },
+  video: { label: "Vídeo", cls: "bg-gray-500/70 text-white" },
+};
+
 function TeamVideos({
   teamId,
   teamName,
@@ -42,8 +51,9 @@ function TeamVideos({
   const { data: media, isLoading } = useListTeamMedia(teamId);
   const videos = useMemo(() => {
     const all = media ?? [];
-    if (activeCategory) return all.filter((m) => m.category === activeCategory);
-    return all.filter((m) => m.category === "video" || m.category === "highlight" || m.category === "system");
+    if (!activeCategory) return all.filter((m) => VIDEO_CATS.has(m.category) || m.category === "highlight" || m.category === "system");
+    if (VIDEO_CATS.has(activeCategory)) return all.filter((m) => m.category === activeCategory);
+    return all.filter((m) => m.category === activeCategory);
   }, [media, activeCategory]);
 
   if (!isLoading && videos.length === 0) return null;
@@ -76,6 +86,7 @@ function TeamVideos({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {videos.slice(0, 8).map((v) => {
             const embed = v.url ? toEmbedUrl(v.url) : null;
+            const badge = TIPO_BADGE[v.category];
             return (
               <div key={v.id} className="rounded-lg overflow-hidden border bg-card aspect-video relative group">
                 {embed ? (
@@ -92,6 +103,11 @@ function TeamVideos({
                     {v.title}
                   </div>
                 )}
+                {badge && (
+                  <div className="absolute top-1.5 left-1.5">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
+                  </div>
+                )}
                 {v.category === "highlight" && (
                   <div className="absolute top-1.5 left-1.5">
                     <span className="text-[10px] font-bold bg-amber-400/90 text-black px-1.5 py-0.5 rounded flex items-center gap-0.5">
@@ -101,9 +117,7 @@ function TeamVideos({
                 )}
                 {v.category === "system" && (
                   <div className="absolute top-1.5 left-1.5">
-                    <span className="text-[10px] font-bold bg-blue-400/90 text-black px-1.5 py-0.5 rounded">
-                      SIS
-                    </span>
+                    <span className="text-[10px] font-bold bg-blue-400/90 text-black px-1.5 py-0.5 rounded">SIS</span>
                   </div>
                 )}
               </div>
@@ -115,8 +129,10 @@ function TeamVideos({
   );
 }
 
-const CATEGORY_OPTIONS: { value: Category | null; icon: React.FC<{ className?: string }>; label: string; desc: string; activeClass: string }[] = [
-  { value: "video", icon: Film, label: "Vídeos de partido", desc: "Grabaciones y análisis tácticos", activeClass: "border-purple-500 bg-purple-500/10" },
+const CATEGORY_OPTIONS: { value: Category; icon: React.FC<{ className?: string }>; label: string; desc: string; activeClass: string }[] = [
+  { value: "video_partido", icon: Film, label: "Partidos", desc: "Grabaciones de partidos", activeClass: "border-purple-500 bg-purple-500/10" },
+  { value: "video_rival", icon: Eye, label: "Scouting Rival", desc: "Análisis del equipo rival", activeClass: "border-red-500 bg-red-500/10" },
+  { value: "video_propio", icon: Shield, label: "Scouting Propio", desc: "Análisis del propio equipo", activeClass: "border-emerald-500 bg-emerald-500/10" },
   { value: "system", icon: Layers, label: "Sistemas", desc: "Jugadas y sistemas del equipo", activeClass: "border-blue-500 bg-blue-500/10" },
   { value: "highlight", icon: Sparkles, label: "Highlights", desc: "Mejores jugadas por jugador", activeClass: "border-amber-500 bg-amber-500/10" },
 ];
@@ -139,13 +155,13 @@ export default function Videos() {
         </Link>
       </div>
 
-      {/* Category filter chips — clicking filters the video list */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Category filter chips */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {CATEGORY_OPTIONS.map(({ value, icon: Icon, label, desc, activeClass }) => {
           const isActive = activeCategory === value;
           return (
             <button
-              key={label}
+              key={value}
               type="button"
               onClick={() => setActiveCategory(isActive ? null : value)}
               className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
@@ -218,7 +234,7 @@ export default function Videos() {
               ))}
               <div className="pt-4 border-t text-center">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Para subir vídeos, accede al equipo correspondiente y ve a la pestaña de Vídeos, Sistemas o Highlights.
+                  Para subir vídeos, accede al equipo y ve a la pestaña Vídeos.
                 </p>
                 <Link href="/equipos">
                   <Button variant="outline" size="sm" className="font-display uppercase tracking-wide text-xs">
