@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil, Plus,
-  Image as ImageIcon, Video, BarChart2, ClipboardList, FileText, TrendingUp,
+  Image as ImageIcon, Video, BarChart2, ClipboardList, FileText, TrendingUp, Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
@@ -213,7 +213,7 @@ export default function TeamDetail() {
         </div>
       </div>
 
-      {/* Tabs — Highlights removed */}
+      {/* Tabs */}
       <Tabs defaultValue="plantilla">
         <TabsList className="w-full justify-start h-auto flex-wrap gap-1">
           <TabsTrigger value="plantilla" className="flex items-center gap-1.5">
@@ -230,6 +230,9 @@ export default function TeamDetail() {
           </TabsTrigger>
           <TabsTrigger value="sistemas" className="flex items-center gap-1.5">
             <ClipboardList className="h-3.5 w-3.5" /> Sistemas
+          </TabsTrigger>
+          <TabsTrigger value="highlights" className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Highlights
           </TabsTrigger>
           <TabsTrigger value="informe" className="flex items-center gap-1.5">
             <FileText className="h-3.5 w-3.5" /> Informe PDF
@@ -455,6 +458,13 @@ export default function TeamDetail() {
         <TabsContent value="sistemas" className="mt-4">
           <div className="bg-white rounded-xl p-5 border">
             <TeamMediaSection teamId={teamId} category="system" />
+          </div>
+        </TabsContent>
+
+        {/* ── Highlights ────────────────────────────────── */}
+        <TabsContent value="highlights" className="mt-4">
+          <div className="bg-white rounded-xl p-5 border">
+            <TeamMediaSection teamId={teamId} category="highlight" />
           </div>
         </TabsContent>
 

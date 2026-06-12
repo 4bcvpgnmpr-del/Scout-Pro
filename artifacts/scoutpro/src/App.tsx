@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import { SubLayout } from "@/components/sub-layout";
 
 import Dashboard from "@/pages/dashboard";
+import Scout from "@/pages/scout";
 import Players from "@/pages/players";
 import Teams from "@/pages/teams";
 import Games from "@/pages/games";
@@ -51,6 +52,9 @@ function Router() {
       {/* ── Layout pages ─────────────────────────────────────────── */}
       <Route path="/">
         <Layout><Dashboard /></Layout>
+      </Route>
+      <Route path="/scout">
+        <Scout />
       </Route>
       <Route path="/equipos">
         <Layout><Teams /></Layout>

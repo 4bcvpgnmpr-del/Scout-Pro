@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Star, Video, BookOpen, UserCog, Settings, Menu, X,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X, Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,7 @@ const navGroups = [
       { name: "Equipos", href: "/equipos", icon: Shield },
       { name: "Jugadores", href: "/jugadores", icon: Users },
       { name: "Fichajes", href: "/fichajes", icon: Star },
+      { name: "Vista Scouting", href: "/scout", icon: Swords },
     ],
   },
   {
