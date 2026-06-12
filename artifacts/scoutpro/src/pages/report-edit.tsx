@@ -26,8 +26,6 @@ export default function ReportEdit() {
     updateReport.mutate({
       id: reportId,
       data: {
-        playerId: parseInt(data.playerId),
-        gameId: data.gameId ? parseInt(data.gameId) : null,
         scoutName: data.scoutName,
         date: data.date,
         rating: parseInt(data.rating),

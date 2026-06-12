@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
@@ -46,12 +45,12 @@ export default function ReportDetail() {
   const deleteReport = useDeleteReport();
 
   const handleDelete = () => {
-    if (!confirm("Delete this scouting report?")) return;
+    if (!confirm("¿Eliminar este informe de scouting? Esta acción no se puede deshacer.")) return;
     deleteReport.mutate({ id: reportId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-        toast({ title: "Report deleted" });
+        toast({ title: "Informe eliminado" });
         setLocation("/reports");
       },
     });
@@ -64,7 +63,7 @@ export default function ReportDetail() {
     </div>
   );
 
-  if (!report) return <div className="text-muted-foreground py-12 text-center">Report not found.</div>;
+  if (!report) return <div className="text-muted-foreground py-12 text-center">Informe no encontrado.</div>;
 
   const fgPct = report.fieldGoalsAttempted ? ((report.fieldGoalsMade || 0) / report.fieldGoalsAttempted * 100).toFixed(1) + "%" : null;
   const threePct = report.threesAttempted ? ((report.threesMade || 0) / report.threesAttempted * 100).toFixed(1) + "%" : null;
@@ -80,7 +79,7 @@ export default function ReportDetail() {
               <h1 className="text-4xl uppercase italic hover:text-primary transition-colors cursor-pointer">{report.playerName}</h1>
             </Link>
             <div className="flex items-center gap-3 mt-1 text-muted-foreground text-sm">
-              <span>Scouted by <strong className="text-foreground">{report.scoutName}</strong></span>
+              <span>Analizado por <strong className="text-foreground">{report.scoutName}</strong></span>
               <span>·</span>
               <span>{report.date}</span>
             </div>
@@ -103,45 +102,45 @@ export default function ReportDetail() {
       <div ref={contentRef}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <Card>
-          <CardHeader><CardTitle>Component Ratings</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Valoraciones</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <RatingBar label="Offense" value={report.offensiveRating} icon={TrendingUp} />
-            <RatingBar label="Defense" value={report.defensiveRating} icon={Shield} />
-            <RatingBar label="Athleticism" value={report.athleticismRating} icon={Zap} />
+            <RatingBar label="Ataque" value={report.offensiveRating} icon={TrendingUp} />
+            <RatingBar label="Defensa" value={report.defensiveRating} icon={Shield} />
+            <RatingBar label="Atletismo" value={report.athleticismRating} icon={Zap} />
             <RatingBar label="Basketball IQ" value={report.iQRating} icon={Brain} />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Game Stats</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Estadísticas del partido</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-2">
               <StatChip label="PTS" value={report.points} />
               <StatChip label="REB" value={report.rebounds} />
               <StatChip label="AST" value={report.assists} />
-              <StatChip label="STL" value={report.steals} />
-              <StatChip label="BLK" value={report.blocks} />
-              <StatChip label="TO" value={report.turnovers} />
+              <StatChip label="ROB" value={report.steals} />
+              <StatChip label="TAP" value={report.blocks} />
+              <StatChip label="PÉR" value={report.turnovers} />
               <StatChip label="MIN" value={report.minutesPlayed} />
-              {fgPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{fgPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">FG%</div></div>}
-              {threePct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{threePct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">3P%</div></div>}
-              {ftPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{ftPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">FT%</div></div>}
+              {fgPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{fgPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div></div>}
+              {threePct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{threePct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div></div>}
+              {ftPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{ftPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div></div>}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {(report.strengths || report.weaknesses) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
           {report.strengths && (
             <Card className="border-l-4 border-l-primary">
-              <CardHeader><CardTitle>Strengths</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Fortalezas</CardTitle></CardHeader>
               <CardContent><p className="text-muted-foreground leading-relaxed">{report.strengths}</p></CardContent>
             </Card>
           )}
           {report.weaknesses && (
             <Card className="border-l-4 border-l-destructive">
-              <CardHeader><CardTitle>Weaknesses</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Debilidades</CardTitle></CardHeader>
               <CardContent><p className="text-muted-foreground leading-relaxed">{report.weaknesses}</p></CardContent>
             </Card>
           )}
@@ -149,15 +148,15 @@ export default function ReportDetail() {
       )}
 
       {report.summary && (
-        <Card>
-          <CardHeader><CardTitle>Scout Summary</CardTitle></CardHeader>
+        <Card className="mt-5">
+          <CardHeader><CardTitle>Resumen del scout</CardTitle></CardHeader>
           <CardContent><p className="text-muted-foreground leading-relaxed">{report.summary}</p></CardContent>
         </Card>
       )}
 
       {report.recommendation && (
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader><CardTitle>Recommendation</CardTitle></CardHeader>
+        <Card className="mt-5 bg-primary/5 border-primary/20">
+          <CardHeader><CardTitle>Recomendación</CardTitle></CardHeader>
           <CardContent><p className="font-semibold text-primary">{report.recommendation}</p></CardContent>
         </Card>
       )}

@@ -33,12 +33,12 @@ export default function PlayerDetail() {
   const deletePlayer = useDeletePlayer();
 
   const handleDelete = () => {
-    if (!confirm(`Delete ${player?.name}? This cannot be undone.`)) return;
+    if (!confirm(`¿Eliminar a ${player?.name}? Esta acción no se puede deshacer.`)) return;
     deletePlayer.mutate({ id: playerId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPlayersQueryKey() });
-        toast({ title: "Player deleted" });
-        setLocation("/players");
+        toast({ title: "Jugador eliminado" });
+        setLocation("/jugadores");
       },
     });
   };
@@ -52,7 +52,7 @@ export default function PlayerDetail() {
     </div>
   );
 
-  if (!player) return <div className="text-muted-foreground py-12 text-center">Player not found.</div>;
+  if (!player) return <div className="text-muted-foreground py-12 text-center">Jugador no encontrado.</div>;
 
   const fgPct = stats?.avgFieldGoalPct != null ? (Number(stats.avgFieldGoalPct) * 100).toFixed(1) + "%" : null;
   const threePct = stats?.avgThreePointPct != null ? (Number(stats.avgThreePointPct) * 100).toFixed(1) + "%" : null;
@@ -62,7 +62,7 @@ export default function PlayerDetail() {
     <div ref={contentRef} className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/players">
+          <Link href="/jugadores">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
           <Avatar className="h-20 w-20 border-4 border-primary/20">
@@ -74,13 +74,13 @@ export default function PlayerDetail() {
             <h1 className="text-4xl uppercase italic">{player.name}</h1>
             <div className="flex items-center gap-3 mt-1">
               <Badge className="font-mono font-bold">{player.position}</Badge>
-              <span className="text-muted-foreground">{player.teamName || "Free Agent"}</span>
+              <span className="text-muted-foreground">{player.teamName || "Agente libre"}</span>
               {player.jerseyNumber != null && <span className="text-primary font-display text-lg">#{player.jerseyNumber}</span>}
             </div>
             <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-              {player.age && <span>{player.age} yrs</span>}
+              {player.age && <span>{player.age} años</span>}
               {player.height && <span>{player.height}</span>}
-              {player.weight && <span>{player.weight} lbs</span>}
+              {player.weight && <span>{player.weight} kg</span>}
               {player.nationality && <span>{player.nationality}</span>}
             </div>
           </div>
@@ -103,20 +103,20 @@ export default function PlayerDetail() {
 
       {stats && stats.gamesPlayed > 0 && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Season Averages ({stats.gamesPlayed} games)</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Promedios de temporada ({stats.gamesPlayed} partidos)</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               <StatBox label="PTS" value={Number(stats.avgPoints)} />
               <StatBox label="REB" value={Number(stats.avgRebounds)} />
               <StatBox label="AST" value={Number(stats.avgAssists)} />
-              <StatBox label="STL" value={Number(stats.avgSteals)} />
-              <StatBox label="BLK" value={Number(stats.avgBlocks)} />
+              <StatBox label="ROB" value={Number(stats.avgSteals)} />
+              <StatBox label="TAP" value={Number(stats.avgBlocks)} />
               <StatBox label="MIN" value={Number(stats.avgMinutes)} />
             </div>
             <div className="grid grid-cols-3 gap-3 mt-3">
-              <StatBox label="FG%" value={fgPct} />
-              <StatBox label="3P%" value={threePct} />
-              <StatBox label="FT%" value={ftPct} />
+              <StatBox label="TC%" value={fgPct} />
+              <StatBox label="T3%" value={threePct} />
+              <StatBox label="TL%" value={ftPct} />
             </div>
           </CardContent>
         </Card>
@@ -124,22 +124,22 @@ export default function PlayerDetail() {
 
       {player.notes && (
         <Card>
-          <CardHeader><CardTitle>Scout Notes</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Notas de scouting</CardTitle></CardHeader>
           <CardContent><p className="text-muted-foreground leading-relaxed">{player.notes}</p></CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Scouting Reports</CardTitle>
+          <CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Informes de scouting</CardTitle>
           <span className="text-sm text-muted-foreground">{reports?.length || 0} total</span>
         </CardHeader>
         <CardContent>
           {!reports || reports.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              No reports yet.{" "}
+              Sin informes todavía.{" "}
               <Link href={`/reports/new?playerId=${playerId}`}>
-                <span className="text-primary underline cursor-pointer">Create the first one.</span>
+                <span className="text-primary underline cursor-pointer">Crear el primero.</span>
               </Link>
             </div>
           ) : (
@@ -149,10 +149,10 @@ export default function PlayerDetail() {
                   <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:border-primary transition-colors cursor-pointer group">
                     <div>
                       <div className="font-semibold group-hover:text-primary transition-colors">
-                        {r.date} — by {r.scoutName}
+                        {r.date} — por {r.scoutName}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                        {r.summary || [r.strengths && `Strengths: ${r.strengths}`, r.weaknesses && `Weaknesses: ${r.weaknesses}`].filter(Boolean).join(" · ")}
+                        {r.summary || [r.strengths && `Fortalezas: ${r.strengths}`, r.weaknesses && `Debilidades: ${r.weaknesses}`].filter(Boolean).join(" · ")}
                       </div>
                     </div>
                     <div className="text-2xl font-display text-primary ml-4 px-3 py-1 bg-primary/10 rounded">{r.rating}</div>

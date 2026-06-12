@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
@@ -23,24 +22,24 @@ export default function TeamDetail() {
   const deleteTeam = useDeleteTeam();
 
   const handleDelete = () => {
-    if (!confirm(`Delete ${team?.name}? This cannot be undone.`)) return;
+    if (!confirm(`¿Eliminar ${team?.name}? Esta acción no se puede deshacer.`)) return;
     deleteTeam.mutate({ id: teamId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListTeamsQueryKey() });
-        toast({ title: "Team deleted" });
-        setLocation("/teams");
+        toast({ title: "Equipo eliminado" });
+        setLocation("/equipos");
       },
     });
   };
 
   if (isLoading) return <Skeleton className="h-40 rounded-xl" />;
-  if (!team) return <div className="text-muted-foreground py-12 text-center">Team not found.</div>;
+  if (!team) return <div className="text-muted-foreground py-12 text-center">Equipo no encontrado.</div>;
 
   return (
     <div ref={contentRef} className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/teams"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <Link href="/equipos"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
           <div>
             <h1 className="text-4xl uppercase italic">{team.name}</h1>
             <div className="flex items-center gap-3 mt-1 text-muted-foreground">
@@ -64,14 +63,16 @@ export default function TeamDetail() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Roster</CardTitle>
-          <Link href={`/players/new`}>
-            <Button size="sm" className="font-display tracking-wide uppercase text-xs">Add Player</Button>
+          <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Plantilla</CardTitle>
+          <Link href="/players/new">
+            <Button size="sm" className="font-display tracking-wide uppercase text-xs">Añadir jugador</Button>
           </Link>
         </CardHeader>
         <CardContent>
           {!players || players.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">No players on this team yet.</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No hay jugadores en este equipo todavía.
+            </div>
           ) : (
             <div className="space-y-2">
               {players.map(player => (
