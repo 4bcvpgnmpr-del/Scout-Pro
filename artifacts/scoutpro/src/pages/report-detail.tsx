@@ -1,10 +1,18 @@
 import { useRoute, Link, useLocation } from "wouter";
-import { useGetReport, useDeleteReport, getListReportsQueryKey, getGetReportQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
+import {
+  useGetReport,
+  useGetPlayer,
+  useDeleteReport,
+  getListReportsQueryKey,
+  getGetReportQueryKey,
+  getGetDashboardSummaryQueryKey,
+  getGetPlayerQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 
@@ -41,7 +49,12 @@ export default function ReportDetail() {
   const { toast } = useToast();
 
   const { contentRef, exportPdf, exporting } = useExportPdf(`informe-scouting-${reportId}`);
-  const { data: report, isLoading } = useGetReport(reportId, { query: { enabled: !!reportId, queryKey: getGetReportQueryKey(reportId) } });
+  const { data: report, isLoading } = useGetReport(reportId, {
+    query: { enabled: !!reportId, queryKey: getGetReportQueryKey(reportId) },
+  });
+  const { data: player } = useGetPlayer(report?.playerId ?? 0, {
+    query: { enabled: !!report?.playerId, queryKey: getGetPlayerQueryKey(report?.playerId ?? 0) },
+  });
   const deleteReport = useDeleteReport();
 
   const handleDelete = () => {
@@ -69,24 +82,15 @@ export default function ReportDetail() {
   const threePct = report.threesAttempted ? ((report.threesMade || 0) / report.threesAttempted * 100).toFixed(1) + "%" : null;
   const ftPct = report.freeThrowsAttempted ? ((report.freeThrowsMade || 0) / report.freeThrowsAttempted * 100).toFixed(1) + "%" : null;
 
+  const initials = (name: string) =>
+    name.split(" ").map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-          <div>
-            <Link href={`/players/${report.playerId}`}>
-              <h1 className="text-4xl uppercase italic hover:text-primary transition-colors cursor-pointer">{report.playerName}</h1>
-            </Link>
-            <div className="flex items-center gap-3 mt-1 text-muted-foreground text-sm">
-              <span>Analizado por <strong className="text-foreground">{report.scoutName}</strong></span>
-              <span>·</span>
-              <span>{report.date}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-5xl font-display text-primary bg-primary/10 rounded-xl px-6 py-3">{report.rating}</div>
+    <div className="max-w-3xl space-y-4">
+      {/* Action bar — not included in PDF */}
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        <div className="flex items-center gap-2">
           <Link href={`/reports/${reportId}/edit`}>
             <Button variant="outline" size="icon" title="Editar"><Pencil className="h-4 w-4" /></Button>
           </Link>
@@ -99,67 +103,102 @@ export default function ReportDetail() {
         </div>
       </div>
 
-      <div ref={contentRef}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Card>
-          <CardHeader><CardTitle>Valoraciones</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <RatingBar label="Ataque" value={report.offensiveRating} icon={TrendingUp} />
-            <RatingBar label="Defensa" value={report.defensiveRating} icon={Shield} />
-            <RatingBar label="Atletismo" value={report.athleticismRating} icon={Zap} />
-            <RatingBar label="Basketball IQ" value={report.iQRating} icon={Brain} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Estadísticas del partido</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-2">
-              <StatChip label="PTS" value={report.points} />
-              <StatChip label="REB" value={report.rebounds} />
-              <StatChip label="AST" value={report.assists} />
-              <StatChip label="ROB" value={report.steals} />
-              <StatChip label="TAP" value={report.blocks} />
-              <StatChip label="PÉR" value={report.turnovers} />
-              <StatChip label="MIN" value={report.minutesPlayed} />
-              {fgPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{fgPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div></div>}
-              {threePct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{threePct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div></div>}
-              {ftPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{ftPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div></div>}
+      {/* PDF content — contentRef wraps everything below */}
+      <div ref={contentRef} className="space-y-5">
+        {/* Player header card — always visible, shown prominently in PDF */}
+        <div className="flex items-center gap-5 p-5 rounded-xl border bg-card">
+          <div className="h-20 w-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/30 bg-primary/10 flex items-center justify-center">
+            {player?.photoUrl ? (
+              <img src={player.photoUrl} className="h-full w-full object-cover" crossOrigin="anonymous" />
+            ) : (
+              <User className="h-8 w-8 text-primary/60" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <Link href={`/players/${report.playerId}`}>
+              <h1 className="text-3xl uppercase italic hover:text-primary transition-colors cursor-pointer leading-tight">
+                {report.playerName}
+              </h1>
+            </Link>
+            {player && (
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-mono font-bold">{player.position}</span>
+                {player.teamName && <span>{player.teamName}</span>}
+                {player.age != null && <span>· {player.age} años</span>}
+                {player.nationality && <span>· {player.nationality}</span>}
+              </div>
+            )}
+            <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
+              <span>Analizado por <strong className="text-foreground">{report.scoutName}</strong></span>
+              <span>·</span>
+              <span>{report.date}</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {(report.strengths || report.weaknesses) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-          {report.strengths && (
-            <Card className="border-l-4 border-l-primary">
-              <CardHeader><CardTitle>Fortalezas</CardTitle></CardHeader>
-              <CardContent><p className="text-muted-foreground leading-relaxed">{report.strengths}</p></CardContent>
-            </Card>
-          )}
-          {report.weaknesses && (
-            <Card className="border-l-4 border-l-destructive">
-              <CardHeader><CardTitle>Debilidades</CardTitle></CardHeader>
-              <CardContent><p className="text-muted-foreground leading-relaxed">{report.weaknesses}</p></CardContent>
-            </Card>
-          )}
+          </div>
+          <div className="text-5xl font-display text-primary bg-primary/10 rounded-xl px-5 py-3 shrink-0">
+            {report.rating}
+          </div>
         </div>
-      )}
 
-      {report.summary && (
-        <Card className="mt-5">
-          <CardHeader><CardTitle>Resumen del scout</CardTitle></CardHeader>
-          <CardContent><p className="text-muted-foreground leading-relaxed">{report.summary}</p></CardContent>
-        </Card>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Card>
+            <CardHeader><CardTitle>Valoraciones</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <RatingBar label="Ataque" value={report.offensiveRating} icon={TrendingUp} />
+              <RatingBar label="Defensa" value={report.defensiveRating} icon={Shield} />
+              <RatingBar label="Atletismo" value={report.athleticismRating} icon={Zap} />
+              <RatingBar label="Basketball IQ" value={report.iQRating} icon={Brain} />
+            </CardContent>
+          </Card>
 
-      {report.recommendation && (
-        <Card className="mt-5 bg-primary/5 border-primary/20">
-          <CardHeader><CardTitle>Recomendación</CardTitle></CardHeader>
-          <CardContent><p className="font-semibold text-primary">{report.recommendation}</p></CardContent>
-        </Card>
-      )}
+          <Card>
+            <CardHeader><CardTitle>Estadísticas del partido</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2">
+                <StatChip label="PTS" value={report.points} />
+                <StatChip label="REB" value={report.rebounds} />
+                <StatChip label="AST" value={report.assists} />
+                <StatChip label="ROB" value={report.steals} />
+                <StatChip label="TAP" value={report.blocks} />
+                <StatChip label="PÉR" value={report.turnovers} />
+                <StatChip label="MIN" value={report.minutesPlayed} />
+                {fgPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{fgPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div></div>}
+                {threePct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{threePct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div></div>}
+                {ftPct && <div className="bg-card border rounded-lg p-3 text-center"><div className="text-xl font-display">{ftPct}</div><div className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div></div>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {(report.strengths || report.weaknesses) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {report.strengths && (
+              <Card className="border-l-4 border-l-primary">
+                <CardHeader><CardTitle>Fortalezas</CardTitle></CardHeader>
+                <CardContent><p className="text-muted-foreground leading-relaxed">{report.strengths}</p></CardContent>
+              </Card>
+            )}
+            {report.weaknesses && (
+              <Card className="border-l-4 border-l-destructive">
+                <CardHeader><CardTitle>Debilidades</CardTitle></CardHeader>
+                <CardContent><p className="text-muted-foreground leading-relaxed">{report.weaknesses}</p></CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {report.summary && (
+          <Card>
+            <CardHeader><CardTitle>Resumen del scout</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground leading-relaxed">{report.summary}</p></CardContent>
+          </Card>
+        )}
+
+        {report.recommendation && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader><CardTitle>Recomendación</CardTitle></CardHeader>
+            <CardContent><p className="font-semibold text-primary">{report.recommendation}</p></CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

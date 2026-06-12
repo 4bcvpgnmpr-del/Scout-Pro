@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link } from "wouter";
 import {
   useGetDashboardSummary,
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Shield, FileText, TrendingUp, Trophy, Calendar,
-  Target, Plus, ChevronRight,
+  Plus, ChevronRight, Clock,
 } from "lucide-react";
 import { DIFFICULTY_BADGE, DIFFICULTY_LABEL } from "@/lib/difficulty";
 
@@ -40,6 +40,51 @@ function StatCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function Countdown({ targetDate }: { targetDate: string }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const [y, m, d] = targetDate.split("-").map(Number);
+  const target = new Date(y, m - 1, d, 23, 59, 59);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return <span className="text-primary font-display text-2xl">¡Hoy!</span>;
+  }
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  if (days === 0) {
+    return (
+      <div className="flex items-baseline gap-1">
+        <span className="font-display text-3xl text-primary">{hours}</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wide">h</span>
+      </div>
+    );
+  }
+  if (days === 1) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Clock className="h-4 w-4 text-primary" />
+        <span className="font-display text-2xl text-primary">Mañana</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-baseline gap-1">
+      <span className="font-display text-3xl text-primary">{days}</span>
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">días</span>
+      <span className="font-display text-xl text-primary ml-1">{hours}</span>
+      <span className="text-xs text-muted-foreground uppercase tracking-wide">h</span>
+    </div>
   );
 }
 
@@ -80,7 +125,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 max-w-[1400px]">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-4xl font-display tracking-wide">Dashboard</h1>
@@ -93,7 +137,6 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Stats row */}
       {summaryLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -114,9 +157,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Próximo Partido + Últimos Informes */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Próximo partido */}
         <Card className="lg:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -141,10 +182,19 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between gap-4 py-4">
+                {/* Countdown banner */}
+                <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-4">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider">
+                    <Clock className="h-3.5 w-3.5" />
+                    Faltan
+                  </div>
+                  <Countdown targetDate={nextGame.date} />
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2">
                   <div className="flex-1 text-center">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center mx-auto mb-2">
-                      <span className="font-display text-primary text-base">{initials(nextGame.homeTeam)}</span>
+                    <div className="h-14 w-14 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center mx-auto mb-2">
+                      <span className="font-display text-primary text-sm">{initials(nextGame.homeTeam)}</span>
                     </div>
                     <div className="font-semibold text-sm leading-tight">{nextGame.homeTeam}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">Local</div>
@@ -153,8 +203,8 @@ export default function Dashboard() {
                     <div className="font-display text-2xl text-muted-foreground/40">VS</div>
                   </div>
                   <div className="flex-1 text-center">
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-2">
-                      <span className="font-display text-muted-foreground text-base">{initials(nextGame.awayTeam)}</span>
+                    <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-2">
+                      <span className="font-display text-muted-foreground text-sm">{initials(nextGame.awayTeam)}</span>
                     </div>
                     <div className="font-semibold text-sm leading-tight">{nextGame.awayTeam}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">Visitante</div>
@@ -175,9 +225,9 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Link href="/scouting">
+                    <Link href="/equipos">
                       <Button size="sm" className="font-display uppercase tracking-wide text-xs">
-                        Ver scouting
+                        Ver equipos
                       </Button>
                     </Link>
                     <Link href={`/games/${nextGame.id}/edit`}>
@@ -192,7 +242,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Últimos informes */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -238,14 +287,13 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Accesos Rápidos */}
       <div>
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Accesos Rápidos
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {[
-            { href: "/scouting", icon: Target, label: "Scouting" },
+            { href: "/equipos", icon: Shield, label: "Equipos" },
             { href: "/reports/new", icon: FileText, label: "Nuevo Informe" },
             { href: "/players/new", icon: Users, label: "Nuevo Jugador" },
             { href: "/games/new", icon: Trophy, label: "Nuevo Partido" },
@@ -263,7 +311,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Bottom: upcoming games + position breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2 space-y-0">

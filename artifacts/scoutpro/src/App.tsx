@@ -7,7 +7,6 @@ import { Layout } from "@/components/layout";
 import { SubLayout } from "@/components/sub-layout";
 
 import Dashboard from "@/pages/dashboard";
-import Scout from "@/pages/scout";
 import Players from "@/pages/players";
 import Teams from "@/pages/teams";
 import Games from "@/pages/games";
@@ -83,9 +82,6 @@ function Router() {
       <Route path="/ajustes">
         <Layout><Ajustes /></Layout>
       </Route>
-
-      {/* ── Scout hub — own full-screen layout ───────────────────── */}
-      <Route path="/scouting" component={Scout} />
 
       {/* ── SubLayout: Players ───────────────────────────────────── */}
       <Route path="/players/new">

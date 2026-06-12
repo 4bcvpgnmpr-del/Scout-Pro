@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Target, Star, Video, BookOpen, UserCog, Settings, Menu, X,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -10,7 +10,6 @@ const navGroups = [
   {
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard, exact: true },
-      { name: "Scouting", href: "/scouting", icon: Target },
     ],
   },
   {
@@ -125,7 +124,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-sidebar border-b border-sidebar-border z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
@@ -136,19 +134,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 top-14 bg-sidebar z-40 overflow-y-auto">
           <SidebarContent location={location} onNavClick={() => setMobileOpen(false)} />
         </div>
       )}
 
-      {/* Desktop sidebar */}
       <div className="hidden md:flex w-52 flex-col fixed inset-y-0 left-0 bg-sidebar border-r border-sidebar-border z-30">
         <SidebarContent location={location} />
       </div>
 
-      {/* Page content */}
       <div className="flex-1 md:ml-52 mt-14 md:mt-0">
         <main className="min-h-screen p-6 md:p-8">{children}</main>
       </div>
