@@ -1,12 +1,9 @@
-import { useState, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetTeam,
   useListPlayers,
   useDeleteTeam,
   useListTeamMedia,
-  useCreateTeamMedia,
-  useDeleteTeamMedia,
   getListTeamsQueryKey,
   getGetTeamQueryKey,
   getListPlayersQueryKey,
@@ -16,79 +13,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil,
-  Plus, Video, BarChart2, Settings2, FileText, X, ExternalLink,
+  Image as ImageIcon, Video, BarChart2, ClipboardList, Sparkles, FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExportPdf } from "@/hooks/use-export-pdf";
-
-function embedUrl(url: string): string | null {
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  const vmMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vmMatch) return `https://player.vimeo.com/video/${vmMatch[1]}`;
-  return null;
-}
-
-function VideoCard({ item, onDelete }: { item: { id: number; title?: string | null; url?: string | null }; onDelete: () => void }) {
-  const embed = item.url ? embedUrl(item.url) : null;
-  return (
-    <div className="rounded-xl border bg-card overflow-hidden">
-      {embed ? (
-        <div className="aspect-video w-full">
-          <iframe src={embed} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen />
-        </div>
-      ) : (
-        <div className="aspect-video bg-muted flex items-center justify-center">
-          <Video className="h-8 w-8 text-muted-foreground/40" />
-        </div>
-      )}
-      <div className="p-3 flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{item.title || "Vídeo"}</div>
-          {item.url && (
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
-              <ExternalLink className="h-3 w-3" /> Ver original
-            </a>
-          )}
-        </div>
-        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0" onClick={onDelete}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function SystemCard({ item, onDelete }: { item: { id: number; title?: string | null; description?: string | null; url?: string | null }; onDelete: () => void }) {
-  const embed = item.url ? embedUrl(item.url) : null;
-  return (
-    <div className="rounded-xl border bg-card p-4 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="font-semibold">{item.title || "Sistema"}</div>
-        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0 -mt-1" onClick={onDelete}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-      {item.description && <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>}
-      {embed && (
-        <div className="aspect-video mt-2 rounded-lg overflow-hidden">
-          <iframe src={embed} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen />
-        </div>
-      )}
-      {!embed && item.url && (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-          <ExternalLink className="h-3 w-3" /> Ver recurso
-        </a>
-      )}
-    </div>
-  );
-}
+import { TeamMediaSection } from "@/components/team-scouting";
 
 export default function TeamDetail() {
   const [, params] = useRoute("/teams/:id");
@@ -109,42 +41,11 @@ export default function TeamDetail() {
   const { data: allMedia } = useListTeamMedia(teamId, {
     query: { enabled: !!teamId, queryKey: getListTeamMediaQueryKey(teamId) },
   });
+
   const deleteTeam = useDeleteTeam();
-  const createMedia = useCreateTeamMedia();
-  const deleteMedia = useDeleteTeamMedia();
 
   const videos = (allMedia ?? []).filter((m) => m.category === "video");
   const systems = (allMedia ?? []).filter((m) => m.category === "system");
-
-  const invalidateMedia = () => queryClient.invalidateQueries({ queryKey: getListTeamMediaQueryKey(teamId) });
-
-  const [videoTitle, setVideoTitle] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [sysTitle, setSysTitle] = useState("");
-  const [sysDesc, setSysDesc] = useState("");
-  const [sysUrl, setSysUrl] = useState("");
-  const [addingVideo, setAddingVideo] = useState(false);
-  const [addingSys, setAddingSys] = useState(false);
-
-  const handleAddVideo = () => {
-    if (!videoUrl.trim()) return;
-    createMedia.mutate(
-      { id: teamId, data: { category: "video", title: videoTitle || undefined, url: videoUrl, sourceType: "link" } },
-      { onSuccess: () => { setVideoTitle(""); setVideoUrl(""); setAddingVideo(false); invalidateMedia(); } },
-    );
-  };
-
-  const handleAddSystem = () => {
-    if (!sysTitle.trim()) return;
-    createMedia.mutate(
-      { id: teamId, data: { category: "system", title: sysTitle, description: sysDesc || undefined, url: sysUrl || undefined, sourceType: "link" } },
-      { onSuccess: () => { setSysTitle(""); setSysDesc(""); setSysUrl(""); setAddingSys(false); invalidateMedia(); } },
-    );
-  };
-
-  const handleDeleteMedia = (mediaId: number) => {
-    deleteMedia.mutate({ id: teamId, mediaId }, { onSuccess: invalidateMedia });
-  };
 
   const handleDeleteTeam = () => {
     if (!confirm(`¿Eliminar ${team?.name}? Esta acción no se puede deshacer.`)) return;
@@ -197,6 +98,9 @@ export default function TeamDetail() {
           <TabsTrigger value="plantilla" className="flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5" /> Plantilla
           </TabsTrigger>
+          <TabsTrigger value="fotos" className="flex items-center gap-1.5">
+            <ImageIcon className="h-3.5 w-3.5" /> Fotos
+          </TabsTrigger>
           <TabsTrigger value="videos" className="flex items-center gap-1.5">
             <Video className="h-3.5 w-3.5" /> Vídeos
           </TabsTrigger>
@@ -204,7 +108,10 @@ export default function TeamDetail() {
             <BarChart2 className="h-3.5 w-3.5" /> Estadísticas
           </TabsTrigger>
           <TabsTrigger value="sistemas" className="flex items-center gap-1.5">
-            <Settings2 className="h-3.5 w-3.5" /> Sistemas
+            <ClipboardList className="h-3.5 w-3.5" /> Sistemas
+          </TabsTrigger>
+          <TabsTrigger value="highlights" className="flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Highlights
           </TabsTrigger>
           <TabsTrigger value="informe" className="flex items-center gap-1.5">
             <FileText className="h-3.5 w-3.5" /> Informe PDF
@@ -220,7 +127,7 @@ export default function TeamDetail() {
               </CardTitle>
               <Link href="/players/new">
                 <Button size="sm" className="font-display tracking-wide uppercase text-xs">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Añadir
+                  Añadir jugador
                 </Button>
               </Link>
             </CardHeader>
@@ -234,15 +141,15 @@ export default function TeamDetail() {
                   {players.map((player) => (
                     <Link key={player.id} href={`/players/${player.id}`}>
                       <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary bg-card cursor-pointer group transition-colors">
-                        <Avatar className="h-10 w-10">
+                        <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
                           {player.photoUrl ? (
-                            <img src={player.photoUrl} className="h-full w-full object-cover rounded-full" />
+                            <img src={player.photoUrl} className="h-full w-full object-cover" />
                           ) : (
-                            <AvatarFallback className="bg-primary/10 text-primary font-display">
+                            <span className="font-display text-primary text-sm">
                               {player.name.split(" ").map((n) => n[0]).join("").substring(0, 2)}
-                            </AvatarFallback>
+                            </span>
                           )}
-                        </Avatar>
+                        </div>
                         <div className="flex-1">
                           <div className="font-semibold group-hover:text-primary transition-colors">{player.name}</div>
                           <div className="text-xs text-muted-foreground">
@@ -262,53 +169,18 @@ export default function TeamDetail() {
           </Card>
         </TabsContent>
 
-        {/* ── Vídeos ────────────────────────────────────── */}
-        <TabsContent value="videos" className="mt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Vídeos del equipo · {videos.length}
-            </h2>
-            <Button size="sm" variant="outline" onClick={() => setAddingVideo((v) => !v)}>
-              {addingVideo ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
-              {addingVideo ? "Cancelar" : "Añadir vídeo"}
-            </Button>
+        {/* ── Fotos ─────────────────────────────────────── */}
+        <TabsContent value="fotos" className="mt-4">
+          <div className="bg-white rounded-xl p-5 border">
+            <TeamMediaSection teamId={teamId} category="photo" />
           </div>
+        </TabsContent>
 
-          {addingVideo && (
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <Input
-                  placeholder="Título (opcional)"
-                  value={videoTitle}
-                  onChange={(e) => setVideoTitle(e.target.value)}
-                />
-                <Input
-                  placeholder="URL de YouTube o Vimeo"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                />
-                <Button size="sm" onClick={handleAddVideo} disabled={!videoUrl.trim() || createMedia.isPending}>
-                  {createMedia.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />}
-                  Guardar vídeo
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {videos.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Video className="h-10 w-10 mb-3 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">No hay vídeos todavía. Añade enlaces de YouTube o Vimeo.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {videos.map((v) => (
-                <VideoCard key={v.id} item={v} onDelete={() => handleDeleteMedia(v.id)} />
-              ))}
-            </div>
-          )}
+        {/* ── Vídeos ────────────────────────────────────── */}
+        <TabsContent value="videos" className="mt-4">
+          <div className="bg-white rounded-xl p-5 border">
+            <TeamMediaSection teamId={teamId} category="video" />
+          </div>
         </TabsContent>
 
         {/* ── Estadísticas ──────────────────────────────── */}
@@ -351,17 +223,13 @@ export default function TeamDetail() {
                             {p.jerseyNumber != null ? `#${p.jerseyNumber}` : "—"}
                           </td>
                           <td className="text-center py-2.5 px-3 text-muted-foreground">
-                            {p.age != null ? `${p.age}` : "—"}
+                            {p.age != null ? String(p.age) : "—"}
                           </td>
-                          <td className="text-center py-2.5 px-3 text-muted-foreground">
-                            {p.height ?? "—"}
-                          </td>
+                          <td className="text-center py-2.5 px-3 text-muted-foreground">{p.height ?? "—"}</td>
                           <td className="text-center py-2.5 px-3 text-muted-foreground">
                             {p.weight != null ? `${p.weight} kg` : "—"}
                           </td>
-                          <td className="py-2.5 pl-3 text-muted-foreground">
-                            {p.nationality ?? "—"}
-                          </td>
+                          <td className="py-2.5 pl-3 text-muted-foreground">{p.nationality ?? "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -373,58 +241,17 @@ export default function TeamDetail() {
         </TabsContent>
 
         {/* ── Sistemas ──────────────────────────────────── */}
-        <TabsContent value="sistemas" className="mt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Sistemas del equipo · {systems.length}
-            </h2>
-            <Button size="sm" variant="outline" onClick={() => setAddingSys((v) => !v)}>
-              {addingSys ? <X className="mr-1.5 h-3.5 w-3.5" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
-              {addingSys ? "Cancelar" : "Añadir sistema"}
-            </Button>
+        <TabsContent value="sistemas" className="mt-4">
+          <div className="bg-white rounded-xl p-5 border">
+            <TeamMediaSection teamId={teamId} category="system" />
           </div>
+        </TabsContent>
 
-          {addingSys && (
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <Input
-                  placeholder="Nombre del sistema *"
-                  value={sysTitle}
-                  onChange={(e) => setSysTitle(e.target.value)}
-                />
-                <Textarea
-                  placeholder="Descripción, notas tácticas..."
-                  value={sysDesc}
-                  onChange={(e) => setSysDesc(e.target.value)}
-                  rows={3}
-                />
-                <Input
-                  placeholder="URL de vídeo (opcional)"
-                  value={sysUrl}
-                  onChange={(e) => setSysUrl(e.target.value)}
-                />
-                <Button size="sm" onClick={handleAddSystem} disabled={!sysTitle.trim() || createMedia.isPending}>
-                  {createMedia.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Plus className="h-3.5 w-3.5 mr-1.5" />}
-                  Guardar sistema
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {systems.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Settings2 className="h-10 w-10 mb-3 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">No hay sistemas tácticos registrados.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {systems.map((s) => (
-                <SystemCard key={s.id} item={s} onDelete={() => handleDeleteMedia(s.id)} />
-              ))}
-            </div>
-          )}
+        {/* ── Highlights ────────────────────────────────── */}
+        <TabsContent value="highlights" className="mt-4">
+          <div className="bg-white rounded-xl p-5 border">
+            <TeamMediaSection teamId={teamId} category="highlight" />
+          </div>
         </TabsContent>
 
         {/* ── Informe PDF ───────────────────────────────── */}
@@ -437,7 +264,6 @@ export default function TeamDetail() {
           </div>
 
           <div ref={contentRef} className="space-y-5 p-6 bg-card rounded-xl border">
-            {/* Header */}
             <div className="flex items-start justify-between border-b pb-4">
               <div>
                 <h2 className="text-3xl font-display uppercase italic">{team.name}</h2>
@@ -452,7 +278,6 @@ export default function TeamDetail() {
               </div>
             </div>
 
-            {/* Summary stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-muted rounded-lg p-3 text-center">
                 <div className="text-2xl font-display">{players?.length ?? 0}</div>
@@ -468,7 +293,6 @@ export default function TeamDetail() {
               </div>
             </div>
 
-            {/* Roster table */}
             {players && players.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Plantilla</h3>
@@ -497,7 +321,6 @@ export default function TeamDetail() {
               </div>
             )}
 
-            {/* Systems summary */}
             {systems.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Sistemas Tácticos</h3>

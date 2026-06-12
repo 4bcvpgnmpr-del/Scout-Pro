@@ -108,7 +108,7 @@ function VideoCard({ media, onDelete }: { media: TeamMedia; onDelete: () => void
 }
 
 // ─── Per-category media section ───────────────────────────────────────────────
-function TeamMediaSection({ teamId, category }: { teamId: number; category: MediaCategory }) {
+export function TeamMediaSection({ teamId, category }: { teamId: number; category: MediaCategory }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: allMedia, isLoading } = useListTeamMedia(teamId, {
