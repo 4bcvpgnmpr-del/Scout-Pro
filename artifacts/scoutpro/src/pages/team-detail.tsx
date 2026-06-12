@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetTeam,
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Trash2, Users, ArrowRight, Download, Loader2, Pencil,
   Image as ImageIcon, Video, BarChart2, ClipboardList, Sparkles, FileText,
@@ -43,9 +45,31 @@ export default function TeamDetail() {
   });
 
   const deleteTeam = useDeleteTeam();
+  const [sortBy, setSortBy] = useState<"name" | "jersey" | "position">("name");
 
   const videos = (allMedia ?? []).filter((m) => m.category === "video");
   const systems = (allMedia ?? []).filter((m) => m.category === "system");
+
+  const sortedPlayers = useMemo(() => {
+    const list = [...(players ?? [])];
+    if (sortBy === "jersey") {
+      return list.sort((a, b) => {
+        if (a.jerseyNumber == null && b.jerseyNumber == null) return 0;
+        if (a.jerseyNumber == null) return 1;
+        if (b.jerseyNumber == null) return -1;
+        return a.jerseyNumber - b.jerseyNumber;
+      });
+    }
+    if (sortBy === "position") {
+      const order = ["PG", "SG", "SF", "PF", "C"];
+      return list.sort((a, b) => {
+        const ai = order.indexOf(a.position);
+        const bi = order.indexOf(b.position);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      });
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }, [players, sortBy]);
 
   const handleDeleteTeam = () => {
     if (!confirm(`¿Eliminar ${team?.name}? Esta acción no se puede deshacer.`)) return;
@@ -121,24 +145,36 @@ export default function TeamDetail() {
         {/* ── Plantilla ─────────────────────────────────── */}
         <TabsContent value="plantilla" className="mt-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-4 w-4 text-primary" /> Plantilla · {players?.length ?? 0} jugadores
               </CardTitle>
-              <Link href="/players/new">
-                <Button size="sm" className="font-display tracking-wide uppercase text-xs">
-                  Añadir jugador
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Por nombre</SelectItem>
+                    <SelectItem value="jersey">Por dorsal #</SelectItem>
+                    <SelectItem value="position">Por posición</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Link href="/players/new">
+                  <Button size="sm" className="font-display tracking-wide uppercase text-xs">
+                    Añadir jugador
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
-              {!players || players.length === 0 ? (
+              {sortedPlayers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   No hay jugadores en este equipo todavía.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {players.map((player) => (
+                  {sortedPlayers.map((player) => (
                     <Link key={player.id} href={`/players/${player.id}`}>
                       <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary bg-card cursor-pointer group transition-colors">
                         <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 bg-primary/10 flex items-center justify-center">
@@ -153,7 +189,7 @@ export default function TeamDetail() {
                         <div className="flex-1">
                           <div className="font-semibold group-hover:text-primary transition-colors">{player.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {player.position}
+                            <span className="font-mono bg-primary/10 text-primary px-1 rounded text-[10px]">{player.position}</span>
                             {player.jerseyNumber != null ? ` · #${player.jerseyNumber}` : ""}
                             {player.age != null ? ` · ${player.age} años` : ""}
                             {player.nationality ? ` · ${player.nationality}` : ""}

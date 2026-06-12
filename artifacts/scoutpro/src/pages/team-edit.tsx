@@ -19,7 +19,13 @@ export default function TeamEdit() {
   const onSubmit = (data: TeamFormValues) => {
     updateTeam.mutate({
       id: teamId,
-      data: { name: data.name, league: data.league || undefined, city: data.city || undefined },
+      data: {
+        name: data.name,
+        league: data.league || undefined,
+        city: data.city || undefined,
+        logoUrl: data.logoUrl || undefined,
+        teamType: (data.teamType as "own" | "rival") || undefined,
+      },
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetTeamQueryKey(teamId) });
@@ -48,6 +54,8 @@ export default function TeamEdit() {
             name: team.name,
             league: team.league || "",
             city: team.city || "",
+            logoUrl: team.logoUrl || "",
+            teamType: team.teamType || "",
           }}
           onSubmit={onSubmit}
           submitting={updateTeam.isPending}

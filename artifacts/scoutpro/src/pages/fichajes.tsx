@@ -3,12 +3,35 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, Plus, Users, TrendingUp, ArrowRight } from "lucide-react";
-import { useListPlayers, useListTeams, getListPlayersQueryKey } from "@workspace/api-client-react";
+import { useListPlayers, useListTeams, useListReports, getListPlayersQueryKey, getListReportsQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
+
+function ValStars({ rating }: { rating: number | null | undefined }) {
+  if (rating == null) {
+    return (
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Star key={i} className="h-3.5 w-3.5 text-muted-foreground/20" />
+        ))}
+      </div>
+    );
+  }
+  const stars = Math.round(rating / 2);
+  return (
+    <div className="flex gap-0.5" title={`VAL ${rating}`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={`h-3.5 w-3.5 ${i <= stars ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Fichajes() {
   const [positionFilter, setPositionFilter] = useState<string>("");
@@ -16,6 +39,7 @@ export default function Fichajes() {
 
   const { data: players, isLoading } = useListPlayers(undefined, { query: { queryKey: getListPlayersQueryKey() } });
   const { data: teams } = useListTeams();
+  const { data: reports } = useListReports(undefined, { query: { queryKey: getListReportsQueryKey() } });
 
   const teamLeagueMap = useMemo(() => {
     const m: Record<number, string> = {};
@@ -28,6 +52,22 @@ export default function Fichajes() {
     (teams ?? []).forEach((t) => { if (t.league) s.add(t.league); });
     return [...s].sort();
   }, [teams]);
+
+  const playerAvgRating = useMemo(() => {
+    const totals: Record<number, { sum: number; count: number }> = {};
+    (reports ?? []).forEach((r) => {
+      if (r.rating != null) {
+        if (!totals[r.playerId]) totals[r.playerId] = { sum: 0, count: 0 };
+        totals[r.playerId].sum += r.rating;
+        totals[r.playerId].count += 1;
+      }
+    });
+    const avgs: Record<number, number> = {};
+    Object.entries(totals).forEach(([id, { sum, count }]) => {
+      avgs[Number(id)] = Math.round((sum / count) * 10) / 10;
+    });
+    return avgs;
+  }, [reports]);
 
   const freeAgents = useMemo(() => players?.filter((p) => p.teamId == null) ?? [], [players]);
 
@@ -150,7 +190,7 @@ export default function Fichajes() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 rounded" />)}</div>
+            <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 rounded" />)}</div>
           ) : displayList.length === 0 ? (
             <div className="py-12 text-center">
               <Star className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
@@ -165,25 +205,44 @@ export default function Fichajes() {
             </div>
           ) : (
             <div className="space-y-2">
+              {/* Table header */}
+              <div className="hidden sm:grid grid-cols-[auto_1fr_80px_80px_100px_auto] items-center gap-4 px-3 pb-1 text-[11px] text-muted-foreground uppercase tracking-wider border-b">
+                <div className="w-10" />
+                <div>Jugador</div>
+                <div>Posición</div>
+                <div>Edad</div>
+                <div>VAL</div>
+                <div className="w-5" />
+              </div>
               {displayList.map((p) => {
                 const league = p.teamId ? teamLeagueMap[p.teamId] : null;
+                const val = playerAvgRating[p.id];
                 return (
                   <Link key={p.id} href={`/players/${p.id}`}>
-                    <div className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
+                    <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_80px_80px_100px_auto] items-center gap-4 p-3 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
                       <Avatar className="h-10 w-10">
+                        {p.photoUrl && <AvatarImage src={p.photoUrl} alt={p.name} className="object-cover" />}
                         <AvatarFallback className="bg-primary/10 text-primary font-display text-sm">
                           {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0">
                         <div className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {p.position}
-                          {p.teamName ? ` · ${p.teamName}` : " · Agente libre"}
+                          {p.teamName ? p.teamName : "Agente libre"}
                           {league ? ` · ${league}` : ""}
                         </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="hidden sm:block">
+                        <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">{p.position}</span>
+                      </div>
+                      <div className="hidden sm:block text-sm text-muted-foreground">
+                        {p.age != null ? `${p.age} años` : "—"}
+                      </div>
+                      <div className="hidden sm:block">
+                        <ValStars rating={val} />
+                      </div>
+                      <ArrowRight className="hidden sm:block h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </Link>
                 );

@@ -25,6 +25,7 @@ export default function PlayerNew() {
         nationality: data.nationality || undefined,
         handedness: data.handedness || undefined,
         notes: data.notes || undefined,
+        photoUrl: data.photoUrl || undefined,
       },
     }, {
       onSuccess: (player) => {
@@ -39,13 +40,13 @@ export default function PlayerNew() {
   return (
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+        <Link href="/jugadores"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>
           <h1 className="text-4xl">Nuevo Jugador</h1>
           <p className="text-muted-foreground">Añade un prospecto a la base de datos.</p>
         </div>
       </div>
-      <PlayerForm onSubmit={onSubmit} submitting={createPlayer.isPending} submitLabel="Añadir Jugador" cancelTo="/" />
+      <PlayerForm onSubmit={onSubmit} submitting={createPlayer.isPending} submitLabel="Añadir Jugador" cancelTo="/jugadores" />
     </div>
   );
 }

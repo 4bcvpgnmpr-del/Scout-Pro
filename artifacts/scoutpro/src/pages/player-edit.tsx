@@ -30,6 +30,7 @@ export default function PlayerEdit() {
         nationality: data.nationality || undefined,
         handedness: data.handedness || undefined,
         notes: data.notes || undefined,
+        photoUrl: data.photoUrl || undefined,
       },
     }, {
       onSuccess: () => {
@@ -66,6 +67,7 @@ export default function PlayerEdit() {
             nationality: player.nationality || "",
             handedness: player.handedness || "",
             notes: player.notes || "",
+            photoUrl: player.photoUrl || "",
           }}
           onSubmit={onSubmit}
           submitting={updatePlayer.isPending}

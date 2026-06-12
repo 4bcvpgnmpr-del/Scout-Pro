@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useListTeams } from "@workspace/api-client-react";
+import { PhotoUpload } from "@/components/photo-upload";
 
 export type PlayerFormValues = {
   name: string;
@@ -19,6 +20,7 @@ export type PlayerFormValues = {
   nationality?: string;
   handedness?: string;
   notes?: string;
+  photoUrl?: string;
 };
 
 export function PlayerForm({
@@ -36,12 +38,30 @@ export function PlayerForm({
 }) {
   const { register, handleSubmit, setValue, watch } = useForm<PlayerFormValues>({ defaultValues });
   const { data: teams } = useListTeams();
+  const photoUrl = watch("photoUrl");
+  const nameVal = watch("name") ?? "";
+
+  const initials = nameVal
+    .split(" ")
+    .map((w: string) => w[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <Card>
       <CardHeader><CardTitle>Información del Jugador</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="flex justify-center mb-2">
+            <PhotoUpload
+              value={photoUrl}
+              onChange={(url) => setValue("photoUrl", url)}
+              shape="circle"
+              size="lg"
+              placeholder={initials || "?"}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Nombre completo *</Label>
