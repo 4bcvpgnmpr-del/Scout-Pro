@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Video, Film, Layers, Sparkles, ArrowRight, Plus } from "lucide-react";
 import { useListTeams, useListTeamMedia, getListTeamsQueryKey } from "@workspace/api-client-react";
+
+type Category = "video" | "system" | "highlight";
 
 function toEmbedUrl(url: string): string | null {
   try {
@@ -26,9 +28,23 @@ function toEmbedUrl(url: string): string | null {
   return null;
 }
 
-function TeamVideos({ teamId, teamName, logoUrl }: { teamId: number; teamName: string; logoUrl?: string | null }) {
+function TeamVideos({
+  teamId,
+  teamName,
+  logoUrl,
+  activeCategory,
+}: {
+  teamId: number;
+  teamName: string;
+  logoUrl?: string | null;
+  activeCategory: Category | null;
+}) {
   const { data: media, isLoading } = useListTeamMedia(teamId);
-  const videos = useMemo(() => (media ?? []).filter((m) => m.category === "video" || m.category === "highlight"), [media]);
+  const videos = useMemo(() => {
+    const all = media ?? [];
+    if (activeCategory) return all.filter((m) => m.category === activeCategory);
+    return all.filter((m) => m.category === "video" || m.category === "highlight" || m.category === "system");
+  }, [media, activeCategory]);
 
   if (!isLoading && videos.length === 0) return null;
 
@@ -58,14 +74,14 @@ function TeamVideos({ teamId, teamName, logoUrl }: { teamId: number; teamName: s
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {videos.slice(0, 4).map((v) => {
+          {videos.slice(0, 8).map((v) => {
             const embed = v.url ? toEmbedUrl(v.url) : null;
             return (
               <div key={v.id} className="rounded-lg overflow-hidden border bg-card aspect-video relative group">
                 {embed ? (
-                  <iframe src={embed} className="w-full h-full" title={v.title ?? "vídeo"} />
+                  <iframe src={embed} className="w-full h-full" title={v.title ?? "vídeo"} allowFullScreen />
                 ) : v.sourceType === "upload" && v.url ? (
-                  <video src={v.url} className="w-full h-full object-cover" />
+                  <video src={v.url} className="w-full h-full object-cover" controls />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
                     <Video className="h-6 w-6 text-muted-foreground/40" />
@@ -83,6 +99,13 @@ function TeamVideos({ teamId, teamName, logoUrl }: { teamId: number; teamName: s
                     </span>
                   </div>
                 )}
+                {v.category === "system" && (
+                  <div className="absolute top-1.5 left-1.5">
+                    <span className="text-[10px] font-bold bg-blue-400/90 text-black px-1.5 py-0.5 rounded">
+                      SIS
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -92,7 +115,14 @@ function TeamVideos({ teamId, teamName, logoUrl }: { teamId: number; teamName: s
   );
 }
 
+const CATEGORY_OPTIONS: { value: Category | null; icon: React.FC<{ className?: string }>; label: string; desc: string; activeClass: string }[] = [
+  { value: "video", icon: Film, label: "Vídeos de partido", desc: "Grabaciones y análisis tácticos", activeClass: "border-purple-500 bg-purple-500/10" },
+  { value: "system", icon: Layers, label: "Sistemas", desc: "Jugadas y sistemas del equipo", activeClass: "border-blue-500 bg-blue-500/10" },
+  { value: "highlight", icon: Sparkles, label: "Highlights", desc: "Mejores jugadas por jugador", activeClass: "border-amber-500 bg-amber-500/10" },
+];
+
 export default function Videos() {
+  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const { data: teams, isLoading: teamsLoading } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
 
   return (
@@ -109,30 +139,50 @@ export default function Videos() {
         </Link>
       </div>
 
-      {/* Category legend */}
+      {/* Category filter chips — clicking filters the video list */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { icon: Film, label: "Vídeos de partido", desc: "Grabaciones y análisis tácticos" },
-          { icon: Layers, label: "Sistemas", desc: "Jugadas y sistemas del equipo" },
-          { icon: Sparkles, label: "Highlights", desc: "Mejores jugadas por jugador" },
-        ].map(({ icon: Icon, label, desc }) => (
-          <div key={label} className="flex items-center gap-3 p-3 rounded-xl border bg-card">
-            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold">{label}</div>
-              <div className="text-xs text-muted-foreground">{desc}</div>
-            </div>
-          </div>
-        ))}
+        {CATEGORY_OPTIONS.map(({ value, icon: Icon, label, desc, activeClass }) => {
+          const isActive = activeCategory === value;
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setActiveCategory(isActive ? null : value)}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                isActive ? activeClass : "bg-card border-border hover:border-primary/40"
+              }`}
+            >
+              <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-background/20" : "bg-muted"}`}>
+                <Icon className={`h-4 w-4 ${isActive ? "text-current" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">{label}</div>
+                <div className={`text-xs ${isActive ? "text-current/70" : "text-muted-foreground"}`}>{desc}</div>
+              </div>
+            </button>
+          );
+        })}
       </div>
+
+      {activeCategory && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filtrando por:</span>
+          <span className="text-sm font-medium text-primary">
+            {CATEGORY_OPTIONS.find((c) => c.value === activeCategory)?.label}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setActiveCategory(null)} className="text-xs text-muted-foreground h-7">
+            Mostrar todos
+          </Button>
+        </div>
+      )}
 
       {/* Videos by team */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Vídeos por Equipo
+            {activeCategory
+              ? `${CATEGORY_OPTIONS.find((c) => c.value === activeCategory)?.label} por Equipo`
+              : "Todos los Vídeos por Equipo"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -158,11 +208,17 @@ export default function Videos() {
           ) : (
             <>
               {teams.map((t) => (
-                <TeamVideos key={t.id} teamId={t.id} teamName={t.name} logoUrl={t.logoUrl} />
+                <TeamVideos
+                  key={t.id}
+                  teamId={t.id}
+                  teamName={t.name}
+                  logoUrl={t.logoUrl}
+                  activeCategory={activeCategory}
+                />
               ))}
               <div className="pt-4 border-t text-center">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Para subir vídeos, accede al equipo correspondiente y ve a la pestaña de Vídeos o Highlights.
+                  Para subir vídeos, accede al equipo correspondiente y ve a la pestaña de Vídeos, Sistemas o Highlights.
                 </p>
                 <Link href="/equipos">
                   <Button variant="outline" size="sm" className="font-display uppercase tracking-wide text-xs">

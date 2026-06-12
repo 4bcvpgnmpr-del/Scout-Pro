@@ -38,10 +38,13 @@ export function TeamForm({
       <CardHeader><CardTitle>Información del Equipo</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Hidden field so react-hook-form always includes logoUrl in submit data */}
+          <input type="hidden" {...register("logoUrl")} />
+
           <div className="flex justify-center mb-2">
             <PhotoUpload
               value={logoUrl}
-              onChange={(url) => setValue("logoUrl", url)}
+              onChange={(url) => setValue("logoUrl", url, { shouldDirty: true })}
               shape="square"
               size="lg"
               placeholder={initials || "?"}

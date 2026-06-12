@@ -42,10 +42,7 @@ function DifficultyStars({ difficulty }: { difficulty: string | null | undefined
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          className={`h-3.5 w-3.5 ${i <= filled ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
-        />
+        <Star key={i} className={`h-3.5 w-3.5 ${i <= filled ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
       ))}
     </div>
   );
@@ -80,10 +77,7 @@ export default function Dashboard() {
 
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-  const todayLabel = now.toLocaleDateString("es-ES", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
+  const todayLabel = now.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   const upcomingGames = useMemo(
     () => (games ?? []).filter((g) => g.date >= todayKey).sort((a, b) => a.date.localeCompare(b.date)),
@@ -92,11 +86,25 @@ export default function Dashboard() {
   const nextGame = upcomingGames[0];
   const moreGames = upcomingGames.slice(1, 5);
 
-  const teamLogoMap = useMemo(() => {
-    const m: Record<string, string | null> = {};
-    (teams ?? []).forEach((t) => { m[t.name.toLowerCase()] = t.logoUrl ?? null; });
+  const teamByName = useMemo(() => {
+    const m: Record<string, { id: number; logoUrl?: string | null }> = {};
+    (teams ?? []).forEach((t) => { m[t.name.toLowerCase()] = { id: t.id, logoUrl: t.logoUrl }; });
     return m;
   }, [teams]);
+
+  const ownTeam = useMemo(() => (teams ?? []).find((t) => t.teamType === "own"), [teams]);
+
+  // Determine which team is the rival in the next game
+  const rivalInfo = useMemo(() => {
+    if (!nextGame) return null;
+    const ownName = ownTeam?.name.toLowerCase() ?? "";
+    const homeKey = nextGame.homeTeam.toLowerCase();
+    const awayKey = nextGame.awayTeam.toLowerCase();
+    const rivalName = homeKey === ownName ? nextGame.awayTeam : nextGame.awayTeam;
+    const rivalKey = homeKey === ownName ? awayKey : awayKey;
+    const rival = teamByName[rivalKey];
+    return { name: rivalName, id: rival?.id ?? null, logoUrl: rival?.logoUrl ?? null };
+  }, [nextGame, ownTeam, teamByName]);
 
   const recentReport = reports?.[0];
   const daysAgo = recentReport?.date
@@ -107,8 +115,6 @@ export default function Dashboard() {
     if (!reports || reports.length === 0) return null;
     return [...reports].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
   }, [reports]);
-
-  const ownTeam = useMemo(() => (teams ?? []).find((t) => t.teamType === "own"), [teams]);
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -177,11 +183,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <div className="flex items-center justify-around gap-3 py-4">
-                  <TeamBadge
-                    name={nextGame.homeTeam}
-                    logoUrl={teamLogoMap[nextGame.homeTeam.toLowerCase()]}
-                    sub="Local"
-                  />
+                  <TeamBadge name={nextGame.homeTeam} logoUrl={teamByName[nextGame.homeTeam.toLowerCase()]?.logoUrl} sub="Local" />
                   <div className="text-center shrink-0 space-y-1">
                     <div className="font-display text-3xl text-muted-foreground/30 tracking-wider">VS</div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -189,11 +191,7 @@ export default function Dashboard() {
                       <Countdown targetDate={nextGame.date} />
                     </div>
                   </div>
-                  <TeamBadge
-                    name={nextGame.awayTeam}
-                    logoUrl={teamLogoMap[nextGame.awayTeam.toLowerCase()]}
-                    sub="Visitante"
-                  />
+                  <TeamBadge name={nextGame.awayTeam} logoUrl={teamByName[nextGame.awayTeam.toLowerCase()]?.logoUrl} sub="Visitante" />
                 </div>
                 <div className="border-t pt-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -211,9 +209,10 @@ export default function Dashboard() {
                     <Link href={`/games/${nextGame.id}/edit`}>
                       <Button size="sm" variant="outline" className="text-xs">Editar</Button>
                     </Link>
-                    <Link href="/reports/new">
+                    {/* Informe → filter reports by next opponent */}
+                    <Link href={rivalInfo?.id ? `/teams/${rivalInfo.id}` : "/reports/new"}>
                       <Button size="sm" className="font-display uppercase tracking-wide text-xs">
-                        <FileText className="mr-1.5 h-3.5 w-3.5" /> Informe
+                        <FileText className="mr-1.5 h-3.5 w-3.5" /> Informe rival
                       </Button>
                     </Link>
                   </div>
@@ -223,14 +222,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Right column: Último Informe + Rival de la Semana */}
+        {/* Right column */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Último Informe */}
           <Card className="flex-1">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Último Informe
-              </CardTitle>
+              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Último Informe</CardTitle>
               <Link href="/reports">
                 <span className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-0.5">
                   Ver todos <ChevronRight className="h-3 w-3" />
@@ -240,8 +237,7 @@ export default function Dashboard() {
             <CardContent>
               {!recentReport ? (
                 <div className="py-4 text-center text-muted-foreground text-sm">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/20" />
-                  Sin informes todavía
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/20" />Sin informes todavía
                 </div>
               ) : (
                 <Link href={`/reports/${recentReport.id}`}>
@@ -265,36 +261,42 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Rival de la Semana */}
+          {/* Rival de la Semana → links to rival team page */}
           <Card className="flex-1">
             <CardHeader className="pb-2 space-y-0">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Rival de la Semana
-              </CardTitle>
+              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rival de la Semana</CardTitle>
             </CardHeader>
             <CardContent>
-              {!nextGame ? (
+              {!nextGame || !rivalInfo ? (
                 <div className="py-4 text-center text-muted-foreground text-sm">Sin próximo partido</div>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      {teamLogoMap[nextGame.awayTeam.toLowerCase()] ? (
-                        <img src={teamLogoMap[nextGame.awayTeam.toLowerCase()]!} alt="" className="h-full w-full object-cover rounded-lg" />
+                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      {rivalInfo.logoUrl ? (
+                        <img src={rivalInfo.logoUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <Shield className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-sm">{nextGame.awayTeam}</div>
+                      <div className="font-semibold text-sm">{rivalInfo.name}</div>
                       <div className="text-[11px] text-muted-foreground">Próximo rival · {nextGame.date}</div>
                     </div>
                   </div>
-                  <Link href="/equipos">
-                    <Button size="sm" variant="outline" className="w-full text-xs font-display uppercase tracking-wide mt-1">
-                      Ver análisis del equipo <ChevronRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
+                  {rivalInfo.id ? (
+                    <Link href={`/teams/${rivalInfo.id}`}>
+                      <Button size="sm" variant="outline" className="w-full text-xs font-display uppercase tracking-wide mt-1">
+                        Ver análisis del equipo <ChevronRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link href="/equipos">
+                      <Button size="sm" variant="outline" className="w-full text-xs font-display uppercase tracking-wide mt-1">
+                        Ver equipos <ChevronRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -326,7 +328,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Insights + Próximos Partidos + Posiciones */}
+      {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Insights */}
         <Card>
@@ -356,21 +358,20 @@ export default function Dashboard() {
                 <div>
                   <div className="text-xs font-semibold">Mi equipo</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {ownTeam.name}
-                    {ownTeam.league ? ` · ${ownTeam.league}` : ""}
+                    {ownTeam.name}{ownTeam.league ? ` · ${ownTeam.league}` : ""}
                   </div>
                 </div>
               </div>
             )}
-            {nextGame && (
+            {nextGame && rivalInfo && (
               <div className="flex items-start gap-3 p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
                 <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0 mt-0.5">
                   <Dumbbell className="h-4 w-4 text-orange-400" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold">Próximo partido</div>
+                  <div className="text-xs font-semibold">Próximo rival</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {nextGame.homeTeam} vs {nextGame.awayTeam} · <Countdown targetDate={nextGame.date} />
+                    {rivalInfo.name} · <Countdown targetDate={nextGame.date} />
                   </div>
                 </div>
               </div>
@@ -388,9 +389,7 @@ export default function Dashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Próximos Partidos</CardTitle>
             <Link href="/games">
-              <span className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-0.5">
-                Ver todos <ChevronRight className="h-3 w-3" />
-              </span>
+              <span className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-0.5">Ver todos <ChevronRight className="h-3 w-3" /></span>
             </Link>
           </CardHeader>
           <CardContent>
@@ -402,9 +401,7 @@ export default function Dashboard() {
                   <Link key={g.id} href={`/games/${g.id}/edit`}>
                     <div className="flex items-center justify-between p-2 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate group-hover:text-primary transition-colors">
-                          {g.homeTeam} vs {g.awayTeam}
-                        </div>
+                        <div className="text-xs font-semibold truncate group-hover:text-primary transition-colors">{g.homeTeam} vs {g.awayTeam}</div>
                         <div className="text-[11px] text-muted-foreground">
                           {new Date(g.date + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                           {g.location ? ` · ${g.location}` : ""}

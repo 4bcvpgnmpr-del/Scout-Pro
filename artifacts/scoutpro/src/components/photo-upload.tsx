@@ -2,16 +2,17 @@ import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-async function uploadPhotoFile(file: File): Promise<string> {
+export async function uploadPhotoFile(file: File): Promise<string> {
   const metaRes = await fetch("/api/storage/uploads/request-url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
   });
-  if (!metaRes.ok) throw new Error("request-url failed");
+  if (!metaRes.ok) throw new Error(`request-url failed: ${metaRes.status}`);
   const { uploadURL, objectPath } = (await metaRes.json()) as { uploadURL: string; objectPath: string };
+  // Do NOT set Content-Type header on the PUT — the presigned URL only signs the host header
   const put = await fetch(uploadURL, { method: "PUT", body: file });
-  if (!put.ok) throw new Error("upload failed");
+  if (!put.ok) throw new Error(`upload failed: ${put.status}`);
   return `/api/storage${objectPath}`;
 }
 
@@ -47,8 +48,10 @@ export function PhotoUpload({
     try {
       const url = await uploadPhotoFile(file);
       onChange(url);
-    } catch {
-      toast({ title: "Error al subir la foto", variant: "destructive" });
+      toast({ title: "Imagen subida correctamente" });
+    } catch (err) {
+      console.error("photo upload error", err);
+      toast({ title: "Error al subir la foto", description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -61,12 +64,12 @@ export function PhotoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className={`relative ${sizeClass} ${radiusClass} overflow-hidden border-2 border-dashed border-muted-foreground/30 bg-muted hover:border-primary hover:bg-primary/5 transition-colors group flex-shrink-0`}
+        className={`relative ${sizeClass} ${radiusClass} overflow-hidden border-2 border-dashed border-muted-foreground/30 bg-muted hover:border-primary hover:bg-primary/5 transition-colors group flex items-center justify-center`}
       >
         {value ? (
-          <img src={value} alt="foto" className="w-full h-full object-cover" />
+          <img src={value} alt="foto" className="w-full h-full object-cover absolute inset-0" />
         ) : (
-          <span className={`font-display text-muted-foreground/50 ${textSize}`}>
+          <span className={`font-display text-muted-foreground/50 ${textSize} select-none`}>
             {placeholder ?? "?"}
           </span>
         )}

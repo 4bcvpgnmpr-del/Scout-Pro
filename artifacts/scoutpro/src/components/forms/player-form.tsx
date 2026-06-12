@@ -53,10 +53,13 @@ export function PlayerForm({
       <CardHeader><CardTitle>Información del Jugador</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Hidden field so react-hook-form always includes photoUrl in submit data */}
+          <input type="hidden" {...register("photoUrl")} />
+
           <div className="flex justify-center mb-2">
             <PhotoUpload
               value={photoUrl}
-              onChange={(url) => setValue("photoUrl", url)}
+              onChange={(url) => setValue("photoUrl", url, { shouldDirty: true })}
               shape="circle"
               size="lg"
               placeholder={initials || "?"}
@@ -104,8 +107,8 @@ export function PlayerForm({
               <Input {...register("height")} placeholder={`6'4"`} className="bg-card" />
             </div>
             <div className="space-y-1.5">
-              <Label>Peso (lbs)</Label>
-              <Input {...register("weight")} type="number" placeholder="220" className="bg-card" />
+              <Label>Peso (kg)</Label>
+              <Input {...register("weight")} type="number" placeholder="100" className="bg-card" />
             </div>
             <div className="space-y-1.5">
               <Label>Nacionalidad</Label>
