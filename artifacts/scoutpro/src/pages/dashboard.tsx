@@ -325,7 +325,7 @@ export default function Dashboard() {
               )}
 
               {/* CTA */}
-              <Link href={rivalInfo?.id ? `/teams/${rivalInfo.id}` : "/scout"}>
+              <Link href={`/games/${nextGame.id}/match-center`}>
                 <button className="w-full bg-primary hover:bg-primary/90 transition text-primary-foreground font-black py-3.5 rounded-xl flex items-center justify-center gap-2 uppercase tracking-wide text-sm shadow-lg shadow-primary/20">
                   Abrir Centro de Partido <ArrowRight className="h-4 w-4" />
                 </button>

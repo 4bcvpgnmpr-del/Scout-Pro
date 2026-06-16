@@ -1,0 +1,160 @@
+SCOUTFLOW - CREAR CENTRO DE PARTIDO COMPLETO
+
+Objetivo:
+
+Crear una nueva vista llamada "Centro de Partido".
+
+Esta será la pantalla principal de trabajo para cada partido y se abrirá desde el Dashboard al pulsar:
+
+"ABRIR CENTRO DE PARTIDO"
+
+CONCEPTO
+
+Todo el scouting, vídeos, estadísticas, jugadoras, tareas e informes deben estar centralizados en esta pantalla.
+
+ESTRUCTURA
+
+CABECERA
+
+Mostrar:
+
+* Equipo local
+* Equipo visitante
+* Escudos
+* Récord (ganados-perdidos)
+* Posición en liga
+* Fecha
+* Hora
+* Lugar
+* Dificultad
+* Estado de preparación (%)
+
+PESTAÑAS
+
+1. RESUMEN
+
+Mostrar:
+
+* Información general del partido
+* Claves del partido
+* Fortalezas del rival
+* Debilidades del rival
+* Jugadoras destacadas
+* Próximas tareas
+
+2. SCOUTING
+
+Crear formulario completo.
+
+Secciones:
+
+ATAQUE
+
+* Sistemas principales
+* Ritmo de juego
+* Jugadoras generadoras
+* Observaciones
+
+DEFENSA
+
+* Tipo de defensa
+* Presión
+* Pick & Roll
+* Zona
+* Observaciones
+
+TRANSICIÓN
+
+* Contraataque
+* Balance defensivo
+* Observaciones
+
+FORTALEZAS
+
+* Lista editable
+
+DEBILIDADES
+
+* Lista editable
+
+OBJETIVOS DEL PARTIDO
+
+* Texto libre
+
+NOTAS DEL ENTRENADOR
+
+* Texto libre
+
+Guardar automáticamente.
+
+3. RIVAL
+
+Mostrar plantilla completa.
+
+Columnas:
+
+* Número
+* Nombre
+* Posición
+* Edad
+* Puntos
+* Rebotes
+* Asistencias
+* Valoración
+
+Permitir abrir ficha individual.
+
+En el futuro esta información se actualizará desde FEB.
+
+4. VÍDEOS
+
+Mostrar todos los vídeos asociados al rival y al partido.
+
+Filtros:
+
+* Ataque
+* Defensa
+* Transición
+
+5. JUGADAS
+
+Mostrar jugadas y sistemas recomendados.
+
+Permitir asociar jugadas al partido.
+
+6. ESTADÍSTICAS
+
+Mostrar estadísticas del equipo rival y de las jugadoras.
+
+7. INFORME
+
+Botón principal:
+
+GENERAR INFORME PDF
+
+El informe debe recopilar automáticamente:
+
+* Datos del partido
+* Scouting
+* Fortalezas
+* Debilidades
+* Jugadoras clave
+* Estadísticas
+* Notas del entrenador
+
+8. TAREAS
+
+Checklist:
+
+* Scouting completado
+* Vídeos revisados
+* Informe generado
+* Charla preparada
+
+Actualizar automáticamente el porcentaje de preparación.
+
+OBJETIVO FINAL
+
+El entrenador debe poder preparar completamente un partido sin salir del Centro de Partido.
+
+Todo el flujo de trabajo de ScoutFlow debe girar alrededor de esta pantalla.
