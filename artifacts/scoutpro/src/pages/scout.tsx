@@ -22,6 +22,7 @@ import {
   TrendingUp, TrendingDown, Minus, Settings, Download, SlidersHorizontal,
   Eye, EyeOff, Calendar,
 } from "lucide-react";
+import { ScoutFlowLogo } from "@/components/logo";
 import { useTheme } from "@/hooks/use-theme";
 import { TeamScoutingView, TEAM_SECTIONS, type TeamSection } from "@/components/team-scouting";
 import { THEMES, FONTS } from "@/lib/themes";
@@ -1138,8 +1139,8 @@ export default function Scout() {
 
       {/* ── COL 1: SIDEBAR ────────────────────────────────────────────────── */}
       <aside className="flex flex-col flex-shrink-0 overflow-y-auto" style={{ background: "#111827", width: 264 }}>
-        <div className="px-6 py-5 text-orange-500 font-black text-2xl tracking-tighter flex items-center gap-2 flex-shrink-0">
-          <Trophy className="h-6 w-6" /> SCOUTFLOW
+        <div className="px-6 py-5 flex-shrink-0">
+          <ScoutFlowLogo size="md" />
         </div>
 
         <div className="px-4 pt-3 pb-1">

@@ -5,6 +5,7 @@ import {
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
 
 const navGroups = [
   {
@@ -82,9 +83,8 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
     <div className="flex flex-col h-full">
       <div className="h-14 flex items-center px-5 border-b border-sidebar-border shrink-0">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer">
-            <Trophy className="h-6 w-6 text-primary" />
-            <span className="font-display text-xl tracking-widest text-primary">SCOUTFLOW</span>
+          <div className="cursor-pointer">
+            <ScoutFlowLogo size="md" />
           </div>
         </Link>
       </div>
@@ -127,8 +127,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-background">
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-sidebar border-b border-sidebar-border z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-primary" />
-          <span className="font-display text-lg tracking-widest text-primary">SCOUTFLOW</span>
+          <ScoutFlowMark size={26} />
+          <span className="text-lg font-black tracking-tight leading-none">
+            <span className="text-foreground">Scout</span><span className="text-primary">Flow</span>
+          </span>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileOpen((v) => !v)}>
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
