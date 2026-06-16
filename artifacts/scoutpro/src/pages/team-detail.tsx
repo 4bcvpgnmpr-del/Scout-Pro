@@ -496,7 +496,7 @@ export default function TeamDetail() {
               <div className="text-right">
                 <div className="text-[10px] uppercase tracking-widest text-gray-400">Fecha</div>
                 <div className="font-semibold text-sm text-gray-700">{new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}</div>
-                <div className="text-xs text-gray-400 mt-1">ScoutPro · Análisis Profesional</div>
+                <div className="text-xs text-gray-400 mt-1">ScoutFlow · Análisis Profesional</div>
               </div>
             </div>
 
@@ -613,7 +613,7 @@ export default function TeamDetail() {
 
             {/* Footer */}
             <div className="border-t pt-3 flex justify-between items-center text-[10px] text-gray-400">
-              <span>ScoutPro · Plataforma de Scouting Profesional</span>
+              <span>ScoutFlow · Plataforma de Scouting Profesional</span>
               <span>Generado el {new Date().toLocaleDateString("es-ES")}</span>
             </div>
           </div>

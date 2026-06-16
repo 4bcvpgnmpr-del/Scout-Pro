@@ -14,7 +14,7 @@ export function SubLayout({ children, backTo, backLabel = "Volver" }: SubLayoutP
         <Link href="/">
           <div className="flex items-center gap-2 text-primary font-display text-xl tracking-widest cursor-pointer">
             <Trophy className="h-5 w-5" />
-            SCOUTPRO
+            SCOUTFLOW
           </div>
         </Link>
         <div className="w-px h-5 bg-sidebar-border" />

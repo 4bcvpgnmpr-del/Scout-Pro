@@ -15,7 +15,7 @@ export default function Usuarios() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-4xl font-display tracking-wide">Usuarios</h1>
-          <p className="text-muted-foreground text-sm">Gestiona el acceso del cuerpo técnico a ScoutPro.</p>
+          <p className="text-muted-foreground text-sm">Gestiona el acceso del cuerpo técnico a ScoutFlow.</p>
         </div>
         <Button className="font-display tracking-wide uppercase" disabled>
           <Plus className="mr-2 h-4 w-4" /> Invitar Usuario

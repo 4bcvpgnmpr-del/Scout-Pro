@@ -30,7 +30,7 @@ export default function Ajustes() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-4xl font-display tracking-wide">Ajustes</h1>
-        <p className="text-muted-foreground text-sm">Personaliza la apariencia de ScoutPro.</p>
+        <p className="text-muted-foreground text-sm">Personaliza la apariencia de ScoutFlow.</p>
       </div>
 
       <Card>
