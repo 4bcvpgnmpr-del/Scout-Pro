@@ -173,9 +173,10 @@ export default function TeamDetail() {
           {[
             { value: "plantilla",    label: "Plantilla",    icon: Users },
             { value: "estadisticas", label: "Estadísticas", icon: BarChart2 },
+            { value: "fotos",        label: "Fotos",        icon: Camera },
             { value: "videos",       label: "Vídeos",       icon: Video },
             { value: "sistemas",     label: "Sistemas",     icon: ClipboardList },
-            { value: "playbook",     label: "Playbook",     icon: Library },
+            { value: "highlights",   label: "Highlights",   icon: Library },
           ].map(({ value, label, icon: Icon }) => (
             <TabsTrigger key={value} value={value}
               className="flex items-center gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground transition">
@@ -194,6 +195,13 @@ export default function TeamDetail() {
           <EstadisticasSection teamId={teamId} />
         </TabsContent>
 
+        {/* ── Fotos ── */}
+        <TabsContent value="fotos" className="mt-6">
+          <div className="bg-card rounded-2xl p-6 border">
+            <TeamMediaSection teamId={teamId} category="photo" />
+          </div>
+        </TabsContent>
+
         {/* ── Vídeos ── */}
         <TabsContent value="videos" className="mt-6">
           <div className="bg-card rounded-2xl p-6 border">
@@ -208,8 +216,8 @@ export default function TeamDetail() {
           </div>
         </TabsContent>
 
-        {/* ── Playbook ── */}
-        <TabsContent value="playbook" className="mt-6">
+        {/* ── Highlights ── */}
+        <TabsContent value="highlights" className="mt-6">
           <div className="bg-card rounded-2xl p-6 border">
             <TeamMediaSection teamId={teamId} category="highlight" />
           </div>

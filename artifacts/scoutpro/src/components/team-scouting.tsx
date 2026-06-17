@@ -23,21 +23,24 @@ import {
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type TeamSection = "roster" | "videos" | "sistemas" | "playbook" | "estadisticas";
+export type TeamSection = "roster" | "fotos" | "videos" | "sistemas" | "highlights" | "estadisticas";
 
 type MediaCategory = TeamMediaInput["category"];
 
 const SECTION_TO_CATEGORY: Partial<Record<TeamSection, MediaCategory>> = {
-  videos: "video",
-  sistemas: "system",
+  fotos:      "photo",
+  videos:     "video",
+  sistemas:   "system",
+  highlights: "highlight",
 };
 
 export const TEAM_SECTIONS: { key: TeamSection; label: string; icon: React.ElementType }[] = [
   { key: "roster",       label: "Plantilla",    icon: Users },
   { key: "estadisticas", label: "Estadísticas", icon: BarChart2 },
+  { key: "fotos",        label: "Fotos",        icon: Camera },
   { key: "videos",       label: "Vídeos",       icon: Video },
   { key: "sistemas",     label: "Sistemas",     icon: ClipboardList },
-  { key: "playbook",     label: "Playbook",     icon: Library },
+  { key: "highlights",   label: "Highlights",   icon: Library },
 ];
 
 const POS_ORDER = ["PG", "SG", "SF", "PF", "C"];
@@ -755,9 +758,6 @@ export function TeamScoutingView({
         )}
         {section === "estadisticas" && (
           <EstadisticasSection teamId={team.id} />
-        )}
-        {section === "playbook" && (
-          <PlaybookSection teamId={team.id} teamName={team.name} />
         )}
         {category && (
           <TeamMediaSection key={category} teamId={team.id} category={category} />
