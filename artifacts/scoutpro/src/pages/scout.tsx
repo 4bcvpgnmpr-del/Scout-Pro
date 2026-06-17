@@ -134,17 +134,17 @@ function TeamLogoUpload({ team }: { team: { id: number; name: string; logoUrl?: 
   };
 
   return (
-    <div className="relative h-7 w-7 rounded-full overflow-hidden flex-shrink-0 group/logo cursor-pointer"
+    <div className="relative h-10 w-10 rounded-xl overflow-hidden flex-shrink-0 group/logo cursor-pointer border border-white/10"
       onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
       {team.logoUrl ? (
         <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
       ) : (
-        <div className={`w-full h-full flex items-center justify-center text-[9px] font-black ${isOwn ? "bg-blue-500/30 text-blue-300" : "bg-red-500/30 text-red-300"}`}>
+        <div className={`w-full h-full flex items-center justify-center text-[11px] font-black ${isOwn ? "bg-blue-500/30 text-blue-300" : "bg-red-500/30 text-red-300"}`}>
           {initials}
         </div>
       )}
       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition">
-        {uploading ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Camera className="h-3 w-3 text-white" />}
+        {uploading ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <Camera className="h-3.5 w-3.5 text-white" />}
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
     </div>
