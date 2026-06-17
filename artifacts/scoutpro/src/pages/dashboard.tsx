@@ -376,41 +376,17 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Team logos */}
-              {(() => {
-                const homeRec = getRecord(nextGame.homeTeam);
-                const awayRec = getRecord(nextGame.awayTeam);
-                return (
-                  <div className="flex items-center justify-around gap-2 mb-5">
-                    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                      <TeamBadge name={nextGame.homeTeam} logoUrl={teamByName[nextGame.homeTeam.toLowerCase()]?.logoUrl ?? null} sub="Local" />
-                      {homeRec ? (
-                        <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                          <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">{homeRec.wins}V</span>
-                          <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">{homeRec.losses}D</span>
-                          {homeRec.pos <= standings.length && <span className="text-[10px] font-bold text-muted-foreground bg-muted/50 border border-border px-1.5 py-0.5 rounded-md">#{homeRec.pos}</span>}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40">Sin datos</span>
-                      )}
-                    </div>
-                    <div className="text-center shrink-0">
-                      <div className="text-xl font-black text-muted-foreground/20 tracking-widest">VS</div>
-                    </div>
-                    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                      <TeamBadge name={nextGame.awayTeam} logoUrl={teamByName[nextGame.awayTeam.toLowerCase()]?.logoUrl ?? null} sub="Visitante" />
-                      {awayRec ? (
-                        <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                          <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">{awayRec.wins}V</span>
-                          <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">{awayRec.losses}D</span>
-                          {awayRec.pos <= standings.length && <span className="text-[10px] font-bold text-muted-foreground bg-muted/50 border border-border px-1.5 py-0.5 rounded-md">#{awayRec.pos}</span>}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40">Sin datos</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="flex items-center justify-around gap-2 mb-5">
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <TeamBadge name={nextGame.homeTeam} logoUrl={teamByName[nextGame.homeTeam.toLowerCase()]?.logoUrl ?? null} sub="Local" />
+                </div>
+                <div className="text-center shrink-0">
+                  <div className="text-xl font-black text-muted-foreground/20 tracking-widest">VS</div>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <TeamBadge name={nextGame.awayTeam} logoUrl={teamByName[nextGame.awayTeam.toLowerCase()]?.logoUrl ?? null} sub="Visitante" />
+                </div>
+              </div>
 
               {/* Game meta */}
               <div className="space-y-2 text-sm mb-4">

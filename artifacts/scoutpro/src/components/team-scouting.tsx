@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListTeamMedia,
   useCreateTeamMedia,
   useDeleteTeamMedia,
   useUpdateTeam,
+  useListPlayers,
+  useGetPlayerStats,
   getListTeamMediaQueryKey,
   getListTeamsQueryKey,
+  getListPlayersQueryKey,
+  getGetPlayerStatsQueryKey,
   type TeamMedia,
   type TeamMediaInput,
 } from "@workspace/api-client-react";
@@ -15,10 +19,11 @@ import {
   Users, Video, ClipboardList, Library,
   Trash2, Loader2, Upload, Link2,
   Pencil, Check, Plus, Camera,
+  BarChart2, Activity, Search,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type TeamSection = "roster" | "videos" | "sistemas" | "playbook";
+export type TeamSection = "roster" | "videos" | "sistemas" | "playbook" | "estadisticas";
 
 type MediaCategory = TeamMediaInput["category"];
 
@@ -28,11 +33,14 @@ const SECTION_TO_CATEGORY: Partial<Record<TeamSection, MediaCategory>> = {
 };
 
 export const TEAM_SECTIONS: { key: TeamSection; label: string; icon: React.ElementType }[] = [
-  { key: "roster",   label: "Plantilla", icon: Users },
-  { key: "videos",   label: "Vídeos",    icon: Video },
-  { key: "sistemas", label: "Sistemas",  icon: ClipboardList },
-  { key: "playbook", label: "Playbook",  icon: Library },
+  { key: "roster",       label: "Plantilla",    icon: Users },
+  { key: "estadisticas", label: "Estadísticas", icon: BarChart2 },
+  { key: "videos",       label: "Vídeos",       icon: Video },
+  { key: "sistemas",     label: "Sistemas",     icon: ClipboardList },
+  { key: "playbook",     label: "Playbook",     icon: Library },
 ];
+
+const POS_ORDER = ["PG", "SG", "SF", "PF", "C"];
 
 // ── Constants for video types ─────────────────────────────────────────────────
 const TIPO_OPTIONS = [
@@ -441,6 +449,218 @@ function PlaybookSection({ teamId, teamName }: { teamId: number; teamName: strin
   );
 }
 
+// ── PlayerStatsRowLight (one hook per player, light-mode table row) ───────────
+function PlayerStatsRowLight({ player }: {
+  player: { id: number; name: string; position?: string | null; jerseyNumber?: number | null; photoUrl?: string | null };
+}) {
+  const { data: stats } = useGetPlayerStats(player.id, { query: { queryKey: getGetPlayerStatsQueryKey(player.id) } });
+  const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+  const fmt = (v: number | string | null | undefined, dec = 1) => { const n = Number(v); return v != null && !isNaN(n) ? n.toFixed(dec) : "—"; };
+  const fmtPct = (v: number | string | null | undefined) => { const n = Number(v); return v != null && !isNaN(n) ? `${(n * 100).toFixed(0)}%` : "—"; };
+  return (
+    <tr className="border-b border-gray-100 hover:bg-orange-50/40 transition">
+      <td className="py-2.5 pl-0 pr-2 text-sm text-gray-400 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
+      <td className="py-2.5 px-2">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+            {player.photoUrl
+              ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
+              : <span className="text-[10px] font-black text-orange-500">{initials}</span>}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-800 text-sm leading-tight">{player.name}</p>
+            <p className="text-[10px] text-gray-400">{player.position ?? ""}</p>
+          </div>
+        </div>
+      </td>
+      {stats ? (
+        <>
+          <td className="py-2.5 px-1.5 text-sm font-black text-orange-500 text-center">{fmt(stats.avgPoints)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgRebounds)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgAssists)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgSteals)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgBlocks)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgMinutes, 0)}'</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmtPct(stats.avgThreePointPct)}</td>
+          <td className="py-2.5 pr-0 text-sm text-gray-400 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
+        </>
+      ) : (
+        <td colSpan={9} className="py-2.5 px-2 text-xs text-gray-300 italic">Sin estadísticas</td>
+      )}
+    </tr>
+  );
+}
+
+// ── Plantilla section (synced with Centro de Partido) ─────────────────────────
+function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: string }) {
+  const [search, setSearch] = useState("");
+  const [posFilter, setPosFilter] = useState("Todos");
+
+  const { data: players, isLoading } = useListPlayers(
+    { teamId },
+    { query: { queryKey: getListPlayersQueryKey({ teamId }) } },
+  );
+
+  const filtered = useMemo(() => {
+    let list = players ?? [];
+    if (posFilter !== "Todos") list = list.filter(p => p.position === posFilter);
+    if (search.trim()) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+    return [...list].sort((a, b) => (a.jerseyNumber ?? 99) - (b.jerseyNumber ?? 99));
+  }, [players, posFilter, search]);
+
+  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar jugador..."
+            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {["Todos", ...POS_ORDER].map(p => (
+            <button key={p} onClick={() => setPosFilter(p)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${posFilter === p ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-300" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 text-sm">
+          {(players ?? []).length === 0 ? `No hay jugadores en ${teamName}.` : "Sin resultados."}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 pr-2 pl-0 w-8">#</th>
+                <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Jugador</th>
+                {statsHeaders.map(h => (
+                  <th key={h} className="text-center text-[10px] text-gray-300 uppercase tracking-widest font-black py-2 px-1.5">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(p => <PlayerStatsRowLight key={p.id} player={p} />)}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Estadísticas section (V/D/Pos + player stats table, synced with DB) ───────
+function EstadisticasSection({ teamId }: { teamId: number }) {
+  const [editMode, setEditMode] = useState(false);
+  const [wins, setWins] = useState("");
+  const [losses, setLosses] = useState("");
+  const [pos, setPos] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`sf-team-stats-${teamId}`);
+      if (raw) {
+        const p = JSON.parse(raw) as { wins?: string; losses?: string; pos?: string };
+        setWins(p.wins ?? ""); setLosses(p.losses ?? ""); setPos(p.pos ?? "");
+      } else { setWins(""); setLosses(""); setPos(""); }
+    } catch { /* ignore */ }
+    setEditMode(false);
+  }, [teamId]);
+
+  const save = () => {
+    localStorage.setItem(`sf-team-stats-${teamId}`, JSON.stringify({ wins, losses, pos }));
+    setEditMode(false);
+  };
+
+  const { data: players, isLoading } = useListPlayers(
+    { teamId },
+    { query: { queryKey: getListPlayersQueryKey({ teamId }) } },
+  );
+
+  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+
+  return (
+    <div className="space-y-6">
+      {/* Record V/D/Pos */}
+      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Clasificación de Temporada</span>
+          {!editMode ? (
+            <button onClick={() => setEditMode(true)}
+              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-orange-500 transition px-1.5 py-0.5 rounded">
+              <Pencil className="h-2.5 w-2.5" /> Editar
+            </button>
+          ) : (
+            <button onClick={save}
+              className="flex items-center gap-1 text-[10px] text-orange-600 px-1.5 py-0.5 rounded bg-orange-50 border border-orange-200">
+              <Check className="h-2.5 w-2.5" /> Guardar
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: "Victorias", val: wins,   set: setWins,   cls: "text-green-600" },
+            { label: "Derrotas",  val: losses,  set: setLosses, cls: "text-red-500"   },
+            { label: "Posición",  val: pos,     set: setPos,    cls: "text-amber-600" },
+          ].map(({ label, val, set, cls }) => (
+            <div key={label} className="text-center">
+              <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">{label}</div>
+              {editMode ? (
+                <input value={val} onChange={e => set(e.target.value)} placeholder="—"
+                  className={`w-full text-center text-xl font-black bg-white border border-gray-200 rounded-lg py-1 outline-none focus:border-orange-400 ${cls}`} />
+              ) : (
+                <div className={`text-2xl font-black ${cls}`}>{val || "—"}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Player stats table */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <Activity className="h-3.5 w-3.5 text-gray-400" />
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estadísticas Medias por Jugador</span>
+        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-gray-300" /></div>
+        ) : !players || players.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm">No hay jugadores registrados.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 pr-2 pl-0 w-8">#</th>
+                  <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Jugador</th>
+                  {statsHeaders.map(h => (
+                    <th key={h} className="text-center text-[10px] text-gray-300 uppercase tracking-widest font-black py-2 px-1.5">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {players.map(p => <PlayerStatsRowLight key={p.id} player={p} />)}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Logo upload in the header ─────────────────────────────────────────────────
 function TeamLogoHeader({ team }: { team: { id: number; name: string; logoUrl?: string | null; teamType?: string | null } }) {
   const queryClient = useQueryClient();
@@ -487,73 +707,6 @@ function TeamLogoHeader({ team }: { team: { id: number; name: string; logoUrl?: 
   );
 }
 
-// ── Team stats (manual V/D/Posición) ─────────────────────────────────────────
-function TeamStats({ teamId }: { teamId: number }) {
-  const [editMode, setEditMode] = useState(false);
-  const [wins, setWins] = useState("");
-  const [losses, setLosses] = useState("");
-  const [pos, setPos] = useState("");
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(`sf-team-stats-${teamId}`);
-      if (raw) {
-        const p = JSON.parse(raw) as { wins?: string; losses?: string; pos?: string };
-        setWins(p.wins ?? "");
-        setLosses(p.losses ?? "");
-        setPos(p.pos ?? "");
-      } else {
-        setWins(""); setLosses(""); setPos("");
-      }
-    } catch { /* ignore */ }
-    setEditMode(false);
-  }, [teamId]);
-
-  const save = () => {
-    localStorage.setItem(`sf-team-stats-${teamId}`, JSON.stringify({ wins, losses, pos }));
-    setEditMode(false);
-  };
-
-  return (
-    <div className="mt-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[9px] text-gray-400 uppercase tracking-widest font-bold">Estadísticas</span>
-        {!editMode ? (
-          <button onClick={() => setEditMode(true)}
-            className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-orange-500 transition px-1.5 py-0.5 rounded">
-            <Pencil className="h-2.5 w-2.5" /> Editar
-          </button>
-        ) : (
-          <button onClick={save}
-            className="flex items-center gap-1 text-[10px] text-orange-600 px-1.5 py-0.5 rounded bg-orange-50 border border-orange-200">
-            <Check className="h-2.5 w-2.5" /> Guardar
-          </button>
-        )}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Victorias", val: wins, set: setWins, cls: "text-green-600" },
-          { label: "Derrotas",  val: losses, set: setLosses, cls: "text-red-500" },
-          { label: "Posición",  val: pos, set: setPos, cls: "text-amber-600" },
-        ].map(({ label, val, set, cls }) => (
-          <div key={label} className="text-center">
-            <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">{label}</div>
-            {editMode ? (
-              <input
-                value={val}
-                onChange={(e) => set(e.target.value)}
-                placeholder="—"
-                className={`w-full text-center text-base font-black bg-white border border-gray-200 rounded-lg py-1 outline-none focus:border-orange-400 ${cls}`}
-              />
-            ) : (
-              <div className={`text-lg font-black ${cls}`}>{val || "—"}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── TeamScoutingView (main surface) ───────────────────────────────────────────
 export function TeamScoutingView({
@@ -576,7 +729,6 @@ export function TeamScoutingView({
               {team.teamType === "own" ? "Mi Equipo" : "Equipo Rival"}
             </div>
             <div className="text-3xl font-black uppercase italic text-gray-900 leading-tight">{team.name}</div>
-            <TeamStats teamId={team.id} />
           </div>
         </div>
 
@@ -598,6 +750,12 @@ export function TeamScoutingView({
 
       {/* Content */}
       <div className="px-8 py-6 flex-1">
+        {section === "roster" && (
+          <PlantillaSection teamId={team.id} teamName={team.name} />
+        )}
+        {section === "estadisticas" && (
+          <EstadisticasSection teamId={team.id} />
+        )}
         {section === "playbook" && (
           <PlaybookSection teamId={team.id} teamName={team.name} />
         )}

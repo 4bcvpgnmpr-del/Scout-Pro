@@ -1129,7 +1129,7 @@ export default function Scout() {
       ? teams?.find((t) => t.id === view.teamId)
       : undefined;
   const teamMediaSection: TeamSection | null =
-    (view.kind === "own" || view.kind === "rival") && view.section && view.section !== "roster"
+    (view.kind === "own" || view.kind === "rival") && view.section
       ? view.section
       : null;
   const showTeamScouting = !!(activeTeam && teamMediaSection);
