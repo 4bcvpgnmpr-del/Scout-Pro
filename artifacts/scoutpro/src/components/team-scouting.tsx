@@ -159,6 +159,7 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
   const [sysFile, setSysFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const photoFileRef = useRef<HTMLInputElement>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListTeamMediaQueryKey(teamId) });
 
@@ -174,6 +175,18 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
       onSuccess: () => { invalidate(); toast({ title: "Eliminado" }); },
       onError: () => toast({ title: "Error al eliminar", variant: "destructive" }),
     });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast({ title: "Solo se permiten imágenes", variant: "destructive" }); return; }
+    setUploading(true);
+    try {
+      const path = await uploadFile(file);
+      create({ category: "photo", url: path, sourceType: "upload", title: title.trim() || undefined }, () => setTitle(""));
+    } catch { toast({ title: "Error al subir foto", variant: "destructive" }); }
+    finally { setUploading(false); if (photoFileRef.current) photoFileRef.current.value = ""; }
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,6 +236,17 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
 
   return (
     <div className="space-y-6">
+      {/* Photo add panel */}
+      {category === "photo" && (
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título (opcional)" className={`${inputCls} sm:flex-1`} />
+          <button onClick={() => photoFileRef.current?.click()} disabled={uploading} className={btnCls}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Subir foto
+          </button>
+          <input ref={photoFileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+        </div>
+      )}
+
       {/* Videos add panel */}
       {(isVideoSection || category === "highlight") && (
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
@@ -294,6 +318,19 @@ export function TeamMediaSection({ teamId, category }: { teamId: number; categor
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-300" /></div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm">Sin elementos todavía. Añade el primero arriba.</div>
+      ) : category === "photo" ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {items.map((m) => (
+            <div key={m.id} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-video bg-gray-100">
+              {m.url && <img src={m.url} alt={m.title ?? ""} className="w-full h-full object-cover" />}
+              <button onClick={() => handleDelete(m.id)}
+                className="absolute top-2 right-2 bg-black/60 text-white rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition hover:bg-red-500">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              {m.title && <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-xs font-semibold px-2 py-1.5 truncate">{m.title}</div>}
+            </div>
+          ))}
+        </div>
       ) : category === "system" ? (
         <div className="space-y-4">
           {items.map((m) => (
