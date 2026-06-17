@@ -563,7 +563,7 @@ export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: 
     <div className="space-y-4">
       {showAddButton && (
         <button
-          onClick={() => setLocation("/jugadores/nuevo")}
+          onClick={() => setLocation("/players/new")}
           className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md shadow-orange-100">
           <Plus className="h-4 w-4" /> Añadir Jugador
         </button>

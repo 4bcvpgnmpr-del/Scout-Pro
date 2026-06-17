@@ -3,3 +3,4 @@
 - [scoutpro typecheck blocked](scoutpro-typecheck-blocked.md) — TS6306 from non-composite object-storage-web ref aborts ALL file checks; verify via temp tsconfig dropping that ref.
 - [Player stats API returns strings](player-stats-strings.md) — useGetPlayerStats fields are strings not numbers; always wrap with Number() before toFixed() or arithmetic.
 - [TEAM_SECTIONS must live in separate module](team-sections-hmr.md) — exporting TEAM_SECTIONS from team-scouting.tsx breaks Vite Fast Refresh; keep it in lib/team-sections.ts.
+- [Watchlist API missing field](watchlist-api-bug.md) — all three player SELECTs (list/create/update) must include watchlisted or RQ cache overwrites it.
