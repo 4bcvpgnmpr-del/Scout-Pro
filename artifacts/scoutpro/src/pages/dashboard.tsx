@@ -9,7 +9,7 @@ import {
 import {
   Bell, Trophy, ChevronRight, Clock, Video, FileText, Shield, Users,
   Star, Zap, CheckCircle2, Circle, Target, Calendar, ArrowRight, Plus,
-  Swords, BarChart2, MapPin, TrendingUp, BookOpen,
+  Swords, BarChart2, MapPin, TrendingUp, BookOpen, ListOrdered,
 } from "lucide-react";
 import { DIFFICULTY_LABEL } from "@/lib/difficulty";
 
@@ -238,6 +238,35 @@ export default function Dashboard() {
       });
   }, [games, todayKey, rivalInfo]);
 
+  // Standings: computed from ALL completed games (scores set)
+  const standings = useMemo(() => {
+    const completed = (games ?? []).filter(g => g.homeScore != null && g.awayScore != null);
+    const rec: Record<string, { wins: number; losses: number; played: number; displayName: string }> = {};
+    for (const g of completed) {
+      const hn = g.homeTeam.toLowerCase();
+      const an = g.awayTeam.toLowerCase();
+      if (!rec[hn]) rec[hn] = { wins: 0, losses: 0, played: 0, displayName: g.homeTeam };
+      if (!rec[an]) rec[an] = { wins: 0, losses: 0, played: 0, displayName: g.awayTeam };
+      rec[hn].played++;
+      rec[an].played++;
+      if (g.homeScore! > g.awayScore!) {
+        rec[hn].wins++;
+        rec[an].losses++;
+      } else if (g.awayScore! > g.homeScore!) {
+        rec[an].wins++;
+        rec[hn].losses++;
+      }
+    }
+    return Object.entries(rec)
+      .sort((a, b) => b[1].wins - a[1].wins || a[1].losses - b[1].losses)
+      .map(([nameL, r], idx) => ({ nameL, pos: idx + 1, ...r }));
+  }, [games]);
+
+  const getRecord = (teamName: string) => {
+    const nl = teamName.toLowerCase();
+    return standings.find(s => s.nameL === nl) ?? null;
+  };
+
   // Alerts
   const alerts = useMemo(() => {
     const list: { icon: React.ElementType; title: string; desc: string; cls: string; href: string }[] = [];
@@ -318,13 +347,41 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Team logos */}
-              <div className="flex items-center justify-around gap-2 mb-5">
-                <TeamBadge name={nextGame.homeTeam} logoUrl={teamByName[nextGame.homeTeam.toLowerCase()]?.logoUrl ?? null} sub="Local" />
-                <div className="text-center shrink-0">
-                  <div className="text-xl font-black text-muted-foreground/20 tracking-widest">VS</div>
-                </div>
-                <TeamBadge name={nextGame.awayTeam} logoUrl={teamByName[nextGame.awayTeam.toLowerCase()]?.logoUrl ?? null} sub="Visitante" />
-              </div>
+              {(() => {
+                const homeRec = getRecord(nextGame.homeTeam);
+                const awayRec = getRecord(nextGame.awayTeam);
+                return (
+                  <div className="flex items-center justify-around gap-2 mb-5">
+                    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                      <TeamBadge name={nextGame.homeTeam} logoUrl={teamByName[nextGame.homeTeam.toLowerCase()]?.logoUrl ?? null} sub="Local" />
+                      {homeRec ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                          <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">{homeRec.wins}V</span>
+                          <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">{homeRec.losses}D</span>
+                          {homeRec.pos <= standings.length && <span className="text-[10px] font-bold text-muted-foreground bg-muted/50 border border-border px-1.5 py-0.5 rounded-md">#{homeRec.pos}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40">Sin datos</span>
+                      )}
+                    </div>
+                    <div className="text-center shrink-0">
+                      <div className="text-xl font-black text-muted-foreground/20 tracking-widest">VS</div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                      <TeamBadge name={nextGame.awayTeam} logoUrl={teamByName[nextGame.awayTeam.toLowerCase()]?.logoUrl ?? null} sub="Visitante" />
+                      {awayRec ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                          <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-md">{awayRec.wins}V</span>
+                          <span className="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md">{awayRec.losses}D</span>
+                          {awayRec.pos <= standings.length && <span className="text-[10px] font-bold text-muted-foreground bg-muted/50 border border-border px-1.5 py-0.5 rounded-md">#{awayRec.pos}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40">Sin datos</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Game meta */}
               <div className="space-y-2 text-sm mb-4">
@@ -493,30 +550,72 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Rival header */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
-                  {rivalInfo.logoUrl
-                    ? <img src={rivalInfo.logoUrl} alt={rivalInfo.name} className="h-full w-full object-cover" />
-                    : <span className="font-black text-primary text-xl">{rivalInfo.name.slice(0, 2).toUpperCase()}</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-black text-foreground text-xl uppercase leading-tight truncate">{rivalInfo.name}</div>
-                  {nextGame && (
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {fmtShort(nextGame.date)}
-                      </span>
-                      <DiffChip diff={nextGame.difficulty} />
-                      {/* Scouting progress badge */}
-                      {(gameScouting.fortalezas.length > 0 || gameScouting.debilidades.length > 0 || gameScouting.clavesPartido) && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center gap-1">
-                          <CheckCircle2 className="h-2.5 w-2.5" /> Scouting activo
-                        </span>
-                      )}
+              {(() => {
+                const rivalRec = getRecord(rivalInfo.name);
+                return (
+                  <>
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
+                        {rivalInfo.logoUrl
+                          ? <img src={rivalInfo.logoUrl} alt={rivalInfo.name} className="h-full w-full object-cover" />
+                          : <span className="font-black text-primary text-xl">{rivalInfo.name.slice(0, 2).toUpperCase()}</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-black text-foreground text-xl uppercase leading-tight truncate">{rivalInfo.name}</div>
+                        {nextGame && (
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" /> {fmtShort(nextGame.date)}
+                            </span>
+                            <DiffChip diff={nextGame.difficulty} />
+                            {(gameScouting.fortalezas.length > 0 || gameScouting.debilidades.length > 0 || gameScouting.clavesPartido) && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center gap-1">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Scouting activo
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+
+                    {/* General stats bar */}
+                    <div className="grid grid-cols-4 gap-2 mb-4 p-3 rounded-xl bg-muted/30 border border-border">
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Victorias</div>
+                        <div className="text-lg font-black text-green-400">{rivalRec?.wins ?? "—"}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Derrotas</div>
+                        <div className="text-lg font-black text-red-400">{rivalRec?.losses ?? "—"}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Jugados</div>
+                        <div className="text-lg font-black text-foreground/70">{rivalRec?.played ?? "—"}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Posición</div>
+                        <div className="text-lg font-black text-amber-400 flex items-center justify-center gap-0.5">
+                          {rivalRec ? (
+                            <><ListOrdered className="h-3.5 w-3.5 opacity-60" />#{rivalRec.pos}</>
+                          ) : "—"}
+                        </div>
+                      </div>
+                    </div>
+                    {rivalRec && rivalRec.played > 0 && (
+                      <div className="mb-4">
+                        <div className="h-1.5 rounded-full bg-red-500/20 overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full transition-all duration-700"
+                            style={{ width: `${Math.round((rivalRec.wins / rivalRec.played) * 100)}%` }} />
+                        </div>
+                        <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                          <span className="text-green-400/70">{Math.round((rivalRec.wins / rivalRec.played) * 100)}% victorias</span>
+                          <span className="text-red-400/70">{rivalRec.played} partidos jugados</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Rival's last 5 results */}
               {rivalResults.length > 0 && (
@@ -641,32 +740,66 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Stats grid */}
-              <div className="grid grid-cols-4 gap-3 mb-5">
-                {[
-                  { label: "Victorias", value: String(season.wins), cls: "text-green-400" },
-                  { label: "Derrotas", value: String(season.losses), cls: "text-red-400" },
-                  { label: "Racha", value: season.streak ? `${season.streak} ${season.streakN}` : "—", cls: season.streak === "W" ? "text-green-400" : season.streak === "L" ? "text-red-400" : "text-muted-foreground" },
-                  { label: "% Victorias", value: `${season.pct}%`, cls: "text-foreground" },
-                ].map(({ label, value, cls }) => (
-                  <div key={label} className="text-center">
-                    <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${cls}`}>{label}</div>
-                    <div className={`text-2xl font-black ${cls}`}>{value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Win rate bar */}
-              {(season.wins + season.losses) > 0 && (
-                <div className="mb-5">
-                  <div className="h-2 rounded-full bg-red-500/20 overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full transition-all duration-700" style={{ width: `${season.pct}%` }} />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                    <span className="text-green-400/70">{season.wins} victorias</span>
-                    <span className="text-red-400/70">{season.losses} derrotas</span>
-                  </div>
-                </div>
-              )}
+              {(() => {
+                const ownRec = ownTeam ? getRecord(ownTeam.name) : null;
+                const displayWins = ownRec?.wins ?? season.wins;
+                const displayLosses = ownRec?.losses ?? season.losses;
+                const displayPlayed = ownRec?.played ?? (season.wins + season.losses);
+                const displayPct = displayPlayed > 0 ? Math.round((displayWins / displayPlayed) * 100) : 0;
+                return (
+                  <>
+                    <div className="grid grid-cols-4 gap-3 mb-5">
+                      {[
+                        { label: "Victorias", value: String(displayWins), cls: "text-green-400" },
+                        { label: "Derrotas", value: String(displayLosses), cls: "text-red-400" },
+                        { label: "Racha", value: season.streak ? `${season.streak} ${season.streakN}` : "—", cls: season.streak === "W" ? "text-green-400" : season.streak === "L" ? "text-red-400" : "text-muted-foreground" },
+                        { label: "Posición", value: ownRec ? `#${ownRec.pos}` : "—", cls: "text-amber-400" },
+                      ].map(({ label, value, cls }) => (
+                        <div key={label} className="text-center">
+                          <div className={`text-[10px] uppercase tracking-widest font-bold mb-1 ${cls}`}>{label}</div>
+                          <div className={`text-2xl font-black ${cls}`}>{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {displayPlayed > 0 && (
+                      <div className="mb-4">
+                        <div className="h-2 rounded-full bg-red-500/20 overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full transition-all duration-700" style={{ width: `${displayPct}%` }} />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                          <span className="text-green-400/70">{displayWins} victorias</span>
+                          <span className="text-red-400/70">{displayLosses} derrotas</span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Mini standings top-5 */}
+                    {standings.length > 0 && (
+                      <div className="mb-4">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                          <ListOrdered className="h-3 w-3" /> Clasificación
+                        </div>
+                        <div className="rounded-xl border border-border overflow-hidden">
+                          {standings.slice(0, 5).map((s, i) => {
+                            const isOwn = s.nameL === ownNameLower;
+                            return (
+                              <div key={s.nameL} className={`flex items-center gap-2 px-3 py-2 text-xs border-b border-border last:border-0 ${isOwn ? "bg-primary/10" : i % 2 === 0 ? "bg-transparent" : "bg-muted/20"}`}>
+                                <span className={`w-4 text-center font-black shrink-0 ${isOwn ? "text-primary" : "text-muted-foreground/50"}`}>{s.pos}</span>
+                                <span className={`flex-1 font-semibold truncate ${isOwn ? "text-primary" : "text-foreground/80"}`}>{s.displayName}</span>
+                                <span className="text-green-400 font-bold w-6 text-center">{s.wins}</span>
+                                <span className="text-red-400/70 w-6 text-center">{s.losses}</span>
+                                <span className="text-muted-foreground/50 w-8 text-center text-[10px]">{s.played > 0 ? `${Math.round((s.wins / s.played) * 100)}%` : "—"}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {standings.length > 5 && (
+                          <div className="text-[10px] text-center text-muted-foreground/40 mt-1.5">+{standings.length - 5} equipos más</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Upcoming games */}
               <div>
