@@ -7,6 +7,7 @@ import {
   useUpdateTeam,
   useListPlayers,
   useGetPlayerStats,
+  useUpdatePlayer,
   getListTeamMediaQueryKey,
   getListTeamsQueryKey,
   getListPlayersQueryKey,
@@ -19,7 +20,7 @@ import {
   Users, Video, ClipboardList, Library,
   Trash2, Loader2, Upload, Link2,
   Pencil, Check, Plus, Camera,
-  BarChart2, Activity, Search,
+  BarChart2, Activity, Search, Star,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -452,16 +453,66 @@ function PlaybookSection({ teamId, teamName }: { teamId: number; teamName: strin
   );
 }
 
-// ── PlayerStatsRowLight (one hook per player, light-mode table row) ───────────
-function PlayerStatsRowLight({ player }: {
+// ── PlayerStatsRowDark (one hook per player, dark-mode table row with VAL) ────
+function PlayerStatsRowDark({ player }: {
   player: { id: number; name: string; position?: string | null; jerseyNumber?: number | null; photoUrl?: string | null };
 }) {
   const { data: stats } = useGetPlayerStats(player.id, { query: { queryKey: getGetPlayerStatsQueryKey(player.id) } });
   const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
   const fmt = (v: number | string | null | undefined, dec = 1) => { const n = Number(v); return v != null && !isNaN(n) ? n.toFixed(dec) : "—"; };
   const fmtPct = (v: number | string | null | undefined) => { const n = Number(v); return v != null && !isNaN(n) ? `${(n * 100).toFixed(0)}%` : "—"; };
+  const val = stats
+    ? (Number(stats.avgPoints) + Number(stats.avgRebounds) + Number(stats.avgAssists) + Number(stats.avgSteals) + Number(stats.avgBlocks)).toFixed(1)
+    : null;
   return (
-    <tr className="border-b border-gray-100 hover:bg-orange-50/40 transition">
+    <tr className="border-b border-white/5 hover:bg-white/5 transition">
+      <td className="py-2.5 pl-0 pr-2 text-sm text-gray-500 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
+      <td className="py-2.5 px-2">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+            {player.photoUrl
+              ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
+              : <span className="text-[10px] font-black text-orange-400">{initials}</span>}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-200 text-sm leading-tight">{player.name}</p>
+            <p className="text-[10px] text-gray-500">{player.position ?? ""}</p>
+          </div>
+        </div>
+      </td>
+      {stats ? (
+        <>
+          <td className="py-2.5 px-1.5 text-sm font-black text-orange-400 text-center">{val}</td>
+          <td className="py-2.5 px-1.5 text-sm font-black text-amber-400 text-center">{fmt(stats.avgPoints)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgRebounds)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgAssists)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgSteals)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgBlocks)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgMinutes, 0)}'</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(stats.avgThreePointPct)}</td>
+          <td className="py-2.5 pr-0 text-sm text-gray-500 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
+        </>
+      ) : (
+        <td colSpan={10} className="py-2.5 px-2 text-xs text-gray-600 italic">Sin estadísticas</td>
+      )}
+    </tr>
+  );
+}
+
+// ── PlayerRosterRow (shows edad / posición / país / altura / favorito) ─────────
+function PlayerRosterRow({ player, onToggleFavorite }: {
+  player: {
+    id: number; name: string; position?: string | null; jerseyNumber?: number | null;
+    photoUrl?: string | null; age?: number | null; height?: string | null;
+    nationality?: string | null; watchlisted?: boolean | null;
+  };
+  onToggleFavorite: (id: number, current: boolean) => void;
+}) {
+  const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+  const isFav = player.watchlisted ?? false;
+  return (
+    <tr className="border-b border-gray-100 hover:bg-orange-50/30 transition group">
       <td className="py-2.5 pl-0 pr-2 text-sm text-gray-400 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
       <td className="py-2.5 px-2">
         <div className="flex items-center gap-2">
@@ -470,27 +521,21 @@ function PlayerStatsRowLight({ player }: {
               ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
               : <span className="text-[10px] font-black text-orange-500">{initials}</span>}
           </div>
-          <div>
-            <p className="font-semibold text-gray-800 text-sm leading-tight">{player.name}</p>
-            <p className="text-[10px] text-gray-400">{player.position ?? ""}</p>
-          </div>
+          <p className="font-semibold text-gray-800 text-sm">{player.name}</p>
         </div>
       </td>
-      {stats ? (
-        <>
-          <td className="py-2.5 px-1.5 text-sm font-black text-orange-500 text-center">{fmt(stats.avgPoints)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgRebounds)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgAssists)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgSteals)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgBlocks)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgMinutes, 0)}'</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmtPct(stats.avgThreePointPct)}</td>
-          <td className="py-2.5 pr-0 text-sm text-gray-400 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
-        </>
-      ) : (
-        <td colSpan={9} className="py-2.5 px-2 text-xs text-gray-300 italic">Sin estadísticas</td>
-      )}
+      <td className="py-2.5 px-2 text-sm text-gray-500 text-center font-medium">{player.position ?? "—"}</td>
+      <td className="py-2.5 px-2 text-sm text-gray-500 text-center">{player.age ?? "—"}</td>
+      <td className="py-2.5 px-2 text-sm text-gray-500 text-center">{player.nationality ?? "—"}</td>
+      <td className="py-2.5 px-2 text-sm text-gray-500 text-center">{player.height ? `${player.height}` : "—"}</td>
+      <td className="py-2.5 pr-1 text-center">
+        <button
+          onClick={() => onToggleFavorite(player.id, isFav)}
+          title={isFav ? "En lista de fichajes · click para quitar" : "Añadir a fichajes"}
+          className={`p-1.5 rounded-lg transition ${isFav ? "text-amber-400 bg-amber-50" : "text-gray-300 hover:text-amber-400 hover:bg-amber-50 opacity-0 group-hover:opacity-100"}`}>
+          <Star className={`h-4 w-4 ${isFav ? "fill-amber-400" : ""}`} />
+        </button>
+      </td>
     </tr>
   );
 }
@@ -499,6 +544,8 @@ function PlayerStatsRowLight({ player }: {
 export function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: string }) {
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("Todos");
+  const queryClient = useQueryClient();
+  const updatePlayer = useUpdatePlayer();
 
   const { data: players, isLoading } = useListPlayers(
     { teamId },
@@ -512,7 +559,11 @@ export function PlantillaSection({ teamId, teamName }: { teamId: number; teamNam
     return [...list].sort((a, b) => (a.jerseyNumber ?? 99) - (b.jerseyNumber ?? 99));
   }, [players, posFilter, search]);
 
-  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+  const handleToggleFavorite = (playerId: number, current: boolean) => {
+    updatePlayer.mutate({ id: playerId, data: { watchlisted: !current } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPlayersQueryKey({ teamId }) }),
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -549,13 +600,19 @@ export function PlantillaSection({ teamId, teamName }: { teamId: number; teamNam
               <tr className="border-b border-gray-100">
                 <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 pr-2 pl-0 w-8">#</th>
                 <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Jugador</th>
-                {statsHeaders.map(h => (
-                  <th key={h} className="text-center text-[10px] text-gray-300 uppercase tracking-widest font-black py-2 px-1.5">{h}</th>
-                ))}
+                <th className="text-center text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Pos</th>
+                <th className="text-center text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Edad</th>
+                <th className="text-center text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">País</th>
+                <th className="text-center text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Alt</th>
+                <th className="text-center text-[10px] text-amber-400 uppercase tracking-widest font-black py-2 px-1 w-10">
+                  <Star className="h-3 w-3 inline" />
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => <PlayerStatsRowLight key={p.id} player={p} />)}
+              {filtered.map(p => (
+                <PlayerRosterRow key={p.id} player={p} onToggleFavorite={handleToggleFavorite} />
+              ))}
             </tbody>
           </table>
         </div>
@@ -566,95 +623,41 @@ export function PlantillaSection({ teamId, teamName }: { teamId: number; teamNam
 
 // ── Estadísticas section (V/D/Pos + player stats table, synced with DB) ───────
 export function EstadisticasSection({ teamId }: { teamId: number }) {
-  const [editMode, setEditMode] = useState(false);
-  const [wins, setWins] = useState("");
-  const [losses, setLosses] = useState("");
-  const [pos, setPos] = useState("");
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(`sf-team-stats-${teamId}`);
-      if (raw) {
-        const p = JSON.parse(raw) as { wins?: string; losses?: string; pos?: string };
-        setWins(p.wins ?? ""); setLosses(p.losses ?? ""); setPos(p.pos ?? "");
-      } else { setWins(""); setLosses(""); setPos(""); }
-    } catch { /* ignore */ }
-    setEditMode(false);
-  }, [teamId]);
-
-  const save = () => {
-    localStorage.setItem(`sf-team-stats-${teamId}`, JSON.stringify({ wins, losses, pos }));
-    setEditMode(false);
-  };
-
   const { data: players, isLoading } = useListPlayers(
     { teamId },
     { query: { queryKey: getListPlayersQueryKey({ teamId }) } },
   );
 
-  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+  const statsHeaders = ["VAL", "Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
 
   return (
-    <div className="space-y-6">
-      {/* Record V/D/Pos */}
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Clasificación de Temporada</span>
-          {!editMode ? (
-            <button onClick={() => setEditMode(true)}
-              className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-orange-500 transition px-1.5 py-0.5 rounded">
-              <Pencil className="h-2.5 w-2.5" /> Editar
-            </button>
-          ) : (
-            <button onClick={save}
-              className="flex items-center gap-1 text-[10px] text-orange-600 px-1.5 py-0.5 rounded bg-orange-50 border border-orange-200">
-              <Check className="h-2.5 w-2.5" /> Guardar
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Victorias", val: wins,   set: setWins,   cls: "text-green-600" },
-            { label: "Derrotas",  val: losses,  set: setLosses, cls: "text-red-500"   },
-            { label: "Posición",  val: pos,     set: setPos,    cls: "text-amber-600" },
-          ].map(({ label, val, set, cls }) => (
-            <div key={label} className="text-center">
-              <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-1">{label}</div>
-              {editMode ? (
-                <input value={val} onChange={e => set(e.target.value)} placeholder="—"
-                  className={`w-full text-center text-xl font-black bg-white border border-gray-200 rounded-lg py-1 outline-none focus:border-orange-400 ${cls}`} />
-              ) : (
-                <div className={`text-2xl font-black ${cls}`}>{val || "—"}</div>
-              )}
-            </div>
-          ))}
-        </div>
+    <div className="bg-gray-900 rounded-2xl border border-white/5 overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+        <Activity className="h-4 w-4 text-orange-400" />
+        <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">Estadísticas Medias por Jugador</span>
       </div>
 
-      {/* Player stats table */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-3">
-          <Activity className="h-3.5 w-3.5 text-gray-400" />
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estadísticas Medias por Jugador</span>
-        </div>
+      {/* Table */}
+      <div className="px-4 py-3">
         {isLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-gray-300" /></div>
+          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-600" /></div>
         ) : !players || players.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">No hay jugadores registrados.</div>
+          <div className="text-center py-10 text-gray-600 text-sm">No hay jugadores registrados.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 pr-2 pl-0 w-8">#</th>
-                  <th className="text-left text-[10px] text-gray-400 uppercase tracking-widest font-black py-2 px-2">Jugador</th>
-                  {statsHeaders.map(h => (
-                    <th key={h} className="text-center text-[10px] text-gray-300 uppercase tracking-widest font-black py-2 px-1.5">{h}</th>
+                <tr className="border-b border-white/5">
+                  <th className="text-left text-[10px] text-gray-600 uppercase tracking-widest font-black py-2 pr-2 pl-0 w-8">#</th>
+                  <th className="text-left text-[10px] text-gray-600 uppercase tracking-widest font-black py-2 px-2">Jugador</th>
+                  {statsHeaders.map((h, i) => (
+                    <th key={h} className={`text-center text-[10px] uppercase tracking-widest font-black py-2 px-1.5 ${i === 0 ? "text-orange-500" : i === 1 ? "text-amber-500" : "text-gray-600"}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {players.map(p => <PlayerStatsRowLight key={p.id} player={p} />)}
+                {players.map(p => <PlayerStatsRowDark key={p.id} player={p} />)}
               </tbody>
             </table>
           </div>

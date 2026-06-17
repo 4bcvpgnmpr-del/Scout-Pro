@@ -1072,7 +1072,7 @@ export default function Scout() {
               return (
                 <button key={s.key}
                   onClick={() => { setView({ kind, teamId: team.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                  className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition ${currentSection === s.key ? "text-white bg-white/10 font-semibold" : "text-gray-400 hover:bg-white/5"}`}>
+                  className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition ${currentSection === s.key ? "text-orange-400 bg-orange-500/15 font-bold" : "text-gray-500 hover:bg-white/5 hover:text-gray-300"}`}>
                   <Icon className="h-3.5 w-3.5" /> {s.label}
                 </button>
               );
@@ -1225,11 +1225,18 @@ export default function Scout() {
               </button>
             )}
           </div>
-          <button onClick={() => setShowAddPlayer(true)}
-            className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
-            <Plus className="h-4 w-4" />
-            {view.kind === "watchlist" ? "AÑADIR A FICHAR" : "AÑADIR JUGADOR"}
-          </button>
+          {view.kind === "watchlist" ? (
+            <button onClick={() => setShowAddPlayer(true)}
+              className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
+              <Plus className="h-4 w-4" /> AÑADIR A FICHAR
+            </button>
+          ) : (
+            <Link href="/jugadores">
+              <button className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
+                <Plus className="h-4 w-4" /> AÑADIR JUGADOR
+              </button>
+            </Link>
+          )}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugador..."
