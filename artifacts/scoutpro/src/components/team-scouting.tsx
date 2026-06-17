@@ -493,7 +493,7 @@ function PlayerStatsRowLight({ player }: {
 }
 
 // ── Plantilla section (synced with Centro de Partido) ─────────────────────────
-function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: string }) {
+export function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: string }) {
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("Todos");
 
@@ -562,7 +562,7 @@ function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: stri
 }
 
 // ── Estadísticas section (V/D/Pos + player stats table, synced with DB) ───────
-function EstadisticasSection({ teamId }: { teamId: number }) {
+export function EstadisticasSection({ teamId }: { teamId: number }) {
   const [editMode, setEditMode] = useState(false);
   const [wins, setWins] = useState("");
   const [losses, setLosses] = useState("");
