@@ -2,15 +2,20 @@ import { useState, useCallback, useMemo } from "react";
 import { useRoute, Link } from "wouter";
 import {
   useGetGame, useListTeams, useListPlayers, useListGames,
-  getGetGameQueryKey, getListTeamsQueryKey, getListPlayersQueryKey, getListGamesQueryKey,
+  useUpdatePlayer, useGetPlayerStats,
+  getGetGameQueryKey, getListTeamsQueryKey, getListPlayersQueryKey,
+  getListGamesQueryKey, getGetPlayerStatsQueryKey, getGetPlayerQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Calendar, MapPin, Star, CheckCircle2, Circle,
   Download, Loader2, Users, Video, Swords, BarChart2, Target,
   Shield, TrendingUp, Plus, Trash2, FileText, MessageSquare,
-  Activity, Pencil, Trophy, Zap, BookOpen, ChevronRight,
+  Activity, Pencil, Trophy, Zap, BookOpen, ChevronRight, Camera,
 } from "lucide-react";
 import { useExportPdf } from "@/hooks/use-export-pdf";
+import { useToast } from "@/hooks/use-toast";
+import { uploadPhotoFile } from "@/components/photo-upload";
 import { DIFFICULTY_LABEL } from "@/lib/difficulty";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -339,13 +344,89 @@ function TabScouting({ scout, onChange }: { scout: ScoutingData; onChange: (s: S
   );
 }
 
+// ── Player card with photo upload ─────────────────────────────────────────────
+const POSITIONS: Record<string, string> = { PG: "Base", SG: "Escolta", SF: "Alero", PF: "Ala-Pívot", C: "Pívot" };
+
+function PlayerPhotoCard({ player }: { player: { id: number; name: string; position: string; jerseyNumber?: number | null; age?: number | null; height?: string | null; nationality?: string | null; photoUrl?: string | null } }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updatePlayer = useUpdatePlayer();
+  const [uploading, setUploading] = useState(false);
+  const [localPhoto, setLocalPhoto] = useState<string | null>(null);
+
+  const photo = localPhoto ?? player.photoUrl ?? null;
+  const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast({ title: "Solo imágenes", variant: "destructive" }); return; }
+    setUploading(true);
+    try {
+      const url = await uploadPhotoFile(file);
+      setLocalPhoto(url);
+      updatePlayer.mutate({ id: player.id, data: { photoUrl: url } }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetPlayerQueryKey(player.id) });
+          toast({ title: "Foto guardada" });
+        },
+        onError: () => toast({ title: "Error guardando foto", variant: "destructive" }),
+      });
+    } catch {
+      toast({ title: "Error al subir foto", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 flex flex-col items-center gap-3 hover:border-white/[0.12] transition group">
+      {/* Photo */}
+      <div className="relative">
+        <label className="cursor-pointer block">
+          <div className="h-20 w-20 rounded-2xl overflow-hidden bg-white/[0.06] border border-white/10 flex items-center justify-center relative">
+            {photo
+              ? <img src={photo} alt={player.name} className="h-full w-full object-cover" />
+              : <span className="font-black text-primary text-xl">{initials}</span>}
+            <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              {uploading
+                ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                : <Camera className="h-5 w-5 text-white" />}
+            </div>
+          </div>
+          <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+        </label>
+        {player.jerseyNumber != null && (
+          <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center">
+            {player.jerseyNumber}
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="text-center min-w-0 w-full">
+        <Link href={`/players/${player.id}`}>
+          <p className="font-black text-white/90 text-sm leading-tight hover:text-primary transition cursor-pointer truncate">{player.name}</p>
+        </Link>
+        <p className="text-[11px] text-primary/70 font-bold mt-0.5">{POSITIONS[player.position ?? ""] ?? player.position ?? "—"}</p>
+        <div className="flex items-center justify-center gap-2 mt-1.5 text-[10px] text-white/30">
+          {player.age && <span>{player.age}a</span>}
+          {player.height && <span>{player.height}</span>}
+          {player.nationality && <span>{player.nationality}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: Rival ────────────────────────────────────────────────────────────────
 function TabRival({ rivalTeamId, rivalName }: { rivalTeamId: number | null; rivalName: string }) {
   const { data: players, isLoading } = useListPlayers(
     rivalTeamId ? { teamId: rivalTeamId } : undefined,
     { query: { enabled: !!rivalTeamId, queryKey: getListPlayersQueryKey(rivalTeamId ? { teamId: rivalTeamId } : undefined) } },
   );
-  const positions: Record<string, string> = { PG: "Base", SG: "Escolta", SF: "Alero", PF: "Ala-Pívot", C: "Pívot" };
+
   return (
     <div className="space-y-4">
       <MCard>
@@ -359,6 +440,7 @@ function TabRival({ rivalTeamId, rivalName }: { rivalTeamId: number | null; riva
             </Link>
           )}
         </div>
+
         {!rivalTeamId ? (
           <div className="py-10 text-center">
             <Users className="h-10 w-10 text-white/10 mx-auto mb-3" />
@@ -370,9 +452,11 @@ function TabRival({ rivalTeamId, rivalName }: { rivalTeamId: number | null; riva
             </Link>
           </div>
         ) : isLoading ? (
-          <div className="space-y-2">{[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-white/[0.03] rounded-xl animate-pulse" />
-          ))}</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-36 bg-white/[0.03] rounded-2xl animate-pulse" />
+            ))}
+          </div>
         ) : !players || players.length === 0 ? (
           <div className="py-10 text-center">
             <Users className="h-10 w-10 text-white/10 mx-auto mb-3" />
@@ -384,42 +468,14 @@ function TabRival({ rivalTeamId, rivalName }: { rivalTeamId: number | null; riva
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  {["#", "Nombre", "Posición", "Edad", "Alt.", "Nac."].map(h => (
-                    <th key={h} className="text-left text-[10px] text-white/30 uppercase tracking-widest font-black py-2 px-3 first:pl-0">{h}</th>
-                  ))}
-                  <th className="w-8" />
-                </tr>
-              </thead>
-              <tbody>
-                {players.map(p => (
-                  <tr key={p.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition group">
-                    <td className="py-3 px-3 pl-0 text-sm text-white/30 font-mono w-10">{p.jerseyNumber ?? "—"}</td>
-                    <td className="py-3 px-3 font-semibold text-white/85 text-sm">{p.name}</td>
-                    <td className="py-3 px-3 text-sm text-white/50">{positions[p.position ?? ""] ?? p.position ?? "—"}</td>
-                    <td className="py-3 px-3 text-sm text-white/50">{p.age ?? "—"}</td>
-                    <td className="py-3 px-3 text-sm text-white/40">{p.height ?? "—"}</td>
-                    <td className="py-3 px-3 text-sm text-white/40">{p.nationality ?? "—"}</td>
-                    <td className="py-3 pr-0">
-                      <Link href={`/players/${p.id}`}>
-                        <button className="opacity-0 group-hover:opacity-100 transition text-white/30 hover:text-primary">
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {players.map(p => <PlayerPhotoCard key={p.id} player={p} />)}
           </div>
         )}
       </MCard>
 
       <div className="text-[11px] text-white/25 text-center">
-        En el futuro esta información se actualizará automáticamente desde FEB.
+        Haz clic en la foto de cada jugadora para actualizarla · En el futuro se conectará con la FEB.
       </div>
     </div>
   );
@@ -487,12 +543,63 @@ function TabJugadas() {
   );
 }
 
+// ── PlayerStatsRow (one hook call per player, avoids hooks-in-loop) ───────────
+function PlayerStatsRow({ player }: { player: { id: number; name: string; position?: string | null; jerseyNumber?: number | null; photoUrl?: string | null } }) {
+  const { data: stats } = useGetPlayerStats(player.id, { query: { queryKey: getGetPlayerStatsQueryKey(player.id) } });
+  const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+  const fmt = (v: number | null | undefined, dec = 1) => v != null ? v.toFixed(dec) : "—";
+  const fmtPct = (v: number | null | undefined) => v != null ? `${(v * 100).toFixed(0)}%` : "—";
+  return (
+    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition group">
+      <td className="py-3 pl-0 pr-3 text-sm text-white/30 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
+      <td className="py-3 px-3">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full overflow-hidden bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
+            {player.photoUrl
+              ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
+              : <span className="text-[10px] font-black text-primary">{initials}</span>}
+          </div>
+          <div>
+            <Link href={`/players/${player.id}`}>
+              <p className="font-semibold text-white/85 text-sm leading-tight hover:text-primary transition cursor-pointer">{player.name}</p>
+            </Link>
+            <p className="text-[10px] text-white/35">{POSITIONS[player.position ?? ""] ?? player.position ?? ""}</p>
+          </div>
+        </div>
+      </td>
+      {stats ? (
+        <>
+          <td className="py-3 px-2 text-sm font-black text-primary text-center">{fmt(stats.avgPoints)}</td>
+          <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgRebounds)}</td>
+          <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgAssists)}</td>
+          <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgSteals)}</td>
+          <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgBlocks)}</td>
+          <td className="py-3 px-2 text-sm text-white/50 text-center">{fmt(stats.avgMinutes, 0)}'</td>
+          <td className="py-3 px-2 text-sm text-white/50 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
+          <td className="py-3 px-2 text-sm text-white/50 text-center">{fmtPct(stats.avgThreePointPct)}</td>
+          <td className="py-3 pr-0 text-sm text-white/50 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
+        </>
+      ) : (
+        <td colSpan={9} className="py-3 px-3 text-xs text-white/20 italic">Sin estadísticas registradas</td>
+      )}
+    </tr>
+  );
+}
+
 // ── Tab: Estadísticas ─────────────────────────────────────────────────────────
-function TabEstadisticas({ homeTeam, awayTeam, homeScore, awayScore, h2hResults }: {
+function TabEstadisticas({ homeTeam, awayTeam, homeScore, awayScore, h2hResults, rivalTeamId }: {
   homeTeam: string; awayTeam: string;
   homeScore?: number | null; awayScore?: number | null;
   h2hResults: { date: string; home: string; away: string; hs: number; as: number }[];
+  rivalTeamId: number | null;
 }) {
+  const { data: players } = useListPlayers(
+    rivalTeamId ? { teamId: rivalTeamId } : undefined,
+    { query: { enabled: !!rivalTeamId, queryKey: getListPlayersQueryKey(rivalTeamId ? { teamId: rivalTeamId } : undefined) } },
+  );
+
+  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+
   return (
     <div className="space-y-4">
       {homeScore != null && awayScore != null && (
@@ -512,6 +619,40 @@ function TabEstadisticas({ homeTeam, awayTeam, homeScore, awayScore, h2hResults 
           <p className={`text-center text-sm font-black uppercase tracking-widest ${homeScore > awayScore ? "text-green-400" : "text-red-400"}`}>
             {homeScore > awayScore ? `Gana ${homeTeam}` : `Gana ${awayTeam}`}
           </p>
+        </MCard>
+      )}
+
+      {rivalTeamId && (
+        <MCard>
+          <div className="flex items-center justify-between mb-4">
+            <SLabel icon={Activity} label="Estadísticas Medias Rival" color="text-amber-400" />
+            {players && players.length > 0 && (
+              <span className="text-[10px] text-white/30">{players.length} jugadoras</span>
+            )}
+          </div>
+          {!players || players.length === 0 ? (
+            <div className="py-8 text-center">
+              <Activity className="h-10 w-10 text-white/10 mx-auto mb-3" />
+              <p className="text-sm text-white/40">No hay jugadoras registradas para este equipo</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    <th className="text-left text-[10px] text-white/25 uppercase tracking-widest font-black py-2 pr-3 pl-0 w-8">#</th>
+                    <th className="text-left text-[10px] text-white/25 uppercase tracking-widest font-black py-2 px-3">Jugadora</th>
+                    {statsHeaders.map(h => (
+                      <th key={h} className="text-center text-[10px] text-white/25 uppercase tracking-widest font-black py-2 px-2">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.map(p => <PlayerStatsRow key={p.id} player={p} />)}
+                </tbody>
+              </table>
+            </div>
+          )}
         </MCard>
       )}
 
@@ -539,14 +680,6 @@ function TabEstadisticas({ homeTeam, awayTeam, homeScore, awayScore, h2hResults 
             })}
           </div>
         )}
-      </MCard>
-
-      <MCard>
-        <SLabel icon={BarChart2} label="Estadísticas Avanzadas" color="text-amber-400" />
-        <div className="py-8 text-center">
-          <p className="text-sm text-white/40">Las estadísticas avanzadas estarán disponibles próximamente</p>
-          <p className="text-xs text-white/25 mt-1">Se conectarán con la FEB en futuras versiones</p>
-        </div>
       </MCard>
     </div>
   );
@@ -988,6 +1121,7 @@ export default function GameMatchCenter() {
             homeTeam={game.homeTeam} awayTeam={game.awayTeam}
             homeScore={game.homeScore} awayScore={game.awayScore}
             h2hResults={h2hResults}
+            rivalTeamId={rivalTeam?.id ?? null}
           />
         )}
         {activeTab === "informe" && (

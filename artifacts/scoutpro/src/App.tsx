@@ -31,6 +31,7 @@ import ReportNew from "@/pages/report-new";
 import ReportEdit from "@/pages/report-edit";
 import ReportDetail from "@/pages/report-detail";
 import GameMatchCenter from "@/pages/game-match-center";
+import MatchCenterHub from "@/pages/match-center-hub";
 
 import { applyTheme, applyFont } from "@/lib/themes";
 import type { ThemeId, FontId } from "@/lib/themes";
@@ -108,6 +109,10 @@ function Router() {
       </Route>
       <Route path="/teams/:id">
         {() => <SubLayout backTo="/equipos" backLabel="Equipos"><TeamDetail /></SubLayout>}
+      </Route>
+
+      <Route path="/match-center">
+        <Layout><MatchCenterHub /></Layout>
       </Route>
 
       {/* ── SubLayout: Games ─────────────────────────────────────── */}

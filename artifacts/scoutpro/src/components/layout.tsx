@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Star, Video, BookOpen, UserCog, Settings, Menu, X, Swords,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
@@ -19,7 +19,6 @@ const navGroups = [
       { name: "Equipos", href: "/equipos", icon: Shield },
       { name: "Jugadores", href: "/jugadores", icon: Users },
       { name: "Fichajes", href: "/fichajes", icon: Star },
-      { name: "Vista Scouting", href: "/scout", icon: Swords },
     ],
   },
   {
@@ -32,6 +31,7 @@ const navGroups = [
   {
     label: "Planificación",
     items: [
+      { name: "Centro de Partido", href: "/match-center", icon: Crosshair },
       { name: "Partidos", href: "/games", icon: Trophy },
       { name: "Calendario", href: "/calendar", icon: Calendar },
     ],
