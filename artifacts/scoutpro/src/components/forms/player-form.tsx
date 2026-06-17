@@ -1,3 +1,4 @@
+import React from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,14 @@ export function PlayerForm({
   submitting,
   submitLabel,
   cancelTo,
+  children,
 }: {
   defaultValues?: Partial<PlayerFormValues>;
   onSubmit: (values: PlayerFormValues) => void;
   submitting: boolean;
   submitLabel: string;
   cancelTo: string;
+  children?: React.ReactNode;
 }) {
   const { register, handleSubmit, setValue, watch } = useForm<PlayerFormValues>({ defaultValues });
   const { data: teams } = useListTeams();
@@ -129,6 +132,7 @@ export function PlayerForm({
               <Textarea {...register("notes")} placeholder="Observaciones generales, contexto..." className="bg-card h-24" />
             </div>
           </div>
+          {children && <div className="pt-2">{children}</div>}
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={submitting} className="font-display tracking-wide uppercase">
               {submitting ? "Guardando..." : submitLabel}

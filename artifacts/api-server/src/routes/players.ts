@@ -58,6 +58,7 @@ router.get("/players", async (req, res): Promise<void> => {
       handedness: playersTable.handedness,
       photoUrl: playersTable.photoUrl,
       notes: playersTable.notes,
+      watchlisted: playersTable.watchlisted,
       createdAt: playersTable.createdAt,
     })
     .from(playersTable)
@@ -109,6 +110,7 @@ router.post("/players", async (req, res): Promise<void> => {
       handedness: playersTable.handedness,
       photoUrl: playersTable.photoUrl,
       notes: playersTable.notes,
+      watchlisted: playersTable.watchlisted,
       createdAt: playersTable.createdAt,
     })
     .from(playersTable)
@@ -229,6 +231,7 @@ router.patch("/players/:id", async (req, res): Promise<void> => {
       handedness: playersTable.handedness,
       photoUrl: playersTable.photoUrl,
       notes: playersTable.notes,
+      watchlisted: playersTable.watchlisted,
       createdAt: playersTable.createdAt,
     })
     .from(playersTable)
