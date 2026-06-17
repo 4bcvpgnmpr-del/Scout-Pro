@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useGetDashboardSummary, getGetDashboardSummaryQueryKey,
@@ -9,7 +9,7 @@ import {
 import {
   Bell, Trophy, ChevronRight, Clock, Video, FileText, Shield, Users,
   Star, Zap, CheckCircle2, Circle, Target, Calendar, ArrowRight, Plus,
-  Swords, BarChart2, MapPin, TrendingUp, BookOpen, ListOrdered,
+  Swords, BarChart2, MapPin, TrendingUp, BookOpen, ListOrdered, Pencil, Check,
 } from "lucide-react";
 import { DIFFICULTY_LABEL } from "@/lib/difficulty";
 
@@ -167,6 +167,35 @@ export default function Dashboard() {
   );
   const { checks, toggle, percent } = useChecklist(_nextGame?.id ?? null);
   const gameScouting = useGameScouting(_nextGame?.id ?? null);
+
+  // Rival manual stats (editable, stored per-game)
+  const [rivalEditMode, setRivalEditMode] = useState(false);
+  const [rivalManualWins, setRivalManualWins] = useState("");
+  const [rivalManualLosses, setRivalManualLosses] = useState("");
+  const [rivalManualPos, setRivalManualPos] = useState("");
+  useEffect(() => {
+    const id = _nextGame?.id;
+    if (!id) return;
+    try {
+      const raw = localStorage.getItem(`sf-rival-manual-${id}`);
+      if (raw) {
+        const p = JSON.parse(raw) as { wins?: string; losses?: string; pos?: string };
+        setRivalManualWins(p.wins ?? "");
+        setRivalManualLosses(p.losses ?? "");
+        setRivalManualPos(p.pos ?? "");
+      } else {
+        setRivalManualWins(""); setRivalManualLosses(""); setRivalManualPos("");
+      }
+    } catch { /* ignore */ }
+    setRivalEditMode(false);
+  }, [_nextGame?.id]);
+  const saveRivalManual = () => {
+    if (!_nextGame?.id) return;
+    localStorage.setItem(`sf-rival-manual-${_nextGame.id}`, JSON.stringify({
+      wins: rivalManualWins, losses: rivalManualLosses, pos: rivalManualPos,
+    }));
+    setRivalEditMode(false);
+  };
 
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -550,72 +579,68 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Rival header */}
-              {(() => {
-                const rivalRec = getRecord(rivalInfo.name);
-                return (
-                  <>
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
-                        {rivalInfo.logoUrl
-                          ? <img src={rivalInfo.logoUrl} alt={rivalInfo.name} className="h-full w-full object-cover" />
-                          : <span className="font-black text-primary text-xl">{rivalInfo.name.slice(0, 2).toUpperCase()}</span>}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-black text-foreground text-xl uppercase leading-tight truncate">{rivalInfo.name}</div>
-                        {nextGame && (
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" /> {fmtShort(nextGame.date)}
-                            </span>
-                            <DiffChip diff={nextGame.difficulty} />
-                            {(gameScouting.fortalezas.length > 0 || gameScouting.debilidades.length > 0 || gameScouting.clavesPartido) && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center gap-1">
-                                <CheckCircle2 className="h-2.5 w-2.5" /> Scouting activo
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
+              <div className="flex items-center gap-4 mb-3">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
+                  {rivalInfo.logoUrl
+                    ? <img src={rivalInfo.logoUrl} alt={rivalInfo.name} className="h-full w-full object-cover" />
+                    : <span className="font-black text-primary text-xl">{rivalInfo.name.slice(0, 2).toUpperCase()}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-foreground text-xl uppercase leading-tight truncate">{rivalInfo.name}</div>
+                  {nextGame && (
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> {fmtShort(nextGame.date)}
+                      </span>
+                      <DiffChip diff={nextGame.difficulty} />
+                      {(gameScouting.fortalezas.length > 0 || gameScouting.debilidades.length > 0 || gameScouting.clavesPartido) && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center gap-1">
+                          <CheckCircle2 className="h-2.5 w-2.5" /> Scouting activo
+                        </span>
+                      )}
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* General stats bar */}
-                    <div className="grid grid-cols-4 gap-2 mb-4 p-3 rounded-xl bg-muted/30 border border-border">
-                      <div className="text-center">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Victorias</div>
-                        <div className="text-lg font-black text-green-400">{rivalRec?.wins ?? "—"}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Derrotas</div>
-                        <div className="text-lg font-black text-red-400">{rivalRec?.losses ?? "—"}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Jugados</div>
-                        <div className="text-lg font-black text-foreground/70">{rivalRec?.played ?? "—"}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5">Posición</div>
-                        <div className="text-lg font-black text-amber-400 flex items-center justify-center gap-0.5">
-                          {rivalRec ? (
-                            <><ListOrdered className="h-3.5 w-3.5 opacity-60" />#{rivalRec.pos}</>
-                          ) : "—"}
-                        </div>
-                      </div>
+              {/* Manual stats — editable */}
+              <div className="mb-4 p-3 rounded-xl bg-muted/30 border border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">Estadísticas del rival</span>
+                  {!rivalEditMode ? (
+                    <button onClick={() => setRivalEditMode(true)}
+                      className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-primary transition px-1.5 py-0.5 rounded">
+                      <Pencil className="h-2.5 w-2.5" /> Editar
+                    </button>
+                  ) : (
+                    <button onClick={saveRivalManual}
+                      className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition px-1.5 py-0.5 rounded bg-primary/10">
+                      <Check className="h-2.5 w-2.5" /> Guardar
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Victorias", val: rivalManualWins, set: setRivalManualWins, cls: "text-green-400" },
+                    { label: "Derrotas", val: rivalManualLosses, set: setRivalManualLosses, cls: "text-red-400" },
+                    { label: "Posición", val: rivalManualPos, set: setRivalManualPos, cls: "text-amber-400" },
+                  ].map(({ label, val, set, cls }) => (
+                    <div key={label} className="text-center">
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">{label}</div>
+                      {rivalEditMode ? (
+                        <input
+                          value={val}
+                          onChange={(e) => set(e.target.value)}
+                          placeholder="—"
+                          className={`w-full text-center text-base font-black bg-background border border-border rounded-lg py-1 outline-none focus:border-primary ${cls}`}
+                        />
+                      ) : (
+                        <div className={`text-lg font-black ${cls}`}>{val || "—"}</div>
+                      )}
                     </div>
-                    {rivalRec && rivalRec.played > 0 && (
-                      <div className="mb-4">
-                        <div className="h-1.5 rounded-full bg-red-500/20 overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full transition-all duration-700"
-                            style={{ width: `${Math.round((rivalRec.wins / rivalRec.played) * 100)}%` }} />
-                        </div>
-                        <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
-                          <span className="text-green-400/70">{Math.round((rivalRec.wins / rivalRec.played) * 100)}% victorias</span>
-                          <span className="text-red-400/70">{rivalRec.played} partidos jugados</span>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+                  ))}
+                </div>
+              </div>
 
               {/* Rival's last 5 results */}
               {rivalResults.length > 0 && (
@@ -770,31 +795,6 @@ export default function Dashboard() {
                           <span className="text-green-400/70">{displayWins} victorias</span>
                           <span className="text-red-400/70">{displayLosses} derrotas</span>
                         </div>
-                      </div>
-                    )}
-                    {/* Mini standings top-5 */}
-                    {standings.length > 0 && (
-                      <div className="mb-4">
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                          <ListOrdered className="h-3 w-3" /> Clasificación
-                        </div>
-                        <div className="rounded-xl border border-border overflow-hidden">
-                          {standings.slice(0, 5).map((s, i) => {
-                            const isOwn = s.nameL === ownNameLower;
-                            return (
-                              <div key={s.nameL} className={`flex items-center gap-2 px-3 py-2 text-xs border-b border-border last:border-0 ${isOwn ? "bg-primary/10" : i % 2 === 0 ? "bg-transparent" : "bg-muted/20"}`}>
-                                <span className={`w-4 text-center font-black shrink-0 ${isOwn ? "text-primary" : "text-muted-foreground/50"}`}>{s.pos}</span>
-                                <span className={`flex-1 font-semibold truncate ${isOwn ? "text-primary" : "text-foreground/80"}`}>{s.displayName}</span>
-                                <span className="text-green-400 font-bold w-6 text-center">{s.wins}</span>
-                                <span className="text-red-400/70 w-6 text-center">{s.losses}</span>
-                                <span className="text-muted-foreground/50 w-8 text-center text-[10px]">{s.played > 0 ? `${Math.round((s.wins / s.played) * 100)}%` : "—"}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {standings.length > 5 && (
-                          <div className="text-[10px] text-center text-muted-foreground/40 mt-1.5">+{standings.length - 5} equipos más</div>
-                        )}
                       </div>
                     )}
                   </>

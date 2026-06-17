@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair, Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
@@ -39,6 +39,7 @@ const navGroups = [
   {
     label: "Análisis",
     items: [
+      { name: "Hub de Scouting", href: "/scouting", icon: Swords },
       { name: "Informes", href: "/reports", icon: FileText },
     ],
   },
