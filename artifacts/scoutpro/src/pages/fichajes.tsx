@@ -116,7 +116,7 @@ export default function Fichajes() {
   const hasFilters = !!(positionFilter || leagueFilter || nationalityFilter || tipoFilter !== "ALL" || search.trim());
 
   const filteredPlayers = useMemo(() => {
-    const base = hasFilters ? (players ?? []) : freeAgents;
+    const base = players ?? [];
     return base.filter((p) => {
       if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.teamName?.toLowerCase().includes(search.toLowerCase())) return false;
       if (positionFilter && p.position !== positionFilter) return false;

@@ -22,25 +22,21 @@ export default function Players() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("ALL");
 
-  const hasFilter = search.trim().length > 0 || positionFilter !== "ALL";
-
   const { data: players, isLoading } = useListPlayers(
     positionFilter !== "ALL" ? { position: positionFilter } : undefined,
     {
       query: {
-        enabled: hasFilter,
         queryKey: getListPlayersQueryKey(positionFilter !== "ALL" ? { position: positionFilter } : undefined),
       },
     },
   );
 
-  const filteredPlayers = hasFilter
-    ? (players?.filter(
-        (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.teamName?.toLowerCase().includes(search.toLowerCase()),
-      ) ?? [])
-    : [];
+  const filteredPlayers = (players ?? []).filter(
+    (p) =>
+      (!search.trim() ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.teamName?.toLowerCase().includes(search.toLowerCase())),
+  );
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -79,22 +75,7 @@ export default function Players() {
         </Select>
       </div>
 
-      {!hasFilter ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Search className="h-8 w-8 text-primary/60" />
-          </div>
-          <h3 className="text-lg font-semibold mb-1">Busca un jugador</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Escribe un nombre en el buscador o filtra por posición para ver jugadores.
-          </p>
-          <Link href="/players/new" className="mt-6">
-            <Button variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" /> Añadir jugador
-            </Button>
-          </Link>
-        </div>
-      ) : isLoading ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>

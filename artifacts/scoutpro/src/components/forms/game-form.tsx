@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useListTeams, getListTeamsQueryKey } from "@workspace/api-client-react";
 
 export type GameFormValues = {
   date: string;
@@ -32,6 +33,9 @@ export function GameForm({
   cancelTo: string;
 }) {
   const { register, handleSubmit, setValue, watch } = useForm<GameFormValues>({ defaultValues });
+  const { data: teams = [] } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
+
+  const teamNames = teams.map((t) => t.name).sort();
 
   return (
     <Card>
@@ -55,14 +59,50 @@ export function GameForm({
               </Select>
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Equipo local *</Label>
-              <Input {...register("homeTeam", { required: true })} placeholder="Equipo local" className="bg-card" />
+              {teamNames.length > 0 ? (
+                <Select
+                  value={watch("homeTeam") || ""}
+                  onValueChange={(v) => setValue("homeTeam", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className="bg-card">
+                    <SelectValue placeholder="Selecciona equipo local" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamNames.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input {...register("homeTeam", { required: true })} placeholder="Equipo local" className="bg-card" />
+              )}
+              {/* hidden input for validation when using Select */}
+              <input type="hidden" {...register("homeTeam", { required: true })} />
             </div>
             <div className="space-y-1.5">
               <Label>Equipo visitante *</Label>
-              <Input {...register("awayTeam", { required: true })} placeholder="Equipo visitante" className="bg-card" />
+              {teamNames.length > 0 ? (
+                <Select
+                  value={watch("awayTeam") || ""}
+                  onValueChange={(v) => setValue("awayTeam", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className="bg-card">
+                    <SelectValue placeholder="Selecciona equipo visitante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamNames.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input {...register("awayTeam", { required: true })} placeholder="Equipo visitante" className="bg-card" />
+              )}
+              <input type="hidden" {...register("awayTeam", { required: true })} />
             </div>
             <div className="space-y-1.5">
               <Label>Puntos local</Label>
@@ -73,6 +113,7 @@ export function GameForm({
               <Input {...register("awayScore")} type="number" placeholder="0" className="bg-card" />
             </div>
           </div>
+
           <div className="space-y-1.5">
             <Label>Lugar</Label>
             <Input {...register("location")} placeholder="ej. WiZink Center" className="bg-card" />

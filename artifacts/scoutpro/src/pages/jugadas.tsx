@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Grid3X3, Layers, Zap, Plus, Trash2, Play, BookOpen, Search, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { Grid3X3, Layers, Zap, Plus, Trash2, Play, BookOpen, Search, X, Image, Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { uploadPhotoFile } from "@/components/photo-upload";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type PlayCategory = "ataque" | "defensa" | "especiales";
@@ -11,6 +12,7 @@ type Play = {
   category: PlayCategory;
   description: string;
   videoUrl: string;
+  imageUrl?: string;
   createdAt: string;
 };
 
@@ -72,15 +74,34 @@ function AddPlayDialog({
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<PlayCategory>("ataque");
   const [description, setDescription] = useState("");
+  const [mediaType, setMediaType] = useState<"video" | "image">("video");
   const [videoUrl, setVideoUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const canSubmit = title.trim().length > 0;
+  const canSubmit = title.trim().length > 0 && !uploading;
+
+  const handleImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setUploadError("Solo se admiten imágenes."); return; }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const url = await uploadPhotoFile(file);
+      setImageUrl(url);
+    } catch {
+      setUploadError("Error al subir la imagen. Inténtalo de nuevo.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border">
+        <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
           <h2 className="font-black uppercase tracking-tight text-base">Nueva Jugada</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition">
             <X className="h-4 w-4" />
@@ -89,6 +110,7 @@ function AddPlayDialog({
 
         {/* Body */}
         <div className="p-5 space-y-4">
+          {/* Title */}
           <div>
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
               Nombre de la jugada *
@@ -102,6 +124,7 @@ function AddPlayDialog({
             />
           </div>
 
+          {/* Category */}
           <div>
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
               Categoría
@@ -126,6 +149,7 @@ function AddPlayDialog({
             </div>
           </div>
 
+          {/* Description */}
           <div>
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
               Descripción / Instrucciones
@@ -139,16 +163,68 @@ function AddPlayDialog({
             />
           </div>
 
+          {/* Media type toggle */}
           <div>
             <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
-              Enlace de vídeo <span className="text-muted-foreground/50 normal-case tracking-normal font-normal">(YouTube o Vimeo, opcional)</span>
+              Contenido multimedia <span className="normal-case tracking-normal font-normal text-muted-foreground/50">(opcional)</span>
             </label>
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
-              className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 transition"
-            />
+            <div className="flex gap-1.5 mb-3">
+              <button
+                onClick={() => setMediaType("video")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition ${mediaType === "video" ? "bg-primary/15 border-primary text-primary" : "bg-background border-border text-muted-foreground hover:border-primary/30"}`}
+              >
+                <Link2 className="h-3.5 w-3.5" /> Enlace de vídeo
+              </button>
+              <button
+                onClick={() => setMediaType("image")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition ${mediaType === "image" ? "bg-primary/15 border-primary text-primary" : "bg-background border-border text-muted-foreground hover:border-primary/30"}`}
+              >
+                <Image className="h-3.5 w-3.5" /> Subir diagrama
+              </button>
+            </div>
+
+            {mediaType === "video" ? (
+              <input
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=... o Vimeo"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 transition"
+              />
+            ) : (
+              <div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
+                />
+                {imageUrl ? (
+                  <div className="relative rounded-xl overflow-hidden border border-border">
+                    <img src={imageUrl} alt="Diagrama" className="w-full max-h-48 object-contain bg-muted" />
+                    <button
+                      onClick={() => { setImageUrl(""); if (fileRef.current) fileRef.current.value = ""; }}
+                      className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full border-2 border-dashed border-border rounded-xl py-8 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-primary/60 transition disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <><Loader2 className="h-6 w-6 animate-spin" /><span className="text-xs">Subiendo imagen...</span></>
+                    ) : (
+                      <><Image className="h-6 w-6" /><span className="text-xs font-medium">Haz clic para subir un diagrama</span><span className="text-[10px]">PNG, JPG, GIF — imagen de tu pizarra o aplicación táctica</span></>
+                    )}
+                  </button>
+                )}
+                {uploadError && <p className="text-xs text-destructive mt-1.5">{uploadError}</p>}
+              </div>
+            )}
           </div>
         </div>
 
@@ -163,7 +239,13 @@ function AddPlayDialog({
           <button
             onClick={() => {
               if (canSubmit) {
-                onAdd({ title: title.trim(), category, description: description.trim(), videoUrl: videoUrl.trim() });
+                onAdd({
+                  title: title.trim(),
+                  category,
+                  description: description.trim(),
+                  videoUrl: mediaType === "video" ? videoUrl.trim() : "",
+                  imageUrl: mediaType === "image" ? imageUrl : undefined,
+                });
                 onClose();
               }
             }}
@@ -184,11 +266,16 @@ function PlayCard({ play, onDelete }: { play: Play; onDelete: () => void }) {
   const embedUrl = getVideoEmbed(play.videoUrl);
   const thumbnail = play.videoUrl ? getYoutubeThumbnail(play.videoUrl) : null;
   const hasVideo = !!play.videoUrl;
+  const hasImage = !!play.imageUrl;
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 transition group flex flex-col">
-      {/* Media area */}
-      {hasVideo ? (
+      {/* Media area — image takes priority, then video, then placeholder */}
+      {hasImage ? (
+        <div className="aspect-video bg-muted shrink-0 overflow-hidden">
+          <img src={play.imageUrl} alt={play.title} className="w-full h-full object-contain" />
+        </div>
+      ) : hasVideo ? (
         <div className="relative aspect-video bg-black shrink-0">
           {showVideo && embedUrl ? (
             <iframe
