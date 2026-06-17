@@ -2,3 +2,4 @@
 - [PDF/canvas export with Tailwind v4](pdf-export-tailwind-v4.md) — plain html2canvas silently fails on oklch()/color-mix() colors; use html2canvas-pro.
 - [scoutpro typecheck blocked](scoutpro-typecheck-blocked.md) — TS6306 from non-composite object-storage-web ref aborts ALL file checks; verify via temp tsconfig dropping that ref.
 - [Player stats API returns strings](player-stats-strings.md) — useGetPlayerStats fields are strings not numbers; always wrap with Number() before toFixed() or arithmetic.
+- [TEAM_SECTIONS must live in separate module](team-sections-hmr.md) — exporting TEAM_SECTIONS from team-scouting.tsx breaks Vite Fast Refresh; keep it in lib/team-sections.ts.

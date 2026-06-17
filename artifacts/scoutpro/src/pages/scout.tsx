@@ -1040,8 +1040,8 @@ export default function Scout() {
 
   const navBtn = (v: SidebarView, label: React.ReactNode, indent = false) => (
     <button onClick={() => { setView(v); setSelectedPlayerId(null); setComparePlayerId(null); }}
-      className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-2 transition-all text-sm ${indent ? "pl-6" : ""}
-        ${isActive(v) ? "text-white border-l-4 border-orange-500 bg-white/10" : "text-gray-300 hover:bg-white/5"}`}>
+      className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${indent ? "pl-6" : ""}
+        ${isActive(v) ? "text-orange-300 bg-orange-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"}`}>
       {label}
     </button>
   );
@@ -1057,25 +1057,30 @@ export default function Scout() {
         : "roster";
     return (
       <div key={team.id}>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <TeamLogoUpload team={team} />
           <button
             onClick={() => { setView({ kind, teamId: team.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-            className={`flex-1 min-w-0 text-left px-3 py-2.5 rounded-md flex items-center gap-2 transition-all text-sm
-              ${active ? "text-white border-l-4 border-orange-500 bg-white/10" : "text-gray-300 hover:bg-white/5"}`}>
+            className={`flex-1 min-w-0 text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium
+              ${active ? "text-white bg-white/8" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"}`}>
             <span className="truncate flex-1">{team.name}</span>
-            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition ${active ? "rotate-180 text-orange-400" : "text-gray-500"}`} />
+            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${active ? "rotate-180 text-orange-400" : "text-gray-600"}`} />
           </button>
         </div>
         {active && (
-          <div className="ml-7 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+          <div className="ml-11 mt-1 mb-1 space-y-0.5">
             {TEAM_SECTIONS.map((s) => {
               const Icon = s.icon;
+              const isCurrent = currentSection === s.key;
               return (
                 <button key={s.key}
                   onClick={() => { setView({ kind, teamId: team.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                  className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition ${currentSection === s.key ? "text-orange-400 bg-orange-500/15 font-bold" : "text-gray-500 hover:bg-white/5 hover:text-gray-300"}`}>
-                  <Icon className="h-3.5 w-3.5" /> {s.label}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium
+                    ${isCurrent ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
+                  {isCurrent
+                    ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                    : <Icon className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />}
+                  {s.label}
                 </button>
               );
             })}
@@ -1140,69 +1145,81 @@ export default function Scout() {
     <div className="flex h-screen bg-gray-100 font-sans antialiased overflow-hidden">
 
       {/* ── COL 1: SIDEBAR ────────────────────────────────────────────────── */}
-      <aside className="flex flex-col flex-shrink-0 overflow-y-auto" style={{ background: "#111827", width: 264 }}>
-        <div className="px-6 py-5 flex-shrink-0">
+      <aside className="flex flex-col flex-shrink-0 overflow-hidden" style={{ background: "#0f172a", width: 272 }}>
+        {/* Logo */}
+        <div className="px-5 py-5 flex-shrink-0 border-b border-white/5">
           <ScoutFlowLogo size="md" />
         </div>
 
-        <div className="px-4 pt-3 pb-1">
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <Users className="h-3.5 w-3.5 text-blue-400" />
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Mi Equipo</span>
+        <div className="flex-1 overflow-y-auto">
+          {/* ── MI EQUIPO ── */}
+          <div className="pt-5 pb-2">
+            <div className="px-5 mb-2 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Mi Equipo</span>
+            </div>
+            <div className="px-3 space-y-0.5">
+              {ownTeams.length === 0 && <p className="text-gray-700 text-xs px-3 py-1.5 italic">Sin equipo propio</p>}
+              {ownTeams.map((team) => renderTeamRow(team, "own"))}
+              <button onClick={() => setShowAddTeam("own")}
+                className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-blue-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
+                <Plus className="h-3 w-3" /> Añadir mi equipo
+              </button>
+            </div>
           </div>
-          {ownTeams.length === 0 && <p className="text-gray-600 text-xs px-2 py-1">Sin equipo propio</p>}
-          {ownTeams.map((team) => renderTeamRow(team, "own"))}
-        </div>
-        <div className="px-4 pb-2">
-          <button onClick={() => setShowAddTeam("own")}
-            className="w-full text-left text-gray-500 text-xs py-1.5 px-2 hover:text-blue-400 transition flex items-center gap-1.5 rounded">
-            <Plus className="h-3 w-3" /> Añadir mi equipo
-          </button>
+
+          <div className="mx-5 h-px bg-white/5" />
+
+          {/* ── EQUIPOS RIVALES ── */}
+          <div className="pt-4 pb-2">
+            <div className="px-5 mb-2 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Equipos Rivales</span>
+            </div>
+            <div className="px-3 space-y-0.5">
+              {rivalTeams.length === 0 && <p className="text-gray-700 text-xs px-3 py-1.5 italic">Sin rivales</p>}
+              {rivalTeams.map((team) => renderTeamRow(team, "rival"))}
+              <button onClick={() => setShowAddTeam("rival")}
+                className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-red-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
+                <Plus className="h-3 w-3" /> Añadir rival
+              </button>
+            </div>
+          </div>
+
+          <div className="mx-5 h-px bg-white/5" />
+
+          {/* ── A FICHAR ── */}
+          <div className="pt-4 pb-4">
+            <div className="px-5 mb-2 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">A Fichar</span>
+            </div>
+            <div className="px-3">
+              {navBtn({ kind: "watchlist" }, <><Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /> Jugadores a Fichar</>)}
+            </div>
+          </div>
         </div>
 
-        <div className="px-4 pt-2 pb-1">
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <Swords className="h-3.5 w-3.5 text-red-400" />
-            <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">Equipos Rivales</span>
-          </div>
-          {rivalTeams.length === 0 && <p className="text-gray-600 text-xs px-2 py-1">Sin rivales</p>}
-          {rivalTeams.map((team) => renderTeamRow(team, "rival"))}
-        </div>
-        <div className="px-4 pb-2">
-          <button onClick={() => setShowAddTeam("rival")}
-            className="w-full text-left text-gray-500 text-xs py-1.5 px-2 hover:text-red-400 transition flex items-center gap-1.5 rounded">
-            <Plus className="h-3 w-3" /> Añadir rival
-          </button>
-        </div>
-
-        <div className="px-4 pt-2 pb-1">
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <UserSearch className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">A Fichar</span>
-          </div>
-          {navBtn({ kind: "watchlist" }, <><Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /> Jugadores a Fichar</>)}
-        </div>
-
-        <div className="flex-1" />
-        <div className="border-t border-gray-800 px-4 py-3 space-y-1">
+        {/* ── BOTTOM NAV ── */}
+        <div className="border-t border-white/5 px-3 py-4 space-y-0.5">
           <Link href="/reports">
-            <button className="w-full text-left text-gray-500 text-xs hover:text-gray-300 transition py-1 flex items-center gap-2">
-              <ClipboardList className="h-3.5 w-3.5" /> Todos los informes
+            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
+              <ClipboardList className="h-4 w-4 flex-shrink-0" /> Todos los informes
             </button>
           </Link>
           <Link href="/games">
-            <button className="w-full text-left text-gray-500 text-xs hover:text-gray-300 transition py-1 flex items-center gap-2">
-              🏆 Partidos
+            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
+              <Trophy className="h-4 w-4 flex-shrink-0" /> Partidos
             </button>
           </Link>
           <Link href="/calendar">
-            <button className="w-full text-left text-gray-500 text-xs hover:text-gray-300 transition py-1 flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5" /> Calendario
+            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
+              <Calendar className="h-4 w-4 flex-shrink-0" /> Calendario
             </button>
           </Link>
           <button onClick={() => setShowSettings(true)}
-            className="w-full text-left text-gray-500 text-xs hover:text-orange-400 transition py-1 flex items-center gap-2">
-            <Settings className="h-3.5 w-3.5" /> Personalizar
+            className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-orange-300 hover:bg-orange-500/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
+            <Settings className="h-4 w-4 flex-shrink-0" /> Personalizar
           </button>
         </div>
       </aside>
@@ -1227,16 +1244,10 @@ export default function Scout() {
               </button>
             )}
           </div>
-          {view.kind === "watchlist" ? (
+          {view.kind === "watchlist" && (
             <button onClick={() => setShowAddPlayer(true)}
               className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
               <Plus className="h-4 w-4" /> AÑADIR A FICHAR
-            </button>
-          ) : (
-            <button
-              onClick={() => setLocation("/jugadores")}
-              className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
-              <Plus className="h-4 w-4" /> AÑADIR JUGADOR
             </button>
           )}
           <div className="relative">

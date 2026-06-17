@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListTeamMedia,
@@ -533,7 +534,8 @@ function PlayerRosterRow({ player, onToggleFavorite }: {
 }
 
 // ── Plantilla section (synced with Centro de Partido) ─────────────────────────
-export function PlantillaSection({ teamId, teamName }: { teamId: number; teamName: string }) {
+export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: number; teamName: string; showAddButton?: boolean }) {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("Todos");
   const queryClient = useQueryClient();
@@ -559,6 +561,13 @@ export function PlantillaSection({ teamId, teamName }: { teamId: number; teamNam
 
   return (
     <div className="space-y-4">
+      {showAddButton && (
+        <button
+          onClick={() => setLocation("/jugadores/nuevo")}
+          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md shadow-orange-100">
+          <Plus className="h-4 w-4" /> Añadir Jugador
+        </button>
+      )}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

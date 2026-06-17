@@ -187,7 +187,7 @@ export default function TeamDetail() {
 
         {/* ── Plantilla ── */}
         <TabsContent value="plantilla" className="mt-6">
-          <PlantillaSection teamId={teamId} teamName={team.name} />
+          <PlantillaSection teamId={teamId} teamName={team.name} showAddButton />
         </TabsContent>
 
         {/* ── Estadísticas ── */}
