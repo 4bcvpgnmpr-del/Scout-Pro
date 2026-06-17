@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type TeamSection = "roster" | "fotos" | "videos" | "sistemas" | "highlights" | "estadisticas";
+import { TEAM_SECTIONS } from "@/lib/team-sections";
+import type { TeamSection } from "@/lib/team-sections";
 
 type MediaCategory = TeamMediaInput["category"];
 
@@ -34,15 +35,6 @@ const SECTION_TO_CATEGORY: Partial<Record<TeamSection, MediaCategory>> = {
   sistemas:   "system",
   highlights: "highlight",
 };
-
-export const TEAM_SECTIONS: { key: TeamSection; label: string; icon: React.ElementType }[] = [
-  { key: "roster",       label: "Plantilla",    icon: Users },
-  { key: "estadisticas", label: "Estadísticas", icon: BarChart2 },
-  { key: "fotos",        label: "Fotos",        icon: Camera },
-  { key: "videos",       label: "Vídeos",       icon: Video },
-  { key: "sistemas",     label: "Sistemas",     icon: ClipboardList },
-  { key: "highlights",   label: "Highlights",   icon: Library },
-];
 
 const POS_ORDER = ["PG", "SG", "SF", "PF", "C"];
 

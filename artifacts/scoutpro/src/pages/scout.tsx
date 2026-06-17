@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListTeams,
   useListPlayers,
@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import { ScoutFlowLogo } from "@/components/logo";
 import { useTheme } from "@/hooks/use-theme";
-import { TeamScoutingView, TEAM_SECTIONS, type TeamSection } from "@/components/team-scouting";
+import { TeamScoutingView } from "@/components/team-scouting";
+import { TEAM_SECTIONS, type TeamSection } from "@/lib/team-sections";
 import { THEMES, FONTS } from "@/lib/themes";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 import { useReportPrefs, REPORT_SECTIONS } from "@/hooks/use-report-prefs";
@@ -962,6 +963,7 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHa
 
 // ─── Main Scout Page ───────────────────────────────────────────────────────────
 export default function Scout() {
+  const [, setLocation] = useLocation();
   const [view, setView] = useState<SidebarView>({ kind: "all" });
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [comparePlayerId, setComparePlayerId] = useState<number | null>(null);
@@ -1231,11 +1233,11 @@ export default function Scout() {
               <Plus className="h-4 w-4" /> AÑADIR A FICHAR
             </button>
           ) : (
-            <Link href="/jugadores">
-              <button className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
-                <Plus className="h-4 w-4" /> AÑADIR JUGADOR
-              </button>
-            </Link>
+            <button
+              onClick={() => setLocation("/jugadores")}
+              className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
+              <Plus className="h-4 w-4" /> AÑADIR JUGADOR
+            </button>
           )}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
