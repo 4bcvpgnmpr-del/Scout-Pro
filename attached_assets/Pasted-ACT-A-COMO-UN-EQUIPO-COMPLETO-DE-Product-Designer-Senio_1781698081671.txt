@@ -1,0 +1,310 @@
+ACTÚA COMO UN EQUIPO COMPLETO DE:
+
+* Product Designer Senior
+* UX/UI Designer Senior
+* Software Architect Senior
+* Especialista en aplicaciones SaaS deportivas
+
+IMPORTANTE:
+
+NO MODIFICAR EL DASHBOARD PRINCIPAL.
+
+El dashboard actual tiene una apariencia profesional y debe mantenerse.
+
+La prioridad es convertir toda la aplicación en un producto completamente terminado, conectado y listo para comercializar.
+
+================================================
+
+OBJETIVO GENERAL
+
+Todos los menús y submenús deben quedar:
+
+* Completamente funcionales
+* Sincronizados entre sí
+* Visualmente consistentes
+* Con diseño premium
+* Sin páginas vacías
+* Sin datos duplicados
+* Sin botones sin función
+
+La aplicación debe sentirse como un software profesional utilizado por clubes de baloncesto.
+
+================================================
+
+SINCRONIZACIÓN GLOBAL
+
+Implementar una única fuente de datos.
+
+Cualquier modificación realizada en:
+
+* Equipos
+* Jugadores
+* Vídeos
+* Sistemas
+* Centro de Partido
+* Hub de Scouting
+* Informes
+
+debe actualizar automáticamente toda la plataforma.
+
+Ejemplos:
+
+Si creo un jugador en Equipos:
+→ aparece automáticamente en Centro de Partido.
+
+Si subo un vídeo:
+→ aparece automáticamente en Vídeos del equipo y en Centro de Partido.
+
+Si creo un sistema:
+→ aparece automáticamente en Playbooks.
+
+Si termino un scouting:
+→ aparece automáticamente en Hub de Scouting e Informes.
+
+================================================
+
+MÓDULO EQUIPOS
+
+SUBMENÚ PLANTILLA
+
+Diseño profesional tipo Hudl.
+
+Mostrar:
+
+* Foto
+* Número
+* Posición
+* Altura
+* Edad
+* Minutos
+* Puntos
+* Rebotes
+* Asistencias
+
+Al pulsar un jugador abrir perfil completo.
+
+SUBMENÚ ESTADÍSTICAS
+
+Crear dashboard analítico.
+
+Incluir:
+
+* KPIs
+* Tendencias
+* Comparativas
+* Gráficos interactivos
+* Rankings
+
+SUBMENÚ VÍDEOS
+
+Biblioteca moderna.
+
+Incluir:
+
+* Miniaturas
+* Etiquetas
+* Categorías
+* Filtros
+* Buscador
+
+SUBMENÚ SISTEMAS
+
+Biblioteca táctica profesional.
+
+Incluir:
+
+* Jugadas
+* Diagramas
+* Categorías
+* Etiquetas
+* Vista previa
+
+================================================
+
+MÓDULO CENTRO DE PARTIDO
+
+Debe convertirse en el núcleo operativo de la aplicación.
+
+SUBMENÚ RESUMEN
+
+Mostrar:
+
+* Rival
+* Fecha
+* Estado de preparación
+* Progreso del scouting
+* Alertas
+* Últimos partidos del rival
+
+SUBMENÚ SCOUTING
+
+Mostrar:
+
+* Fortalezas
+* Debilidades
+* Tendencias ofensivas
+* Tendencias defensivas
+* Jugadores clave
+* Riesgos detectados
+* Recomendaciones IA
+
+SUBMENÚ PLANTILLAS
+
+Gestionar convocatorias y rotaciones.
+
+SUBMENÚ VÍDEOS
+
+Vídeos filtrados específicamente para el rival.
+
+SUBMENÚ PLAYBOOKS
+
+Jugadas seleccionadas para el partido.
+
+SUBMENÚ ESTADÍSTICAS
+
+Panel avanzado del rival.
+
+SUBMENÚ INFORMES
+
+Vista previa profesional del PDF.
+
+SUBMENÚ TAREAS
+
+Sistema tipo Notion.
+
+Estados:
+
+* Pendiente
+* En progreso
+* Completada
+
+================================================
+
+MÓDULO HUB DE SCOUTING
+
+Transformarlo en un centro profesional de gestión.
+
+Vista Kanban.
+
+Columnas:
+
+* Pendiente
+* En progreso
+* Revisar
+* Completado
+* Archivado
+
+Cada tarjeta debe mostrar:
+
+* Rival
+* Fecha
+* Responsable
+* Estado
+* Progreso
+
+Al hacer clic:
+
+Abrir automáticamente el Centro de Partido asociado.
+
+================================================
+
+MÓDULO INFORMES
+
+REDISEÑAR COMPLETAMENTE.
+
+Crear informes comparables a:
+
+* Wyscout
+* Hudl
+* Synergy
+* FastScout
+
+================================================
+
+ESTRUCTURA DEL PDF
+
+PORTADA
+
+* Escudos
+* Equipos
+* Fecha
+* Competición
+* Imagen profesional
+* Branding ScoutFlow
+
+RESUMEN EJECUTIVO
+
+* Análisis general
+* Conclusiones rápidas
+* Nivel de dificultad
+
+ANÁLISIS DEL RIVAL
+
+* Estilo de juego
+* Fortalezas
+* Debilidades
+* Tendencias
+
+PLANTILLA RIVAL
+
+Para cada jugador:
+
+* Foto
+* Número
+* Posición
+* Estadísticas
+* Observaciones
+
+ESTADÍSTICAS
+
+* KPIs
+* Gráficos
+* Comparativas
+
+ANÁLISIS TÁCTICO
+
+* Sistemas ofensivos
+* Sistemas defensivos
+* Situaciones especiales
+
+SECCIÓN DE VÍDEOS
+
+* Clips destacados
+* Enlaces
+* Referencias
+
+PLAN DE PARTIDO
+
+* Claves para ganar
+* Ajustes defensivos
+* Ajustes ofensivos
+
+CONCLUSIONES
+
+* Resumen final
+* Prioridades
+* Recomendaciones IA
+
+================================================
+
+CALIDAD VISUAL
+
+Todo debe transmitir:
+
+* Software premium
+* Club profesional
+* Tecnología avanzada
+* Producto listo para vender
+
+Eliminar:
+
+* Secciones vacías
+* Componentes repetidos
+* Datos ficticios innecesarios
+* Botones sin funcionalidad
+
+================================================
+
+OBJETIVO FINAL
+
+ScoutFlow debe quedar preparado para una demostración comercial a entrenadores, clubes y academias profesionales, con todos los módulos conectados y funcionando como un único ecosistema.
