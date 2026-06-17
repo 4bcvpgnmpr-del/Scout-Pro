@@ -9,7 +9,7 @@ import {
 import {
   Bell, Trophy, ChevronRight, Clock, Video, FileText, Shield, Users,
   Star, Zap, CheckCircle2, Circle, Target, Calendar, ArrowRight, Plus,
-  Swords, BarChart2, MapPin, TrendingUp,
+  Swords, BarChart2, MapPin, TrendingUp, BookOpen,
 } from "lucide-react";
 import { DIFFICULTY_LABEL } from "@/lib/difficulty";
 
@@ -88,25 +88,54 @@ function fmtShort(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 }
 
-// ── Preparation checklist (localStorage) ─────────────────────────────────────
-const CHECK_KEY = "sf-prep-checklist-v2";
+// ── Preparation checklist (localStorage, synced with match center) ────────────
+const CHECK_KEY_GLOBAL = "sf-prep-checklist-v2";
 type Checks = { scouting: boolean; videos: boolean; informe: boolean; charla: boolean };
 const DEFAULT_CHECKS: Checks = { scouting: false, videos: false, informe: false, charla: false };
 
-function useChecklist() {
-  const [checks, setChecks] = useState<Checks>(() => {
-    try { return { ...DEFAULT_CHECKS, ...(JSON.parse(localStorage.getItem(CHECK_KEY) ?? "{}") as Partial<Checks>) }; }
-    catch { return DEFAULT_CHECKS; }
-  });
+function readChecks(gameId: number | null): Checks {
+  try {
+    const key = gameId != null ? `sf-checklist-${gameId}` : CHECK_KEY_GLOBAL;
+    return { ...DEFAULT_CHECKS, ...(JSON.parse(localStorage.getItem(key) ?? "{}") as Partial<Checks>) };
+  } catch { return DEFAULT_CHECKS; }
+}
+
+function useChecklist(gameId: number | null) {
+  const [checks, setChecks] = useState<Checks>(() => readChecks(gameId));
+
+  // Re-read when gameId changes (navigation between games)
+  const gameIdRef = { current: gameId };
   const toggle = useCallback((k: keyof Checks) => {
     setChecks((c) => {
       const next = { ...c, [k]: !c[k] };
-      localStorage.setItem(CHECK_KEY, JSON.stringify(next));
+      const key = gameIdRef.current != null ? `sf-checklist-${gameIdRef.current}` : CHECK_KEY_GLOBAL;
+      localStorage.setItem(key, JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const percent = Math.round((Object.values(checks).filter(Boolean).length / 4) * 100);
   return { checks, toggle, percent };
+}
+
+// ── Game scouting data (synced from match center localStorage) ────────────────
+type ScoutLocal = {
+  clavesPartido: string; jugadorasDestacadas: string; objetivos: string;
+  sistemas: string; ritmo: string; tipoDefensa: string; presion: string;
+  fortalezas: string[]; debilidades: string[];
+  notasEntrenador: string;
+};
+const DEFAULT_SCOUT: ScoutLocal = {
+  clavesPartido: "", jugadorasDestacadas: "", objetivos: "",
+  sistemas: "", ritmo: "", tipoDefensa: "", presion: "",
+  fortalezas: [], debilidades: [], notasEntrenador: "",
+};
+function readGameScouting(gameId: number | null): ScoutLocal {
+  if (gameId == null) return DEFAULT_SCOUT;
+  try { return { ...DEFAULT_SCOUT, ...(JSON.parse(localStorage.getItem(`sf-scouting-${gameId}`) ?? "{}") as Partial<ScoutLocal>) }; }
+  catch { return DEFAULT_SCOUT; }
+}
+function useGameScouting(gameId: number | null): ScoutLocal {
+  return useMemo(() => readGameScouting(gameId), [gameId]);
 }
 
 // ── Panel wrapper ─────────────────────────────────────────────────────────────
@@ -126,7 +155,18 @@ export default function Dashboard() {
   const { data: games } = useListGames({ query: { queryKey: getListGamesQueryKey() } });
   const { data: reports } = useListReports(undefined, { query: { queryKey: getListReportsQueryKey() } });
   const { data: teams } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
-  const { checks, toggle, percent } = useChecklist();
+  // nextGame is defined below — we re-derive gameId here lazily after nextGame is available
+  // We compute nextGame inline first to feed into hooks (hooks must be unconditional)
+  const _nextGame = useMemo(
+    () => (games ?? []).filter((g) => {
+      const now2 = new Date();
+      const tk = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}-${String(now2.getDate()).padStart(2, "0")}`;
+      return g.date >= tk;
+    }).sort((a, b) => a.date.localeCompare(b.date))[0] ?? null,
+    [games],
+  );
+  const { checks, toggle, percent } = useChecklist(_nextGame?.id ?? null);
+  const gameScouting = useGameScouting(_nextGame?.id ?? null);
 
   const now = new Date();
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -336,7 +376,17 @@ export default function Dashboard() {
 
         {/* ── Estado de Preparación (4/10) ── */}
         <div className={`${P} lg:col-span-4 bg-card`}>
-          <SectionLabel icon={Target} label="Estado de Preparación" color="text-green-400" />
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-3.5 w-3.5 text-green-400" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-green-400">Estado de Preparación</span>
+            </div>
+            {nextGame && (
+              <span className="text-[10px] text-muted-foreground/60 bg-muted/50 border border-border px-2 py-0.5 rounded-full truncate max-w-[140px]">
+                {nextGame.homeTeam} vs {nextGame.awayTeam}
+              </span>
+            )}
+          </div>
           <div className="flex flex-col items-center gap-4">
             <CircularProgress percent={percent} />
             <div className="w-full space-y-1">
@@ -354,9 +404,17 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-border">
-            <button className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1">
-              Ver checklist completo <ChevronRight className="h-3 w-3" />
-            </button>
+            {nextGame ? (
+              <Link href={`/games/${nextGame.id}/match-center`}>
+                <button className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1">
+                  Ver en Centro de Partido <ChevronRight className="h-3 w-3" />
+                </button>
+              </Link>
+            ) : (
+              <button className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1">
+                Ver checklist completo <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -435,20 +493,26 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Rival header */}
-              <div className="flex items-center gap-4 mb-5">
+              <div className="flex items-center gap-4 mb-4">
                 <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center shrink-0">
                   {rivalInfo.logoUrl
                     ? <img src={rivalInfo.logoUrl} alt={rivalInfo.name} className="h-full w-full object-cover" />
                     : <span className="font-black text-primary text-xl">{rivalInfo.name.slice(0, 2).toUpperCase()}</span>}
                 </div>
-                <div>
-                  <div className="font-black text-foreground text-2xl uppercase leading-tight">{rivalInfo.name}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-foreground text-xl uppercase leading-tight truncate">{rivalInfo.name}</div>
                   {nextGame && (
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" /> {fmtShort(nextGame.date)}
                       </span>
                       <DiffChip diff={nextGame.difficulty} />
+                      {/* Scouting progress badge */}
+                      {(gameScouting.fortalezas.length > 0 || gameScouting.debilidades.length > 0 || gameScouting.clavesPartido) && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 flex items-center gap-1">
+                          <CheckCircle2 className="h-2.5 w-2.5" /> Scouting activo
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -456,39 +520,107 @@ export default function Dashboard() {
 
               {/* Rival's last 5 results */}
               {rivalResults.length > 0 && (
-                <div className="mb-5">
+                <div className="mb-4">
                   <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Últimos {rivalResults.length} Partidos</div>
                   <div className="flex gap-2">
                     {rivalResults.map((r, i) => (
                       <div key={i} className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-black border ${
-                        r === "W"
-                          ? "bg-green-500/15 text-green-400 border-green-500/30"
-                          : "bg-red-500/15 text-red-400 border-red-500/30"
+                        r === "W" ? "bg-green-500/15 text-green-400 border-green-500/30" : "bg-red-500/15 text-red-400 border-red-500/30"
                       }`}>{r}</div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Fortalezas / Debilidades */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-xl bg-green-500/5 border border-green-500/15 p-3">
-                  <div className="text-[10px] text-green-400 font-black uppercase tracking-widest mb-2">Fortalezas</div>
-                  {rivalInfo.team
-                    ? <Link href={`/teams/${rivalInfo.team.id}`}><span className="text-xs text-muted-foreground hover:text-primary cursor-pointer transition">Ver análisis del equipo →</span></Link>
-                    : <span className="text-xs text-muted-foreground/50">Añade el equipo para ver análisis</span>}
+              {/* Claves del partido (from match center) */}
+              {gameScouting.clavesPartido && (
+                <div className="rounded-xl bg-primary/[0.04] border border-primary/15 p-3 mb-4">
+                  <div className="text-[10px] text-primary/70 font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <BookOpen className="h-3 w-3" /> Claves del Partido
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{gameScouting.clavesPartido}</p>
                 </div>
+              )}
+
+              {/* Fortalezas / Debilidades */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Fortalezas */}
                 <div className="rounded-xl bg-red-500/5 border border-red-500/15 p-3">
-                  <div className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2">Debilidades</div>
-                  <Link href="/reports/new">
-                    <span className="text-xs text-muted-foreground hover:text-primary cursor-pointer transition">Generar informe →</span>
-                  </Link>
+                  <div className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span>Fortalezas</span>
+                    {gameScouting.fortalezas.length > 0 && (
+                      <span className="text-[9px] text-red-400/60">{gameScouting.fortalezas.length}</span>
+                    )}
+                  </div>
+                  {gameScouting.fortalezas.length > 0 ? (
+                    <div className="space-y-1">
+                      {gameScouting.fortalezas.slice(0, 3).map((f, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span className="text-red-400/50 text-[10px] shrink-0 mt-0.5">▸</span>
+                          <span className="text-xs text-muted-foreground leading-snug line-clamp-2">{f}</span>
+                        </div>
+                      ))}
+                      {gameScouting.fortalezas.length > 3 && (
+                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                          <span className="text-[10px] text-primary/60 hover:text-primary transition cursor-pointer">
+                            +{gameScouting.fortalezas.length - 3} más →
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                      <span className="text-xs text-muted-foreground/50 hover:text-primary cursor-pointer transition">Analizar en Centro de Partido →</span>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Debilidades */}
+                <div className="rounded-xl bg-green-500/5 border border-green-500/15 p-3">
+                  <div className="text-[10px] text-green-400 font-black uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span>Debilidades</span>
+                    {gameScouting.debilidades.length > 0 && (
+                      <span className="text-[9px] text-green-400/60">{gameScouting.debilidades.length}</span>
+                    )}
+                  </div>
+                  {gameScouting.debilidades.length > 0 ? (
+                    <div className="space-y-1">
+                      {gameScouting.debilidades.slice(0, 3).map((d, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span className="text-green-400/50 text-[10px] shrink-0 mt-0.5">▸</span>
+                          <span className="text-xs text-muted-foreground leading-snug line-clamp-2">{d}</span>
+                        </div>
+                      ))}
+                      {gameScouting.debilidades.length > 3 && (
+                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                          <span className="text-[10px] text-primary/60 hover:text-primary transition cursor-pointer">
+                            +{gameScouting.debilidades.length - 3} más →
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                      <span className="text-xs text-muted-foreground/50 hover:text-primary cursor-pointer transition">Identificar en Centro de Partido →</span>
+                    </Link>
+                  )}
                 </div>
               </div>
 
-              <Link href={rivalInfo.id ? `/teams/${rivalInfo.id}` : "/scout"}>
-                <button className="w-full py-2.5 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:text-foreground hover:border-foreground/20 transition flex items-center justify-center gap-1.5">
-                  Ver Scouting Completo <ChevronRight className="h-3.5 w-3.5" />
+              {/* Jugadoras a vigilar */}
+              {gameScouting.jugadorasDestacadas && (
+                <div className="rounded-xl bg-amber-500/[0.04] border border-amber-500/15 p-3 mb-4">
+                  <div className="text-[10px] text-amber-400/80 font-black uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <Star className="h-3 w-3" /> Jugadoras a Vigilar
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{gameScouting.jugadorasDestacadas}</p>
+                </div>
+              )}
+
+              {/* CTA */}
+              <Link href={nextGame ? `/games/${nextGame.id}/match-center` : (rivalInfo.id ? `/teams/${rivalInfo.id}` : "/scout")}>
+                <button className="w-full py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-bold text-primary hover:text-primary transition flex items-center justify-center gap-1.5">
+                  Abrir Centro de Partido <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </Link>
             </>
