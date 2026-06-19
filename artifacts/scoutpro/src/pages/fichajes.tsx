@@ -116,7 +116,7 @@ export default function Fichajes() {
   const hasFilters = !!(positionFilter || leagueFilter || nationalityFilter || tipoFilter !== "ALL" || search.trim());
 
   const filteredPlayers = useMemo(() => {
-    const base = players ?? [];
+    const base = players?.filter((p) => p.watchlisted) ?? [];
     return base.filter((p) => {
       if (search.trim() && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.teamName?.toLowerCase().includes(search.toLowerCase())) return false;
       if (positionFilter && p.position !== positionFilter) return false;
@@ -128,7 +128,7 @@ export default function Fichajes() {
       if (tipoFilter !== "ALL" && playerTipo(p.nationality) !== tipoFilter) return false;
       return true;
     });
-  }, [players, freeAgents, positionFilter, leagueFilter, nationalityFilter, tipoFilter, search, teamLeagueMap, hasFilters]);
+  }, [players, positionFilter, leagueFilter, nationalityFilter, tipoFilter, search, teamLeagueMap]);
 
   const clearFilters = () => {
     setPositionFilter("");
@@ -194,8 +194,8 @@ export default function Fichajes() {
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Agentes libres</p>
-                <p className="text-3xl font-display">{isLoading ? "—" : freeAgents.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">A fichar ★</p>
+                <p className="text-3xl font-display">{isLoading ? "—" : (players?.filter(p => p.watchlisted)?.length ?? 0)}</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Star className="h-4 w-4 text-primary" />
@@ -207,7 +207,7 @@ export default function Fichajes() {
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Total prospectos</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Total en base de datos</p>
                 <p className="text-3xl font-display">{isLoading ? "—" : (players?.length ?? 0)}</p>
               </div>
               <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
@@ -297,7 +297,7 @@ export default function Fichajes() {
           <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {hasFilters
               ? `Resultados — ${filteredPlayers.length} jugador${filteredPlayers.length !== 1 ? "es" : ""}`
-              : "Agentes Libres — Candidatos a Fichar"}
+              : `A Fichar ★ — ${filteredPlayers.length} jugador${filteredPlayers.length !== 1 ? "es" : ""}`}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -307,12 +307,12 @@ export default function Fichajes() {
             <div className="py-12 text-center">
               <Star className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
               <p className="text-sm text-muted-foreground">
-                {hasFilters ? "No hay jugadores que coincidan." : "No hay prospectos sin equipo asignado"}
+                {hasFilters ? "No hay jugadores que coincidan." : "Ningún jugador marcado con ★ todavía."}
               </p>
               {!hasFilters && (
-                <Link href="/players/new">
-                  <Button variant="outline" size="sm" className="mt-4">Añadir prospecto</Button>
-                </Link>
+                <p className="text-xs text-muted-foreground/60 mt-1">
+                  Marca jugadores con la estrella en Jugadores o en el Centro de Scouting.
+                </p>
               )}
             </div>
           ) : (
