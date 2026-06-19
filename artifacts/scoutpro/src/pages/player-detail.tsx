@@ -381,8 +381,70 @@ function TabStats({ profile, updateStats, updateAdvanced }: {
   const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
     ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—";
 
+  const gamesPlayed = parseNum(s.gamesPlayed) ?? 0;
+  const ptsAvg = parseNum(s.points) ?? 0;
+  const ptsTotal = gamesPlayed > 0 && ptsAvg > 0 ? Math.round(gamesPlayed * ptsAvg) : null;
+  const valAvg = ptsAvg + totReb + (parseNum(s.assists) ?? 0) + (parseNum(s.steals) ?? 0) + (parseNum(s.blocks) ?? 0);
+  const valTotal = gamesPlayed > 0 && valAvg > 0 ? Math.round(gamesPlayed * valAvg) : null;
+  const hasValData = ptsAvg > 0 || valAvg > 0;
+
   return (
     <div className="space-y-6">
+      {/* ── Valoración total PTS ── */}
+      {hasValData && (
+        <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 p-0.5 shadow-lg shadow-orange-200/40">
+          <div className="rounded-[14px] bg-white px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="h-4 w-4 text-orange-500" />
+              <span className="text-xs font-black text-gray-700 uppercase tracking-widest">Valoración de temporada</span>
+              {gamesPlayed > 0 && <Badge variant="secondary" className="ml-auto">{gamesPlayed} partidos</Badge>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* PTS Total */}
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
+                <div className="text-3xl font-black text-orange-600 leading-none">
+                  {ptsTotal !== null ? ptsTotal : (ptsAvg > 0 ? ptsAvg.toFixed(1) : "—")}
+                </div>
+                <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">
+                  {ptsTotal !== null ? "PTS Total" : "PTS Prom."}
+                </div>
+                {ptsTotal !== null && ptsAvg > 0 && (
+                  <div className="text-[10px] text-gray-400 mt-0.5">{ptsAvg.toFixed(1)} por partido</div>
+                )}
+              </div>
+              {/* VAL Total */}
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                <div className="text-3xl font-black text-amber-600 leading-none">
+                  {valTotal !== null ? valTotal : (valAvg > 0 ? valAvg.toFixed(1) : "—")}
+                </div>
+                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">
+                  {valTotal !== null ? "VAL Total" : "VAL Prom."}
+                </div>
+                {valTotal !== null && valAvg > 0 && (
+                  <div className="text-[10px] text-gray-400 mt-0.5">{valAvg.toFixed(1)} por partido</div>
+                )}
+              </div>
+            </div>
+            {/* mini breakdown */}
+            {valAvg > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+                {[
+                  { l: "PTS", v: ptsAvg },
+                  { l: "REB", v: totReb },
+                  { l: "AST", v: parseNum(s.assists) ?? 0 },
+                  { l: "ROB", v: parseNum(s.steals) ?? 0 },
+                  { l: "TAP", v: parseNum(s.blocks) ?? 0 },
+                ].filter(x => x.v > 0).map(({ l, v }) => (
+                  <span key={l} className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600">
+                    {l} {v.toFixed(1)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Basic stats grid */}
       <Card>
         <CardHeader className="pb-3">

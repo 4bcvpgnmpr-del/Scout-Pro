@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { getStoredProfile } from "@/hooks/use-player-profile";
 import {
   useListTeamMedia,
   useCreateTeamMedia,
@@ -450,41 +451,72 @@ function PlaybookSection({ teamId, teamName }: { teamId: number; teamName: strin
 function PlayerStatsRowDark({ player }: {
   player: { id: number; name: string; position?: string | null; jerseyNumber?: number | null; photoUrl?: string | null };
 }) {
-  const { data: stats } = useGetPlayerStats(player.id, { query: { queryKey: getGetPlayerStatsQueryKey(player.id) } });
+  const { data: dbStats } = useGetPlayerStats(player.id, { query: { queryKey: getGetPlayerStatsQueryKey(player.id) } });
   const initials = player.name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
-  const fmt = (v: number | string | null | undefined, dec = 1) => { const n = Number(v); return v != null && !isNaN(n) ? n.toFixed(dec) : "—"; };
-  const fmtPct = (v: number | string | null | undefined) => { const n = Number(v); return v != null && !isNaN(n) ? `${(n * 100).toFixed(0)}%` : "—"; };
-  const val = stats
-    ? (Number(stats.avgPoints) + Number(stats.avgRebounds) + Number(stats.avgAssists) + Number(stats.avgSteals) + Number(stats.avgBlocks)).toFixed(1)
-    : null;
+  const fmt = (v: number | string | null | undefined, dec = 1) => { const n = Number(v); return v != null && v !== "" && !isNaN(n) ? n.toFixed(dec) : "—"; };
+  const fmtPct = (v: number | string | null | undefined) => { const n = Number(v); return v != null && v !== "" && !isNaN(n) ? `${(n * 100).toFixed(0)}%` : "—"; };
+
+  // Fallback: read from player profile localStorage if no DB stats
+  const hasDbStats = dbStats && (dbStats.gamesPlayed ?? 0) > 0;
+  const lsProfile = !hasDbStats ? getStoredProfile(player.id) : null;
+  const ls = lsProfile?.seasonStats;
+  const hasLsStats = ls && (ls.points || ls.assists || ls.offReb || ls.defReb);
+
+  const stats = hasDbStats ? dbStats : null;
+
+  // Build display values from whichever source we have
+  const pts    = stats ? stats.avgPoints     : ls?.points;
+  const reb    = stats ? stats.avgRebounds   : ls ? String((Number(ls.offReb) || 0) + (Number(ls.defReb) || 0) || "") : null;
+  const ast    = stats ? stats.avgAssists    : ls?.assists;
+  const rob    = stats ? stats.avgSteals     : ls?.steals;
+  const tap    = stats ? stats.avgBlocks     : ls?.blocks;
+  const min    = stats ? stats.avgMinutes    : ls?.minutes;
+  const tcPct  = stats ? stats.avgFieldGoalPct
+    : (ls && Number(ls.fgAtt) > 0 ? String(Number(ls.fgMade) / Number(ls.fgAtt)) : null);
+  const t3Pct  = stats ? stats.avgThreePointPct
+    : (ls && Number(ls.t3Att) > 0 ? String(Number(ls.t3Made) / Number(ls.t3Att)) : null);
+  const tlPct  = stats ? stats.avgFreeThrowPct
+    : (ls && Number(ls.ftAtt) > 0 ? String(Number(ls.ftMade) / Number(ls.ftAtt)) : null);
+
+  const valNum = [pts, reb, ast, rob, tap].reduce<number>((acc, v) => acc + (Number(v) || 0), 0);
+  const val = valNum > 0 ? valNum.toFixed(1) : null;
+
+  const hasAny = hasDbStats || hasLsStats;
+  const fromProfile = !hasDbStats && hasLsStats;
+
   return (
-    <tr className="border-b border-white/5 hover:bg-white/5 transition">
+    <tr className="border-b border-white/5 hover:bg-white/5 transition group">
       <td className="py-2.5 pl-0 pr-2 text-sm text-gray-500 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
       <td className="py-2.5 px-2">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-            {player.photoUrl
-              ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
-              : <span className="text-[10px] font-black text-orange-400">{initials}</span>}
+        <Link href={`/players/${player.id}`}>
+          <div className="flex items-center gap-2 cursor-pointer">
+            <div className="h-7 w-7 rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+              {player.photoUrl
+                ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
+                : <span className="text-[10px] font-black text-orange-400">{initials}</span>}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-200 text-sm leading-tight group-hover:text-orange-400 transition">{player.name}</p>
+              <p className="text-[10px] text-gray-500">{player.position ?? ""}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-gray-200 text-sm leading-tight">{player.name}</p>
-            <p className="text-[10px] text-gray-500">{player.position ?? ""}</p>
-          </div>
-        </div>
+        </Link>
       </td>
-      {stats ? (
+      {hasAny ? (
         <>
-          <td className="py-2.5 px-1.5 text-sm font-black text-orange-400 text-center">{val}</td>
-          <td className="py-2.5 px-1.5 text-sm font-black text-amber-400 text-center">{fmt(stats.avgPoints)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgRebounds)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgAssists)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(stats.avgSteals)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgBlocks)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(stats.avgMinutes, 0)}'</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
-          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(stats.avgThreePointPct)}</td>
-          <td className="py-2.5 pr-0 text-sm text-gray-500 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
+          <td className="py-2.5 px-1.5 text-sm font-black text-orange-400 text-center">
+            {val ?? "—"}
+            {fromProfile && <span className="ml-0.5 text-[8px] text-gray-600 align-super">P</span>}
+          </td>
+          <td className="py-2.5 px-1.5 text-sm font-black text-amber-400 text-center">{fmt(pts)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(reb)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(ast)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-400 text-center">{fmt(rob)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmt(tap)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{min ? fmt(min, 0) + "'" : "—"}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(tcPct)}</td>
+          <td className="py-2.5 px-1.5 text-sm text-gray-500 text-center">{fmtPct(t3Pct)}</td>
+          <td className="py-2.5 pr-0 text-sm text-gray-500 text-center">{fmtPct(tlPct)}</td>
         </>
       ) : (
         <td colSpan={10} className="py-2.5 px-2 text-xs text-gray-600 italic">Sin estadísticas</td>
@@ -508,14 +540,16 @@ function PlayerRosterRow({ player, onToggleFavorite }: {
     <tr className="border-b border-gray-100 hover:bg-orange-50/30 transition group">
       <td className="py-2.5 pl-0 pr-2 text-sm text-gray-400 font-mono text-center w-8">{player.jerseyNumber ?? "—"}</td>
       <td className="py-2.5 px-2">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-            {player.photoUrl
-              ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
-              : <span className="text-[10px] font-black text-orange-500">{initials}</span>}
+        <Link href={`/players/${player.id}`}>
+          <div className="flex items-center gap-2 cursor-pointer">
+            <div className="h-7 w-7 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+              {player.photoUrl
+                ? <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover" />
+                : <span className="text-[10px] font-black text-orange-500">{initials}</span>}
+            </div>
+            <p className="font-semibold text-gray-800 text-sm group-hover:text-orange-600 transition">{player.name}</p>
           </div>
-          <p className="font-semibold text-gray-800 text-sm">{player.name}</p>
-        </div>
+        </Link>
       </td>
       <td className="py-2.5 px-2 text-sm text-gray-500 text-center font-medium">{player.position ?? "—"}</td>
       <td className="py-2.5 px-2 text-sm text-gray-500 text-center">{player.age ?? "—"}</td>
@@ -523,7 +557,7 @@ function PlayerRosterRow({ player, onToggleFavorite }: {
       <td className="py-2.5 px-2 text-sm text-gray-500 text-center">{player.height ? `${player.height}` : "—"}</td>
       <td className="py-2.5 pr-1 text-center">
         <button
-          onClick={() => onToggleFavorite(player.id, isFav)}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(player.id, isFav); }}
           title={isFav ? "En lista de fichajes · click para quitar" : "Añadir a fichajes"}
           className={`p-1.5 rounded-lg transition ${isFav ? "text-amber-400 bg-amber-50" : "text-gray-300 hover:text-amber-400 hover:bg-amber-50 opacity-0 group-hover:opacity-100"}`}>
           <Star className={`h-4 w-4 ${isFav ? "fill-amber-400" : ""}`} />
