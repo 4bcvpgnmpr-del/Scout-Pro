@@ -1,0 +1,820 @@
+{
+  "primera-feb": {
+    "liga": "Primera FEB",
+    "actualizacion": "2026-06-19T19:48:59.248Z",
+    "clasificacion": [
+      {
+        "posicion": 1,
+        "equipo": "MONBUS OBRADOIRO",
+        "pj": 32,
+        "pg": 28,
+        "pp": 4,
+        "pf": 2945,
+        "pc": 2420,
+        "pts": 60
+      },
+      {
+        "posicion": 2,
+        "equipo": "LEYMA CORUÑA",
+        "pj": 32,
+        "pg": 28,
+        "pp": 4,
+        "pf": 2896,
+        "pc": 2502,
+        "pts": 60
+      },
+      {
+        "posicion": 3,
+        "equipo": "SÚPER AGROPAL PALENCIA",
+        "pj": 32,
+        "pg": 25,
+        "pp": 7,
+        "pf": 2675,
+        "pc": 2324,
+        "pts": 57
+      },
+      {
+        "posicion": 4,
+        "equipo": "MOVISTAR ESTUDIANTES",
+        "pj": 32,
+        "pg": 20,
+        "pp": 12,
+        "pf": 2682,
+        "pc": 2561,
+        "pts": 52
+      },
+      {
+        "posicion": 5,
+        "equipo": "INVEREADY GIPUZKOA",
+        "pj": 32,
+        "pg": 19,
+        "pp": 13,
+        "pf": 2520,
+        "pc": 2386,
+        "pts": 51
+      },
+      {
+        "posicion": 6,
+        "equipo": "ALIMERKA OVIEDO BALONCESTO",
+        "pj": 32,
+        "pg": 19,
+        "pp": 13,
+        "pf": 2626,
+        "pc": 2494,
+        "pts": 51
+      },
+      {
+        "posicion": 7,
+        "equipo": "FLEXICAR FUENLABRADA",
+        "pj": 32,
+        "pg": 19,
+        "pp": 13,
+        "pf": 2553,
+        "pc": 2582,
+        "pts": 51
+      },
+      {
+        "posicion": 8,
+        "equipo": "HESTIA MENORCA",
+        "pj": 32,
+        "pg": 17,
+        "pp": 15,
+        "pf": 2574,
+        "pc": 2456,
+        "pts": 49
+      },
+      {
+        "posicion": 9,
+        "equipo": "HLA ALICANTE",
+        "pj": 32,
+        "pg": 15,
+        "pp": 17,
+        "pf": 2632,
+        "pc": 2628,
+        "pts": 47
+      },
+      {
+        "posicion": 10,
+        "equipo": "CAJA RURAL CB ZAMORA",
+        "pj": 32,
+        "pg": 15,
+        "pp": 17,
+        "pf": 2676,
+        "pc": 2748,
+        "pts": 47
+      },
+      {
+        "posicion": 11,
+        "equipo": "GRUPO ALEGA CANTABRIA",
+        "pj": 32,
+        "pg": 12,
+        "pp": 20,
+        "pf": 2481,
+        "pc": 2708,
+        "pts": 44
+      },
+      {
+        "posicion": 12,
+        "equipo": "CLOUD.GAL OURENSE BALONCESTO",
+        "pj": 32,
+        "pg": 12,
+        "pp": 20,
+        "pf": 2530,
+        "pc": 2604,
+        "pts": 44
+      },
+      {
+        "posicion": 13,
+        "equipo": "GRUPO URETA TIZONA BURGOS",
+        "pj": 32,
+        "pg": 10,
+        "pp": 22,
+        "pf": 2668,
+        "pc": 2847,
+        "pts": 42
+      },
+      {
+        "posicion": 14,
+        "equipo": "FIBWI MALLORCA BASQUET PALMA",
+        "pj": 32,
+        "pg": 10,
+        "pp": 22,
+        "pf": 2437,
+        "pc": 2629,
+        "pts": 42
+      },
+      {
+        "posicion": 15,
+        "equipo": "PALMER BASKET MALLORCA PALMA",
+        "pj": 32,
+        "pg": 8,
+        "pp": 24,
+        "pf": 2316,
+        "pc": 2653,
+        "pts": 40
+      },
+      {
+        "posicion": 16,
+        "equipo": "GRUPO CAESA SEGUROS FC CARTAGE",
+        "pj": 32,
+        "pg": 8,
+        "pp": 24,
+        "pf": 2367,
+        "pc": 2712,
+        "pts": 40
+      },
+      {
+        "posicion": 17,
+        "equipo": "MELILLA CIUDAD DEL DEPORTE",
+        "pj": 32,
+        "pg": 7,
+        "pp": 25,
+        "pf": 2445,
+        "pc": 2769,
+        "pts": 39
+      }
+    ],
+    "resultados": [
+      {
+        "local": "SÚPER AGROPAL PALENCIA",
+        "visitante": "MOVISTAR ESTUDIANTES",
+        "marcador": "69-73",
+        "fecha": "—"
+      }
+    ]
+  },
+  "segunda-feb": {
+    "liga": "Segunda FEB",
+    "actualizacion": "2026-06-19T19:48:44.252Z",
+    "clasificacion": [
+      {
+        "posicion": 1,
+        "equipo": "AMICS CASTELLÓ",
+        "pj": 26,
+        "pg": 21,
+        "pp": 5,
+        "pf": 2211,
+        "pc": 1951,
+        "pts": 47
+      },
+      {
+        "posicion": 2,
+        "equipo": "CLASS BASQUET SANT ANTONI",
+        "pj": 26,
+        "pg": 20,
+        "pp": 6,
+        "pf": 2165,
+        "pc": 1910,
+        "pts": 46
+      },
+      {
+        "posicion": 3,
+        "equipo": "BUENO ARENAS ALBACETE BASKET",
+        "pj": 26,
+        "pg": 18,
+        "pp": 8,
+        "pf": 2123,
+        "pc": 2034,
+        "pts": 44
+      },
+      {
+        "posicion": 4,
+        "equipo": "SPANISH BASKETBALL ACADEMY",
+        "pj": 26,
+        "pg": 18,
+        "pp": 8,
+        "pf": 2109,
+        "pc": 1965,
+        "pts": 44
+      },
+      {
+        "posicion": 5,
+        "equipo": "PROINBENI UPB GANDIA",
+        "pj": 26,
+        "pg": 16,
+        "pp": 10,
+        "pf": 2170,
+        "pc": 2019,
+        "pts": 42
+      },
+      {
+        "posicion": 6,
+        "equipo": "CLUB ESPORTIU BÀSQUET LLÍRIA",
+        "pj": 26,
+        "pg": 14,
+        "pp": 12,
+        "pf": 2032,
+        "pc": 1997,
+        "pts": 40
+      },
+      {
+        "posicion": 7,
+        "equipo": "LOBE HUESCA LA MAGIA",
+        "pj": 26,
+        "pg": 13,
+        "pp": 13,
+        "pf": 2158,
+        "pc": 2155,
+        "pts": 39
+      },
+      {
+        "posicion": 8,
+        "equipo": "CBZ",
+        "pj": 26,
+        "pg": 12,
+        "pp": 14,
+        "pf": 2151,
+        "pc": 2104,
+        "pts": 38
+      },
+      {
+        "posicion": 9,
+        "equipo": "C.B. GETAFE",
+        "pj": 26,
+        "pg": 11,
+        "pp": 15,
+        "pf": 2096,
+        "pc": 2112,
+        "pts": 37
+      },
+      {
+        "posicion": 10,
+        "equipo": "SOL GIRONÈS BISBAL BÀSQUET",
+        "pj": 26,
+        "pg": 10,
+        "pp": 16,
+        "pf": 1902,
+        "pc": 2027,
+        "pts": 36
+      },
+      {
+        "posicion": 11,
+        "equipo": "MADERAS SORLI BENICARLO",
+        "pj": 26,
+        "pg": 9,
+        "pp": 17,
+        "pf": 1935,
+        "pc": 2096,
+        "pts": 35
+      },
+      {
+        "posicion": 12,
+        "equipo": "CIUDAD MOLINA BASKET",
+        "pj": 26,
+        "pg": 8,
+        "pp": 18,
+        "pf": 1917,
+        "pc": 2148,
+        "pts": 34
+      },
+      {
+        "posicion": 13,
+        "equipo": "HOMS U.E.MATARÓ",
+        "pj": 26,
+        "pg": 7,
+        "pp": 19,
+        "pf": 1944,
+        "pc": 2162,
+        "pts": 33
+      },
+      {
+        "posicion": 14,
+        "equipo": "OCA GLOBAL C.B. SALOU",
+        "pj": 26,
+        "pg": 5,
+        "pp": 21,
+        "pf": 1937,
+        "pc": 2170,
+        "pts": 31
+      }
+    ],
+    "resultados": []
+  },
+  "liga-femenina-endesa": {
+    "liga": "Liga Femenina Endesa",
+    "actualizacion": "2026-06-19T19:48:44.252Z",
+    "clasificacion": [
+      {
+        "posicion": 1,
+        "equipo": "CASADEMONT ZARAGOZA",
+        "pj": 30,
+        "pg": 27,
+        "pp": 3,
+        "pf": 2370,
+        "pc": 1978,
+        "pts": 57
+      },
+      {
+        "posicion": 2,
+        "equipo": "SPAR GIRONA",
+        "pj": 30,
+        "pg": 24,
+        "pp": 6,
+        "pf": 2459,
+        "pc": 2031,
+        "pts": 54
+      },
+      {
+        "posicion": 3,
+        "equipo": "VALENCIA B.C.",
+        "pj": 30,
+        "pg": 21,
+        "pp": 9,
+        "pf": 2286,
+        "pc": 1969,
+        "pts": 51
+      },
+      {
+        "posicion": 4,
+        "equipo": "HOZONO GLOBAL JAIRIS",
+        "pj": 30,
+        "pg": 19,
+        "pp": 11,
+        "pf": 2203,
+        "pc": 1983,
+        "pts": 49
+      },
+      {
+        "posicion": 5,
+        "equipo": "PERFUMERIAS AVENIDA",
+        "pj": 30,
+        "pg": 18,
+        "pp": 12,
+        "pf": 2083,
+        "pc": 2033,
+        "pts": 48
+      },
+      {
+        "posicion": 6,
+        "equipo": "DURÁN MAQUINARIA ENSINO",
+        "pj": 30,
+        "pg": 16,
+        "pp": 14,
+        "pf": 2199,
+        "pc": 2170,
+        "pts": 46
+      },
+      {
+        "posicion": 7,
+        "equipo": "INNOVA-TSN LEGANES",
+        "pj": 30,
+        "pg": 15,
+        "pp": 15,
+        "pf": 2065,
+        "pc": 2053,
+        "pts": 45
+      },
+      {
+        "posicion": 8,
+        "equipo": "INGENIERÍA AMBIENTAL CAB ESTEP",
+        "pj": 30,
+        "pg": 14,
+        "pp": 16,
+        "pf": 2175,
+        "pc": 2226,
+        "pts": 44
+      },
+      {
+        "posicion": 9,
+        "equipo": "BAXI FERROL",
+        "pj": 30,
+        "pg": 14,
+        "pp": 16,
+        "pf": 2136,
+        "pc": 2211,
+        "pts": 44
+      },
+      {
+        "posicion": 10,
+        "equipo": "LOINTEK GERNIKA BIZKAIA",
+        "pj": 30,
+        "pg": 12,
+        "pp": 18,
+        "pf": 2234,
+        "pc": 2318,
+        "pts": 42
+      },
+      {
+        "posicion": 11,
+        "equipo": "MOVISTAR ESTUDIANTES",
+        "pj": 30,
+        "pg": 12,
+        "pp": 18,
+        "pf": 2275,
+        "pc": 2294,
+        "pts": 42
+      },
+      {
+        "posicion": 12,
+        "equipo": "IDK EUSKOTREN",
+        "pj": 30,
+        "pg": 12,
+        "pp": 18,
+        "pf": 1962,
+        "pc": 2040,
+        "pts": 42
+      },
+      {
+        "posicion": 13,
+        "equipo": "CADI LA SEU",
+        "pj": 30,
+        "pg": 11,
+        "pp": 19,
+        "pf": 2037,
+        "pc": 2259,
+        "pts": 41
+      },
+      {
+        "posicion": 14,
+        "equipo": "KUTXABANK ARASKI",
+        "pj": 30,
+        "pg": 11,
+        "pp": 19,
+        "pf": 1970,
+        "pc": 2201,
+        "pts": 41
+      },
+      {
+        "posicion": 15,
+        "equipo": "CLUB JOVENTUT BADALONA",
+        "pj": 30,
+        "pg": 11,
+        "pp": 19,
+        "pf": 2143,
+        "pc": 2228,
+        "pts": 41
+      },
+      {
+        "posicion": 16,
+        "equipo": "SPAR GRAN CANARIA",
+        "pj": 30,
+        "pg": 3,
+        "pp": 27,
+        "pf": 2105,
+        "pc": 2708,
+        "pts": 33
+      }
+    ],
+    "resultados": []
+  },
+  "lf-challenge": {
+    "liga": "LF Challenge",
+    "actualizacion": "2026-06-19T19:48:44.252Z",
+    "clasificacion": [
+      {
+        "posicion": 1,
+        "equipo": "AZULMARINO MALLORCA PALMA",
+        "pj": 30,
+        "pg": 29,
+        "pp": 1,
+        "pf": 2633,
+        "pc": 1762,
+        "pts": 59
+      },
+      {
+        "posicion": 2,
+        "equipo": "CELTA  FEMXA ZORKA",
+        "pj": 30,
+        "pg": 27,
+        "pp": 3,
+        "pf": 2200,
+        "pc": 1804,
+        "pts": 57
+      },
+      {
+        "posicion": 3,
+        "equipo": "UNICAJA MIJAS",
+        "pj": 30,
+        "pg": 26,
+        "pp": 4,
+        "pf": 2200,
+        "pc": 1843,
+        "pts": 56
+      },
+      {
+        "posicion": 4,
+        "equipo": "OSES CONSTRUCCION",
+        "pj": 30,
+        "pg": 20,
+        "pp": 10,
+        "pf": 2055,
+        "pc": 1957,
+        "pts": 50
+      },
+      {
+        "posicion": 5,
+        "equipo": "MELILLA CIUDAD DEPORTE LA SALL",
+        "pj": 30,
+        "pg": 18,
+        "pp": 12,
+        "pf": 2068,
+        "pc": 1967,
+        "pts": 48
+      },
+      {
+        "posicion": 6,
+        "equipo": "RECOLETAS ZAMORA",
+        "pj": 30,
+        "pg": 16,
+        "pp": 14,
+        "pf": 2026,
+        "pc": 1978,
+        "pts": 46
+      },
+      {
+        "posicion": 7,
+        "equipo": "ALTER ENERSUN AL-QÁZERES EXT.",
+        "pj": 30,
+        "pg": 14,
+        "pp": 16,
+        "pf": 1967,
+        "pc": 2022,
+        "pts": 44
+      },
+      {
+        "posicion": 8,
+        "equipo": "MCR LIMA-HORTA BARCELONA",
+        "pj": 30,
+        "pg": 14,
+        "pp": 16,
+        "pf": 1915,
+        "pc": 2056,
+        "pts": 44
+      },
+      {
+        "posicion": 9,
+        "equipo": "BOSONIT UNIBASKET",
+        "pj": 30,
+        "pg": 14,
+        "pp": 16,
+        "pf": 1882,
+        "pc": 1937,
+        "pts": 44
+      },
+      {
+        "posicion": 10,
+        "equipo": "DOMUSA TEKNIK ISB",
+        "pj": 30,
+        "pg": 13,
+        "pp": 17,
+        "pf": 1968,
+        "pc": 2040,
+        "pts": 43
+      },
+      {
+        "posicion": 11,
+        "equipo": "LA LAGUNA TOYOTA  ADAREVA",
+        "pj": 30,
+        "pg": 11,
+        "pp": 19,
+        "pf": 1928,
+        "pc": 2084,
+        "pts": 41
+      },
+      {
+        "posicion": 12,
+        "equipo": "FUSTECMA NBF CASTELLÓ",
+        "pj": 30,
+        "pg": 11,
+        "pp": 19,
+        "pf": 1845,
+        "pc": 1915,
+        "pts": 41
+      },
+      {
+        "posicion": 13,
+        "equipo": "LA CORDÁ DE PATERNA NB",
+        "pj": 30,
+        "pg": 10,
+        "pp": 20,
+        "pf": 1993,
+        "pc": 2166,
+        "pts": 40
+      },
+      {
+        "posicion": 14,
+        "equipo": "CAJASOL BALONCESTO SEVILLA FEM",
+        "pj": 30,
+        "pg": 10,
+        "pp": 20,
+        "pf": 1920,
+        "pc": 2197,
+        "pts": 40
+      },
+      {
+        "posicion": 15,
+        "equipo": "SERNOVA RENOVABLES REAL CANOE",
+        "pj": 30,
+        "pg": 6,
+        "pp": 24,
+        "pf": 1815,
+        "pc": 2035,
+        "pts": 36
+      },
+      {
+        "posicion": 16,
+        "equipo": "C.B. SANTFELIUENC",
+        "pj": 30,
+        "pg": 1,
+        "pp": 29,
+        "pf": 1741,
+        "pc": 2393,
+        "pts": 31
+      }
+    ],
+    "resultados": []
+  },
+  "lf2": {
+    "liga": "LF2",
+    "actualizacion": "2026-06-19T19:48:44.252Z",
+    "clasificacion": [
+      {
+        "posicion": 1,
+        "equipo": "SEGLE XXI",
+        "pj": 26,
+        "pg": 22,
+        "pp": 4,
+        "pf": 1812,
+        "pc": 1442,
+        "pts": 48
+      },
+      {
+        "posicion": 2,
+        "equipo": "GEIEG PACISA",
+        "pj": 26,
+        "pg": 20,
+        "pp": 6,
+        "pf": 1799,
+        "pc": 1528,
+        "pts": 46
+      },
+      {
+        "posicion": 3,
+        "equipo": "ESCO GRUPO FEMENINO ALCORCON",
+        "pj": 26,
+        "pg": 20,
+        "pp": 6,
+        "pf": 1855,
+        "pc": 1634,
+        "pts": 46
+      },
+      {
+        "posicion": 4,
+        "equipo": "CB CLARET BENIMACLET",
+        "pj": 26,
+        "pg": 20,
+        "pp": 6,
+        "pf": 1865,
+        "pc": 1724,
+        "pts": 46
+      },
+      {
+        "posicion": 5,
+        "equipo": "CESUR DISTRITO OLIMPICO",
+        "pj": 26,
+        "pg": 16,
+        "pp": 10,
+        "pf": 1661,
+        "pc": 1583,
+        "pts": 42
+      },
+      {
+        "posicion": 6,
+        "equipo": "C. B. ISLA BONITA",
+        "pj": 26,
+        "pg": 14,
+        "pp": 12,
+        "pf": 1707,
+        "pc": 1727,
+        "pts": 40
+      },
+      {
+        "posicion": 7,
+        "equipo": "DPES CB CIUDAD DE MOSTOLES",
+        "pj": 26,
+        "pg": 13,
+        "pp": 13,
+        "pf": 1756,
+        "pc": 1656,
+        "pts": 39
+      },
+      {
+        "posicion": 8,
+        "equipo": "SPAR GRAN CANARIA",
+        "pj": 26,
+        "pg": 12,
+        "pp": 14,
+        "pf": 1751,
+        "pc": 1825,
+        "pts": 38
+      },
+      {
+        "posicion": 9,
+        "equipo": "DISHELEC 65 VILADECANS",
+        "pj": 26,
+        "pg": 12,
+        "pp": 14,
+        "pf": 1591,
+        "pc": 1758,
+        "pts": 38
+      },
+      {
+        "posicion": 10,
+        "equipo": "HIERROS DÍAZ EXTREMADURA MIRAL",
+        "pj": 26,
+        "pg": 10,
+        "pp": 16,
+        "pf": 1643,
+        "pc": 1721,
+        "pts": 36
+      },
+      {
+        "posicion": 11,
+        "equipo": "BASKET ALMEDA",
+        "pj": 26,
+        "pg": 8,
+        "pp": 18,
+        "pf": 1384,
+        "pc": 1593,
+        "pts": 34
+      },
+      {
+        "posicion": 12,
+        "equipo": "MAGECTIAS CONTRA VIOLENCIA GEN",
+        "pj": 26,
+        "pg": 7,
+        "pp": 19,
+        "pf": 1809,
+        "pc": 1938,
+        "pts": 33
+      },
+      {
+        "posicion": 13,
+        "equipo": "EL PLANTEL GMASB",
+        "pj": 26,
+        "pg": 7,
+        "pp": 19,
+        "pf": 1645,
+        "pc": 1785,
+        "pts": 33
+      },
+      {
+        "posicion": 14,
+        "equipo": "ELSAMEX CB ANDRATX",
+        "pj": 26,
+        "pg": 1,
+        "pp": 25,
+        "pf": 1591,
+        "pc": 1955,
+        "pts": 27
+      }
+    ],
+    "resultados": []
+  },
+  "tercera-feb": {
+    "liga": "Tercera FEB",
+    "actualizacion": "2026-06-19T19:48:44.252Z",
+    "clasificacion": [],
+    "resultados": []
+  }
+}

@@ -7,6 +7,7 @@ import reportsRouter from "./reports";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
 import teamMediaRouter from "./team-media";
+import febRouter from "./feb";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(teamMediaRouter);
 router.use(playersRouter);
 router.use(gamesRouter);
 router.use(reportsRouter);
+router.use(febRouter);
 
 export default router;
