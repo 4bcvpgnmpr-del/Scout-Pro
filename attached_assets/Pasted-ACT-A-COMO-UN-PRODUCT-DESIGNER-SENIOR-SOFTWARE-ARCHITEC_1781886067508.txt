@@ -1,0 +1,241 @@
+ACTÚA COMO UN PRODUCT DESIGNER SENIOR, SOFTWARE ARCHITECT Y DIRECTOR DE SCOUTING DE BALONCESTO PROFESIONAL.
+
+OBJETIVO:
+
+REDISEÑAR COMPLETAMENTE EL PERFIL DE JUGADOR PARA CONVERTIRLO EN UNA FICHA PROFESIONAL DE SCOUTING Y GESTIÓN DE TALENTO.
+
+EL PERFIL DEL JUGADOR DEBE SER UNO DE LOS MÓDULOS MÁS IMPORTANTES DE SCOUTFLOW.
+
+NO DEBE SER OBLIGATORIO GENERAR INFORMES PARA UTILIZAR EL PERFIL.
+
+EL PERFIL DEBE FUNCIONAR COMO UNA BASE DE DATOS PROFESIONAL DE JUGADORES.
+
+================================================
+
+DISEÑO
+
+Inspiración:
+
+* Hudl
+* Wyscout
+* Synergy Sports
+* FastScout
+
+Diseño premium.
+
+* Tarjetas modernas.
+* Diseño limpio.
+* Navegación rápida.
+* Información organizada.
+* Responsive.
+* Guardado automático.
+
+================================================
+
+INFORMACIÓN PERSONAL
+
+Añadir campos editables:
+
+* Foto del jugador
+* Nombre
+* Apellidos
+* Número
+* Posición principal
+* Posición secundaria
+* Edad
+* Fecha de nacimiento
+* Nacionalidad
+* Altura
+* Peso
+* Mano dominante
+* Equipo actual
+
+Opciones mano dominante:
+
+* Derecha
+* Izquierda
+* Ambidiestro
+
+================================================
+
+PERFIL DE JUEGO
+
+Añadir:
+
+* Estilo de juego
+* Rol dentro del equipo
+* Fortalezas
+* Debilidades
+* Potencial
+* Nivel actual
+* Valoración general
+* Observaciones técnicas
+* Observaciones tácticas
+* Observaciones físicas
+
+================================================
+
+ESTADÍSTICAS BÁSICAS
+
+Permitir introducir y editar:
+
+* Partidos jugados
+* Minutos
+* Puntos
+* Rebotes ofensivos
+* Rebotes defensivos
+* Rebotes totales
+* Asistencias
+* Robos
+* Tapones
+* Pérdidas
+* Faltas
+
+================================================
+
+ESTADÍSTICAS AVANZADAS
+
+Añadir:
+
+* eFG%
+* TS%
+* PER
+* ORtg
+* DRtg
+* Net Rating
+* Usage %
+* Pace
+
+Mostrar gráficos y evolución.
+
+================================================
+
+SECCIÓN DE SCOUTING
+
+Crear una pestaña específica.
+
+Permitir registrar:
+
+* Tendencias ofensivas
+* Tendencias defensivas
+* Comportamiento en transición
+* Toma de decisiones
+* Lectura táctica
+* Rendimiento bajo presión
+
+================================================
+
+SECCIÓN DE NOTAS
+
+Crear editor profesional.
+
+Permitir guardar:
+
+* Observaciones
+* Comentarios
+* Seguimiento
+* Recomendaciones
+
+Guardado automático.
+
+================================================
+
+SECCIÓN DE VÍDEOS
+
+Permitir asociar vídeos específicos al jugador.
+
+Mostrar:
+
+* Miniaturas
+* Categorías
+* Etiquetas
+* Fecha
+
+================================================
+
+SECCIÓN DE HISTORIAL
+
+Mostrar:
+
+* Fecha de creación
+* Última actualización
+* Informes relacionados
+* Partidos observados
+* Evolución del jugador
+
+================================================
+
+COMPARADOR DE JUGADORES
+
+Crear una nueva funcionalidad profesional.
+
+Botón:
+
+"Comparar jugador"
+
+Permitir seleccionar cualquier otro jugador de la base de datos.
+
+Mostrar comparación lado a lado:
+
+* Edad
+* Altura
+* Peso
+* Posición
+* Mano dominante
+* Estadísticas básicas
+* Estadísticas avanzadas
+* Fortalezas
+* Debilidades
+
+Mostrar diferencias visuales mediante gráficos y tablas.
+
+Añadir resumen IA:
+
+"Ventajas del Jugador A sobre el Jugador B"
+
+"Ventajas del Jugador B sobre el Jugador A"
+
+"Recomendación de scouting"
+
+================================================
+
+INFORMES
+
+IMPORTANTE
+
+NO OBLIGAR A GENERAR INFORMES.
+
+El perfil debe funcionar perfectamente sin informes.
+
+Los informes son opcionales.
+
+Añadir botón:
+
+"Generar Informe Individual"
+
+Solo cuando el usuario quiera exportar información.
+
+================================================
+
+EXPERIENCIA DE USUARIO
+
+Organizar todo en pestañas:
+
+* General
+* Estadísticas
+* Scouting
+* Vídeos
+* Comparador
+* Historial
+
+Todos los cambios deben guardarse automáticamente.
+
+Eliminar formularios largos incómodos.
+
+Mostrar información de forma visual y profesional.
+
+================================================
+
+OBJETIVO FINAL
+
+Cuando un entrenador abra la ficha de un jugador debe sentir que está utilizando una herramienta profesional de scouting, seguimiento de talento y análisis de rendimiento, con toda la información centralizada, editable y preparada para tomar decisiones deportivas sin necesidad de generar informes.
