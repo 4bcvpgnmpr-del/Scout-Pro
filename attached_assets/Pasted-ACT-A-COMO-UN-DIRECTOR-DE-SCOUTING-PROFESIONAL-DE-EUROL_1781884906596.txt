@@ -1,0 +1,291 @@
+ACTÚA COMO UN DIRECTOR DE SCOUTING PROFESIONAL DE EUROLIGA, UN ANALISTA DE DATOS DE BALONCESTO Y UN DISEÑADOR EDITORIAL PREMIUM.
+
+OBJETIVO:
+
+REDISEÑAR COMPLETAMENTE EL SISTEMA DE INFORMES PDF DE SCOUTFLOW.
+
+LOS INFORMES PDF DEBEN SER EL PRODUCTO ESTRELLA DE LA PLATAFORMA.
+
+Cuando un entrenador abra el PDF debe sentir que está viendo un informe profesional utilizado por clubes de Euroliga, NBA o selecciones nacionales.
+
+NO CREAR UN PDF SIMPLE.
+
+CREAR UN DOSSIER DE SCOUTING PROFESIONAL.
+
+================================================
+
+CALIDAD VISUAL
+
+Inspirarse en:
+
+* Wyscout
+* Hudl
+* Synergy Sports
+* FastScout
+* Informes de clubes profesionales
+
+Diseño:
+
+* Portadas premium
+* Tipografía profesional
+* Distribución editorial moderna
+* Mucho espacio visual
+* Gráficos de alta calidad
+* Iconografía moderna
+* Colores corporativos coherentes
+
+================================================
+
+ESTRUCTURA DEL INFORME
+
+PORTADA
+
+Mostrar:
+
+* Logo ScoutFlow
+* Escudo propio
+* Escudo rival
+* Nombre de ambos equipos
+* Competición
+* Fecha
+* Imagen de fondo profesional
+* Título:
+  INFORME DE SCOUTING
+
+Diseño de máximo nivel visual.
+
+================================================
+
+PÁGINA 1
+
+RESUMEN EJECUTIVO
+
+Generado automáticamente.
+
+Incluir:
+
+* Estilo de juego del rival
+* Principales fortalezas
+* Principales debilidades
+* Nivel de dificultad
+* Riesgos detectados
+* Claves para ganar
+
+Presentación ejecutiva.
+
+Diseño tipo informe de dirección deportiva.
+
+================================================
+
+PÁGINA 2
+
+IDENTIDAD DEL RIVAL
+
+Mostrar:
+
+* Ritmo de juego
+* Rating ofensivo
+* Rating defensivo
+* Net Rating
+* Tendencias generales
+
+Visualizar mediante:
+
+* Gráficos
+* Indicadores
+* Barras comparativas
+
+================================================
+
+PÁGINAS DE PLANTILLA
+
+Crear una página profesional para cada jugador importante.
+
+Mostrar:
+
+* Foto
+* Número
+* Posición
+* Estadísticas principales
+* Tendencias
+* Fortalezas
+* Debilidades
+* Mano dominante
+* Perfil de juego
+
+Añadir:
+
+ALERTA IA
+
+Generar automáticamente observaciones relevantes.
+
+Ejemplo:
+
+"Jugador que genera la mayoría de sus puntos atacando el lado izquierdo."
+
+================================================
+
+ANÁLISIS OFENSIVO
+
+Mostrar:
+
+* Sistemas más utilizados
+* Situaciones de bloqueo directo
+* Juego sin balón
+* Transiciones
+* Espaciados
+
+Añadir diagramas tácticos.
+
+Añadir capturas de vídeo.
+
+Añadir observaciones IA.
+
+================================================
+
+ANÁLISIS DEFENSIVO
+
+Mostrar:
+
+* Tipo de defensa principal
+* Ajustes defensivos
+* Cambios automáticos
+* Defensas especiales
+
+Detectar patrones repetitivos.
+
+================================================
+
+MAPAS DE TIRO
+
+Crear visualizaciones profesionales.
+
+Mostrar:
+
+* Equipo completo
+* Jugadores clave
+
+Identificar:
+
+* Zonas calientes
+* Zonas frías
+* Tendencias
+
+================================================
+
+ANÁLISIS ESTADÍSTICO AVANZADO
+
+Mostrar:
+
+* eFG%
+* TS%
+* ORtg
+* DRtg
+* Pace
+* Net Rating
+* Rebote ofensivo
+* Rebote defensivo
+* Pérdidas
+
+Visualización premium.
+
+================================================
+
+SECCIÓN DE VÍDEOS
+
+Insertar:
+
+* Clips clave
+* Referencias
+* Capturas
+* Enlaces
+
+Clasificados por:
+
+* Ataque
+* Defensa
+* Transición
+* Finales de partido
+
+================================================
+
+PLAN DE PARTIDO
+
+Generar automáticamente:
+
+CLAVES PARA GANAR
+
+1.
+2.
+3.
+4.
+5.
+
+RIESGOS
+
+1.
+2.
+3.
+
+AJUSTES DEFENSIVOS
+
+AJUSTES OFENSIVOS
+
+ROTACIONES RECOMENDADAS
+
+================================================
+
+PÁGINA FINAL
+
+CONCLUSIONES DEL SCOUTING
+
+Resumen ejecutivo final.
+
+Formato profesional.
+
+Preparado para ser presentado al entrenador principal.
+
+================================================
+
+INTELIGENCIA ARTIFICIAL
+
+La IA debe generar automáticamente:
+
+* Resúmenes
+* Conclusiones
+* Alertas
+* Riesgos
+* Tendencias
+* Claves para ganar
+
+Nunca limitarse a mostrar estadísticas.
+
+Interpretar los datos.
+
+================================================
+
+EXPORTACIÓN
+
+PDF de alta calidad.
+
+Preparado para:
+
+* Pantalla
+* Tablet
+* Impresión
+
+Con paginación profesional.
+
+Índice automático.
+
+Encabezados y pies de página.
+
+Numeración.
+
+================================================
+
+OBJETIVO FINAL
+
+Cuando un entrenador vea el informe debe pensar:
+
+"Este informe por sí solo justifica pagar la suscripción de ScoutFlow."

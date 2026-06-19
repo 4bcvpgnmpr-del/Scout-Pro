@@ -2,5 +2,6 @@
 - [PDF/canvas export with Tailwind v4](pdf-export-tailwind-v4.md) — plain html2canvas silently fails on oklch()/color-mix() colors; use html2canvas-pro.
 - [scoutpro typecheck blocked](scoutpro-typecheck-blocked.md) — TS6306 from non-composite object-storage-web ref aborts ALL file checks; verify via temp tsconfig dropping that ref.
 - [Player stats API returns strings](player-stats-strings.md) — useGetPlayerStats fields are strings not numbers; always wrap with Number() before toFixed() or arithmetic.
+- [Multi-page PDF export pattern](pdf-multipage-export.md) — html2canvas-pro captures each A4 div (794×1123px) separately; refs must type as RefObject<HTMLDivElement | null> in React 19; jsPDF adds pages via addPage() then addImage(canvas, 0,0,210,297).
 - [TEAM_SECTIONS must live in separate module](team-sections-hmr.md) — exporting TEAM_SECTIONS from team-scouting.tsx breaks Vite Fast Refresh; keep it in lib/team-sections.ts.
 - [Watchlist API missing field](watchlist-api-bug.md) — all three player SELECTs (list/create/update) must include watchlisted or RQ cache overwrites it.

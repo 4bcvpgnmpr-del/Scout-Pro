@@ -1,12 +1,15 @@
+import { useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetReport,
   useGetPlayer,
+  useGetGame,
   useDeleteReport,
   getListReportsQueryKey,
   getGetReportQueryKey,
   getGetDashboardSummaryQueryKey,
   getGetPlayerQueryKey,
+  getGetGameQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -14,7 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useExportPdf } from "@/hooks/use-export-pdf";
+import { useExportPdfPages } from "@/hooks/use-export-pdf-pages";
+import { ScoutingReportPdf, type ScoutingNotes } from "@/components/pdf/scouting-report-pdf";
 
 function RatingBar({ label, value, icon: Icon }: { label: string; value: number | null | undefined; icon: React.ElementType }) {
   if (value == null) return null;
@@ -41,6 +45,15 @@ function StatChip({ label, value }: { label: string; value: number | null | unde
   );
 }
 
+function loadScoutingNotes(gameId: number | null | undefined): ScoutingNotes | null {
+  if (!gameId) return null;
+  try {
+    return JSON.parse(localStorage.getItem(`sf-scouting-${gameId}`) ?? "null");
+  } catch {
+    return null;
+  }
+}
+
 export default function ReportDetail() {
   const [, params] = useRoute("/reports/:id");
   const reportId = parseInt(params?.id || "0");
@@ -48,12 +61,19 @@ export default function ReportDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { contentRef, exportPdf, exporting } = useExportPdf(`informe-scouting-${reportId}`);
+  const page1Ref = useRef<HTMLDivElement>(null);
+  const page2Ref = useRef<HTMLDivElement>(null);
+  const page3Ref = useRef<HTMLDivElement>(null);
+  const { exportPdf, exporting } = useExportPdfPages(`dossier-scouting-${reportId}`);
+
   const { data: report, isLoading } = useGetReport(reportId, {
     query: { enabled: !!reportId, queryKey: getGetReportQueryKey(reportId) },
   });
   const { data: player } = useGetPlayer(report?.playerId ?? 0, {
     query: { enabled: !!report?.playerId, queryKey: getGetPlayerQueryKey(report?.playerId ?? 0) },
+  });
+  const { data: game } = useGetGame(report?.gameId ?? 0, {
+    query: { enabled: !!report?.gameId, queryKey: getGetGameQueryKey(report?.gameId ?? 0) },
   });
   const deleteReport = useDeleteReport();
 
@@ -69,6 +89,10 @@ export default function ReportDetail() {
     });
   };
 
+  const handleExport = () => {
+    exportPdf([page1Ref, page2Ref, page3Ref]);
+  };
+
   if (isLoading) return (
     <div className="space-y-6">
       <Skeleton className="h-32 rounded-xl" />
@@ -82,20 +106,25 @@ export default function ReportDetail() {
   const threePct = report.threesAttempted ? ((report.threesMade || 0) / report.threesAttempted * 100).toFixed(1) + "%" : null;
   const ftPct = report.freeThrowsAttempted ? ((report.freeThrowsMade || 0) / report.freeThrowsAttempted * 100).toFixed(1) + "%" : null;
 
-  const initials = (name: string) =>
-    name.split(" ").map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+  const notes = loadScoutingNotes(report.gameId);
 
   return (
     <div className="max-w-3xl space-y-4">
-      {/* Action bar — not included in PDF */}
+      {/* Action bar */}
       <div className="flex items-center justify-between gap-4">
         <Link href="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex items-center gap-2">
           <Link href={`/reports/${reportId}/edit`}>
             <Button variant="outline" size="icon" title="Editar"><Pencil className="h-4 w-4" /></Button>
           </Link>
-          <Button variant="outline" size="icon" onClick={exportPdf} disabled={exporting} title="Exportar PDF">
+          <Button
+            onClick={handleExport}
+            disabled={exporting}
+            className="gap-2 font-display tracking-wide uppercase"
+            title="Exportar Dossier PDF profesional"
+          >
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {exporting ? "Generando..." : "Exportar Dossier PDF"}
           </Button>
           <Button variant="outline" size="icon" onClick={handleDelete} className="text-destructive hover:bg-destructive/10">
             <Trash2 className="h-4 w-4" />
@@ -103,13 +132,12 @@ export default function ReportDetail() {
         </div>
       </div>
 
-      {/* PDF content — contentRef wraps everything below */}
-      <div ref={contentRef} className="space-y-5">
-        {/* Player header card — always visible, shown prominently in PDF */}
+      {/* On-screen preview */}
+      <div className="space-y-5">
         <div className="flex items-center gap-5 p-5 rounded-xl border bg-card">
           <div className="h-20 w-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/30 bg-primary/10 flex items-center justify-center">
             {player?.photoUrl ? (
-              <img src={player.photoUrl} className="h-full w-full object-cover" crossOrigin="anonymous" />
+              <img src={player.photoUrl} className="h-full w-full object-cover" crossOrigin="anonymous" alt={player.name} />
             ) : (
               <User className="h-8 w-8 text-primary/60" />
             )}
@@ -133,6 +161,11 @@ export default function ReportDetail() {
               <span>·</span>
               <span>{report.date}</span>
             </div>
+            {game && (
+              <div className="mt-1.5 text-xs text-muted-foreground">
+                📅 {game.homeTeam} vs {game.awayTeam} · {game.date}
+              </div>
+            )}
           </div>
           <div className="text-5xl font-display text-primary bg-primary/10 rounded-xl px-5 py-3 shrink-0">
             {report.rating}
@@ -147,6 +180,9 @@ export default function ReportDetail() {
               <RatingBar label="Defensa" value={report.defensiveRating} icon={Shield} />
               <RatingBar label="Atletismo" value={report.athleticismRating} icon={Zap} />
               <RatingBar label="Basketball IQ" value={report.iQRating} icon={Brain} />
+              {report.offensiveRating == null && report.defensiveRating == null && (
+                <p className="text-sm text-muted-foreground">Sin valoraciones desglosadas.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -199,7 +235,26 @@ export default function ReportDetail() {
             <CardContent><p className="font-semibold text-primary">{report.recommendation}</p></CardContent>
           </Card>
         )}
+
+        {/* Hint */}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/40 border border-dashed text-xs text-muted-foreground">
+          <Download className="h-3.5 w-3.5 shrink-0" />
+          <span>El botón <strong>Exportar Dossier PDF</strong> genera un informe profesional de 3 páginas: portada premium, estadísticas con Alerta IA y análisis completo.</span>
+        </div>
       </div>
+
+      {/* Hidden PDF pages for export — rendered off-screen */}
+      {report && (
+        <ScoutingReportPdf
+          report={report}
+          player={player}
+          game={game}
+          notes={notes}
+          page1Ref={page1Ref}
+          page2Ref={page2Ref}
+          page3Ref={page3Ref}
+        />
+      )}
     </div>
   );
 }
