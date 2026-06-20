@@ -1,0 +1,44 @@
+I've uploaded a file called scoutflow-automation.zip to this Repl. Please do the following, in order:
+1. Unzip and place files
+Unzip scoutflow-automation.zip. It contains a scoutflow/ folder with this structure — move each file into the matching location in this project (create folders if they don't exist):
+scoutflow/AdvancedStatsDashboard.tsx        → client/src/components/AdvancedStatsDashboard.tsx
+scoutflow/advancedStats.utils.ts            → client/src/lib/advancedStats.utils.ts
+scoutflow/pages/admin/sync.tsx              → client/src/pages/admin/sync.tsx
+scoutflow/db/schema.ts                      → merge into the existing server/db/schema.ts (see step 3)
+scoutflow/jobs/sync.job.ts                  → server/jobs/sync.job.ts
+scoutflow/scrapers/feb.scraper.ts           → server/scrapers/feb.scraper.ts
+scoutflow/scrapers/euroleague.client.ts     → server/scrapers/euroleague.client.ts
+scoutflow/scrapers/csv.importer.ts          → server/scrapers/csv.importer.ts
+scoutflow/server/routes/admin-sync.routes.ts → server/routes/admin-sync.routes.ts
+Adjust the import paths inside each file if this project's folder names are different (e.g. if the backend lives in src/server instead of server).
+2. Install dependencies
+npm install puppeteer node-cron csv-parse @tanstack/react-query lucide-react
+npm install --save-dev @types/node-cron
+3. Extend the Drizzle schema
+Open the existing server/db/schema.ts (or wherever the current schema lives) and add the new tables and enums from scoutflow/db/schema.ts: leagues, teams, players, seasons, player_stats, standings, sync_log, plus the league_source and sync_status pgEnums. Do not remove or modify any existing tables — only add these new ones, and add the relations.
+4. Run the migration
+npx drizzle-kit push
+5. Register the sync jobs
+In the main Express server entry file, import registerSyncJobs from server/jobs/sync.job.ts and call it once when the server starts:
+tsimport { registerSyncJobs } from "./jobs/sync.job";
+registerSyncJobs();
+6. Mount the admin sync routes
+In the Express router setup, add:
+tsimport adminSyncRouter from "./routes/admin-sync.routes";
+app.use("/api/admin/sync", adminSyncRouter);
+7. Add the frontend route
+Add a new route for /admin/sync in the React Router config, rendering the SyncPage component from client/src/pages/admin/sync.tsx.
+8. Add the sidebar nav item
+In the sidebar navigation component, under the existing "ADMIN" section (next to "Usuarios"), add a new nav item:
+
+Label: "Sincronización"
+Icon: RefreshCw from lucide-react
+Link: /admin/sync
+
+Match the existing styling and active-state behavior of the other nav items in that section.
+9. Seed the leagues table
+Insert these initial records into the new leagues table:
+nameshort_namesourceexternal_idgenderlevelLF Endesalfendesafeb4F1LF2lf2feb9F2LF Challengelfchallengefeb67F3Primera FEBprimerafebfeb1M2Segunda FEBsegundafebfeb2M3Tercera FEBtercerafebfeb3M4EuroLeagueeuroleagueeuroleagueEM1EuroCupeurocupeurocupUM2
+10. Switch the sync page off mock data
+In client/src/pages/admin/sync.tsx, find the line const useMock = true; and change it to const useMock = false; once steps 1-9 are done and the API endpoints respond correctly. Test the page first with mock data (true) to confirm the UI renders, then flip it.
+Important: Do not delete or break any existing code, pages, components, or routes. Only add new files and extend what already exists. If any import path doesn't match this project's actual structure, fix the import rather than skipping the file.
