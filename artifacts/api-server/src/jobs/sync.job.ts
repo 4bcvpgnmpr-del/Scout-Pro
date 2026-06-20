@@ -2,12 +2,13 @@ import cron from "node-cron";
 import { db } from "@workspace/db";
 import { syncLog, leagues } from "@workspace/db";
 import { fetchAllEuroLeagues } from "../scrapers/euroleague.client.js";
-import { scrapearTodas } from "../scrapers/feb-scraper.js";
+import { scrapearTodas, scrapearEstadisticasBEV } from "../scrapers/feb-scraper.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import {
   clearNormalizerCaches,
   normalizeFebStats,
+  normalizeFebBEVStats,
   normalizeEuroStats,
   normalizeEuroStanding,
 } from "../db/normalizer.js";
@@ -23,12 +24,30 @@ async function upsertFebData() {
 
   try {
     clearNormalizerCaches();
+
+    // Fase 1: clasificaciones de www.feb.es (posición, W-L, PF, PC)
     const stats = await scrapearTodas();
     let totalRecords = 0;
 
     for (const [ligaId, data] of Object.entries(stats)) {
       const rows = await normalizeFebStats(ligaId, data);
       totalRecords += rows;
+    }
+
+    // Fase 2: estadísticas detalladas de equipo de baloncestoenvivo.feb.es
+    // (tiro, rebotes, asistencias) — enriquece pointsFor en standings existentes
+    try {
+      const bevStats = await scrapearEstadisticasBEV();
+      let bevTotal = 0;
+      for (const [ligaId, data] of Object.entries(bevStats)) {
+        const rows = await normalizeFebBEVStats(ligaId, data);
+        bevTotal += rows;
+      }
+      logger.info({ bevTotal }, "[FEB sync] BEV enrichment completed");
+      totalRecords += bevTotal;
+    } catch (bevErr) {
+      // BEV enriquecimiento es secundario — no falla todo el sync si falla
+      logger.warn({ bevErr }, "[FEB sync] BEV enrichment failed — standings remain with www.feb.es data");
     }
 
     await db

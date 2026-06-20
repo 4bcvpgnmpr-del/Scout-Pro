@@ -273,6 +273,75 @@ export async function normalizeFebStats(
 // FEB scraper gives standings only — alias kept so sync job can call both names.
 export const normalizeFebStanding = normalizeFebStats;
 
+/**
+ * Enriquece los standings existentes con los puntos totales y partidos
+ * obtenidos de baloncestoenvivo.feb.es (fuente BEV).
+ *
+ * BEV proporciona stats ofensivas detalladas por equipo (tiro, rebotes, asistencias)
+ * pero NO wins/losses ni posición — por eso sólo actualiza pointsFor/gamesPlayed
+ * en standings que ya existen gracias a normalizeFebStats.
+ *
+ * El externalId se genera igual que en normalizeFebStats para que el lookup
+ * de equipo sea consistente entre ambas fuentes.
+ */
+export async function normalizeFebBEVStats(
+  ligaId: string,
+  data: import("../scrapers/feb-scraper.js").CompeticionBEVData,
+): Promise<number> {
+  if (!data.equipos?.length) return 0;
+
+  const isFem =
+    data.liga.startsWith("LF") || data.liga.toLowerCase().includes("femenin");
+
+  const leagueId = await findOrCreateLeague({
+    name:       data.liga,
+    shortName:  ligaId,
+    source:     "feb",
+    externalId: ligaId,
+    gender:     isFem ? "F" : "M",
+  });
+
+  const { startYear, endYear } = febSeasonYears();
+  const seasonId = await findOrCreateSeason(leagueId, startYear, endYear);
+
+  let count = 0;
+  for (const row of data.equipos) {
+    if (!row.equipo || row.partidos === 0) continue;
+
+    const externalId = row.equipo.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+    // Buscar el equipo existente (creado por normalizeFebStats)
+    const team = await db.query.syncTeams.findFirst({
+      where: (t, { and, eq: eq_ }) =>
+        and(eq_(t.leagueId, leagueId), eq_(t.externalId, externalId)),
+    });
+
+    if (!team) continue; // sin standings previos no hay nada que enriquecer
+
+    // Actualizar el standing existente con pointsFor y gamesPlayed de BEV
+    const standing = await db.query.standings.findFirst({
+      where: (s, { and, eq: eq_, isNull }) =>
+        and(eq_(s.teamId, team.id), eq_(s.seasonId, seasonId), isNull(s.group)),
+    });
+
+    if (!standing) continue;
+
+    await db
+      .update(standings)
+      .set({
+        gamesPlayed: row.partidos,
+        pointsFor:   row.puntosTotal,
+        updatedAt:   new Date(),
+      })
+      .where(eq(standings.id, standing.id));
+
+    count++;
+  }
+
+  logger.info({ liga: data.liga, rows: count }, "[normalizer] FEB BEV standings enriched");
+  return count;
+}
+
 // ─── EuroLeague normalizers ───────────────────────────────────────────────────
 
 const EURO_META: Record<string, { name: string; source: "euroleague" | "eurocup" }> = {
