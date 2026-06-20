@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
 import { SubLayout } from "@/components/sub-layout";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/protected-route";
 
 import Dashboard from "@/pages/dashboard";
 import Scout from "@/pages/scout";
@@ -35,6 +37,11 @@ import MatchCenterHub from "@/pages/match-center-hub";
 import ScoutingHub from "@/pages/scouting-hub";
 import SyncPage from "@/pages/admin/sync";
 
+import LoginPage from "@/pages/login";
+import RegisterPage from "@/pages/register";
+import SelectTeamPage from "@/pages/select-team";
+import UpgradePage from "@/pages/upgrade";
+
 import { applyTheme, applyFont } from "@/lib/themes";
 import type { ThemeId, FontId } from "@/lib/themes";
 
@@ -53,96 +60,186 @@ function AppInit() {
 function Router() {
   return (
     <Switch>
+      {/* ── Public auth routes ─────────────────────────────────── */}
+      <Route path="/login">
+        <LoginPage />
+      </Route>
+      <Route path="/register">
+        <RegisterPage />
+      </Route>
+
+      {/* ── Protected: Selección de equipo / upgrade ───────────── */}
+      <Route path="/equipos/seleccionar">
+        <ProtectedRoute>
+          <Layout><SelectTeamPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/upgrade">
+        <ProtectedRoute>
+          <Layout><UpgradePage /></Layout>
+        </ProtectedRoute>
+      </Route>
+
       {/* ── Layout pages ─────────────────────────────────────────── */}
       <Route path="/">
-        <Layout><Dashboard /></Layout>
+        <ProtectedRoute>
+          <Layout><Dashboard /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/scout">
-        <Scout />
+        <ProtectedRoute>
+          <Scout />
+        </ProtectedRoute>
       </Route>
       <Route path="/equipos">
-        <Layout><Teams /></Layout>
+        <ProtectedRoute>
+          <Layout><Teams /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/jugadores">
-        <Layout><Players /></Layout>
+        <ProtectedRoute>
+          <Layout><Players /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/games">
-        <Layout><Games /></Layout>
+        <ProtectedRoute>
+          <Layout><Games /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/reports">
-        <Layout><Reports /></Layout>
+        <ProtectedRoute>
+          <Layout><Reports /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/calendar">
-        <Layout><CalendarPage /></Layout>
+        <ProtectedRoute>
+          <Layout><CalendarPage /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/fichajes">
-        <Layout><Fichajes /></Layout>
+        <ProtectedRoute>
+          <Layout><Fichajes /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/videos">
-        <Layout><Videos /></Layout>
+        <ProtectedRoute>
+          <Layout><Videos /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/jugadas">
-        <Layout><Jugadas /></Layout>
+        <ProtectedRoute>
+          <Layout><Jugadas /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/usuarios">
-        <Layout><Usuarios /></Layout>
+        <ProtectedRoute>
+          <Layout><Usuarios /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/ajustes">
-        <Layout><Ajustes /></Layout>
+        <ProtectedRoute>
+          <Layout><Ajustes /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/admin/sync">
-        <Layout><SyncPage /></Layout>
+        <ProtectedRoute>
+          <Layout><SyncPage /></Layout>
+        </ProtectedRoute>
       </Route>
 
       {/* ── SubLayout: Players ───────────────────────────────────── */}
       <Route path="/players/new">
-        <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerNew /></SubLayout>
+        <ProtectedRoute>
+          <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerNew /></SubLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/players/:id/edit">
-        {() => <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerEdit /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerEdit /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
       <Route path="/players/:id">
-        {() => <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerDetail /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerDetail /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
 
       {/* ── SubLayout: Teams ─────────────────────────────────────── */}
       <Route path="/teams/new">
-        <SubLayout backTo="/equipos" backLabel="Equipos"><TeamNew /></SubLayout>
+        <ProtectedRoute>
+          <SubLayout backTo="/equipos" backLabel="Equipos"><TeamNew /></SubLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/teams/:id/edit">
-        {() => <SubLayout backTo="/equipos" backLabel="Equipos"><TeamEdit /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/equipos" backLabel="Equipos"><TeamEdit /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
       <Route path="/teams/:id">
-        {() => <SubLayout backTo="/equipos" backLabel="Equipos"><TeamDetail /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/equipos" backLabel="Equipos"><TeamDetail /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
 
       <Route path="/match-center">
-        <Layout><MatchCenterHub /></Layout>
+        <ProtectedRoute>
+          <Layout><MatchCenterHub /></Layout>
+        </ProtectedRoute>
       </Route>
       <Route path="/scouting">
-        <Layout><ScoutingHub /></Layout>
+        <ProtectedRoute>
+          <Layout><ScoutingHub /></Layout>
+        </ProtectedRoute>
       </Route>
 
       {/* ── SubLayout: Games ─────────────────────────────────────── */}
       <Route path="/games/new">
-        <SubLayout backTo="/games" backLabel="Partidos"><GameNew /></SubLayout>
+        <ProtectedRoute>
+          <SubLayout backTo="/games" backLabel="Partidos"><GameNew /></SubLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/games/:id/match-center">
-        {() => <Layout><GameMatchCenter /></Layout>}
+        {() => (
+          <ProtectedRoute>
+            <Layout><GameMatchCenter /></Layout>
+          </ProtectedRoute>
+        )}
       </Route>
       <Route path="/games/:id/edit">
-        {() => <SubLayout backTo="/games" backLabel="Partidos"><GameEdit /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/games" backLabel="Partidos"><GameEdit /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
 
       {/* ── SubLayout: Reports ───────────────────────────────────── */}
       <Route path="/reports/new">
-        <SubLayout backTo="/reports" backLabel="Informes"><ReportNew /></SubLayout>
+        <ProtectedRoute>
+          <SubLayout backTo="/reports" backLabel="Informes"><ReportNew /></SubLayout>
+        </ProtectedRoute>
       </Route>
       <Route path="/reports/:id/edit">
-        {() => <SubLayout backTo="/reports" backLabel="Informes"><ReportEdit /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/reports" backLabel="Informes"><ReportEdit /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
       <Route path="/reports/:id">
-        {() => <SubLayout backTo="/reports" backLabel="Informes"><ReportDetail /></SubLayout>}
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/reports" backLabel="Informes"><ReportDetail /></SubLayout>
+          </ProtectedRoute>
+        )}
       </Route>
     </Switch>
   );
@@ -153,8 +250,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AppInit />
-          <Router />
+          <AuthProvider>
+            <AppInit />
+            <Router />
+          </AuthProvider>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

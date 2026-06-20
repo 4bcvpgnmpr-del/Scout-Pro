@@ -1,9 +1,10 @@
 interface ScoutFlowLogoProps {
   size?: "sm" | "md" | "lg";
   textColor?: string;
+  className?: string;
 }
 
-export function ScoutFlowLogo({ size = "md" }: ScoutFlowLogoProps) {
+export function ScoutFlowLogo({ size = "md", className }: ScoutFlowLogoProps) {
   const iconSize = size === "sm" ? 22 : size === "lg" ? 38 : 30;
   const textSz = size === "sm" ? "text-base" : size === "lg" ? "text-2xl" : "text-xl";
 

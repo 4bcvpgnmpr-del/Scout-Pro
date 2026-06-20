@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { syncLog, leagues } from "@workspace/db";
 import { desc, gte, eq } from "drizzle-orm";
 import { syncHandlers } from "../jobs/sync.job.js";
+import { requireAuth, requirePro } from "../lib/auth.middleware.js";
 
 const router = Router();
 
@@ -114,7 +115,7 @@ router.get("/status", async (_req, res) => {
 
 // ─── POST /all ────────────────────────────────────────────────────────────────
 
-router.post("/all", async (_req, res) => {
+router.post("/all", requireAuth, requirePro, async (_req, res) => {
   try {
     Promise.allSettled([
       syncHandlers.feb(),
@@ -129,7 +130,7 @@ router.post("/all", async (_req, res) => {
 
 // ─── POST /:source ────────────────────────────────────────────────────────────
 
-router.post("/:source", async (req, res): Promise<void> => {
+router.post("/:source", requireAuth, requirePro, async (req, res): Promise<void> => {
   const { source } = req.params;
   const handler = syncHandlers[source as keyof typeof syncHandlers];
 

@@ -1,0 +1,48 @@
+Entendido — sin autenticación no podemos saber qué usuario está logueado ni qué plan tiene, así que lo añado como base de todo lo demás. Aquí va el prompt actualizado y completo, con login, suscripciones y el menú de selección de equipo:
+
+I need to add authentication, subscription tiers, and a team-selection flow to ScoutFlow. This project currently has no authentication system, so please build it from scratch using session-based auth (not a third-party auth provider). Implement everything below, in order:
+1. Install dependencies
+npm install bcrypt express-session connect-pg-simple
+npm install --save-dev @types/bcrypt @types/express-session @types/connect-pg-simple
+2. Database: users table
+Add (or extend if one already exists) a users table in the Drizzle schema with: id (uuid, pk), email (text, unique, not null), passwordHash (text, not null), name (text), role (text, default 'entrenador'), subscriptionTier (pgEnum 'amateur' | 'professional', default 'amateur'), createdAt. Also add a sessions table compatible with connect-pg-simple (it can auto-create this if configured to, otherwise add the standard sid/sess/expire columns). Run npx drizzle-kit push after.
+3. Backend: auth routes
+Create server/routes/auth.routes.ts with:
+
+POST /api/auth/register — body { email, password, name }, hashes password with bcrypt (10 rounds), creates user with subscriptionTier: 'amateur', starts a session, returns the user (without passwordHash).
+POST /api/auth/login — body { email, password }, verifies with bcrypt, starts a session, returns the user.
+POST /api/auth/logout — destroys the session.
+GET /api/auth/me — returns the current session user, or 401 if not logged in.
+
+Configure express-session in the main server file using connect-pg-simple as the store, pointed at the existing PostgreSQL connection. Use a secure random SESSION_SECRET from environment variables (add it to .env if missing).
+Add a small requireAuth middleware that checks req.session.userId and returns 401 if absent, and apply it to all routes that need a logged-in user.
+4. Frontend: auth pages and context
+Create client/src/pages/Login.tsx and client/src/pages/Register.tsx with simple forms matching the existing dark theme (background #1a1a1a / #111, accent red #e53935). Create an AuthContext (client/src/contexts/AuthContext.tsx) that calls /api/auth/me on load, exposes { user, login, register, logout, isLoading }, and wraps the app. Add a ProtectedRoute wrapper component that redirects to /login if there's no user. Wrap all existing app routes (Dashboard, Equipos, Jugadores, etc.) with ProtectedRoute, without changing their internal logic.
+5. League automation flag
+Add an isAutomated boolean column to the existing leagues table: true for source in (feb, acb, euroleague, eurocup), false for source = 'manual'. Update seed data accordingly.
+6. Data entry method on stats
+Add a data_entry_method pgEnum ('scraped', 'manual') to the player_stats table.
+7. Backend: gate automated sync behind professional tier
+In /api/admin/sync/:source and /api/admin/sync/all, add requireAuth plus a check: if req.session.user.subscriptionTier === 'amateur', respond 403 with { error: "Esta función requiere el plan Profesional" }.
+8. Sidebar: add "Seleccionar Equipo" menu item
+In the sidebar, under the "GESTIÓN" section, add a new nav item above or next to "Equipos":
+
+Label: "Seleccionar Equipo"
+Icon: Target or ListChecks from lucide-react
+Link: /equipos/seleccionar
+
+9. Frontend: team selection flow
+Build the page at client/src/pages/SelectTeam.tsx (route /equipos/seleccionar), with two steps:
+
+Step 1: list of leagues as cards. Leagues with isAutomated = true show a "PRO" badge. If user.subscriptionTier === 'amateur', those cards appear disabled/greyed with a tooltip "Disponible con el plan Profesional" linking to a stub /upgrade page.
+Step 2: after picking a league, show its teams (reuse the existing teams list component if present, otherwise build a simple searchable list) and let the user select one as their working team, saving the selection to the user's session/profile (add a selectedTeamId column to users if needed).
+
+10. Conditional stats UI per team
+On the selected team's page:
+
+If the league isAutomated = true AND user.subscriptionTier === 'professional': show the existing sync status badge / last-synced info.
+Otherwise (manual league, or amateur user even on an automated league): hide sync controls and show a "Estadísticas manuales" form to add/edit a player's stats by hand (points, rebounds, assists, steals, blocks, turnovers, minutes, games played, FG/3P/FT made-attempted), saving to player_stats with dataEntryMethod = 'manual'.
+
+11. Data source label
+On team cards (Equipos page) and the player stats dashboard, show a small label: "Datos automáticos" (sync icon) or "Datos manuales" (pencil icon), based on the team's league isAutomated flag.
+Important: Do not remove or break any existing pages, routes, or components. Build auth first and test that login/register/logout work before wiring the tier-gating logic on top of it. If anything about the existing project structure conflicts with these instructions (e.g. a different folder layout), adapt the paths but keep the same behavior.

@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair, Swords, RefreshCw,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
+  Swords, RefreshCw, Target, LogOut, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navGroups = [
   {
@@ -16,15 +18,16 @@ const navGroups = [
   {
     label: "Gestión",
     items: [
-      { name: "Equipos", href: "/equipos", icon: Shield },
-      { name: "Jugadores", href: "/jugadores", icon: Users },
-      { name: "Fichajes", href: "/fichajes", icon: Star },
+      { name: "Seleccionar Equipo", href: "/equipos/seleccionar", icon: Target },
+      { name: "Equipos",            href: "/equipos",             icon: Shield },
+      { name: "Jugadores",          href: "/jugadores",           icon: Users },
+      { name: "Fichajes",           href: "/fichajes",            icon: Star },
     ],
   },
   {
     label: "Contenido",
     items: [
-      { name: "Vídeos", href: "/videos", icon: Video },
+      { name: "Vídeos",    href: "/videos",  icon: Video },
       { name: "Biblioteca", href: "/jugadas", icon: BookOpen },
     ],
   },
@@ -32,23 +35,23 @@ const navGroups = [
     label: "Planificación",
     items: [
       { name: "Centro de Partido", href: "/match-center", icon: Crosshair },
-      { name: "Partidos", href: "/games", icon: Trophy },
-      { name: "Calendario", href: "/calendar", icon: Calendar },
+      { name: "Partidos",          href: "/games",        icon: Trophy },
+      { name: "Calendario",        href: "/calendar",     icon: Calendar },
     ],
   },
   {
     label: "Análisis",
     items: [
       { name: "Hub de Scouting", href: "/scouting", icon: Swords },
-      { name: "Informes", href: "/reports", icon: FileText },
+      { name: "Informes",        href: "/reports",  icon: FileText },
     ],
   },
   {
     label: "Admin",
     items: [
-      { name: "Usuarios",        href: "/usuarios",    icon: UserCog },
-      { name: "Sincronización",  href: "/admin/sync",  icon: RefreshCw },
-      { name: "Ajustes",         href: "/ajustes",     icon: Settings },
+      { name: "Usuarios",       href: "/usuarios",   icon: UserCog },
+      { name: "Sincronización", href: "/admin/sync", icon: RefreshCw },
+      { name: "Ajustes",        href: "/ajustes",    icon: Settings },
     ],
   },
 ];
@@ -80,6 +83,46 @@ function NavItem({
   );
 }
 
+function UserFooter() {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+
+  const initials = (user.name ?? user.email)
+    .split(" ")
+    .map((w) => w[0]?.toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <div className="px-3 py-3 border-t border-sidebar-border">
+      <div className="flex items-center gap-2.5">
+        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+          <span className="text-[11px] font-bold text-primary">{initials}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <div className="text-xs font-medium truncate">{user.name ?? user.email}</div>
+            {user.subscriptionTier === "professional" && (
+              <Zap size={10} className="text-amber-400 shrink-0" />
+            )}
+          </div>
+          <div className="text-[10px] text-sidebar-foreground/50 truncate capitalize">
+            {user.subscriptionTier === "professional" ? "Profesional" : "Amateur"}
+          </div>
+        </div>
+        <button
+          onClick={() => logout()}
+          title="Cerrar sesión"
+          className="text-sidebar-foreground/40 hover:text-sidebar-foreground/80 transition-colors shrink-0"
+        >
+          <LogOut size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SidebarContent({ location, onNavClick }: { location: string; onNavClick?: () => void }) {
   return (
     <div className="flex flex-col h-full">
@@ -106,17 +149,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
           </div>
         ))}
       </div>
-      <div className="h-14 flex items-center px-5 border-t border-sidebar-border shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-primary">E</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">Entrenador</div>
-            <div className="text-[10px] text-sidebar-foreground/50 truncate">Club Baloncesto</div>
-          </div>
-        </div>
-      </div>
+      <UserFooter />
     </div>
   );
 }

@@ -4,6 +4,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+export const dataEntryMethodEnum = pgEnum("data_entry_method", [
+  "scraped",
+  "manual",
+]);
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export const leagueSourceEnum = pgEnum("league_source", [
@@ -25,8 +30,9 @@ export const leagues = pgTable("stat_leagues", {
   country:    text("country").notNull().default("ES"),
   gender:     text("gender").notNull().default("M"),
   level:      integer("level").notNull().default(1),
-  isActive:   boolean("is_active").notNull().default(true),
-  createdAt:  timestamp("created_at").notNull().defaultNow(),
+  isActive:     boolean("is_active").notNull().default(true),
+  isAutomated:  boolean("is_automated").notNull().default(false),
+  createdAt:    timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
   sourceExtIdx: uniqueIndex("stat_leagues_source_ext_idx").on(t.source, t.externalId),
 }));
@@ -113,6 +119,7 @@ export const playerStats = pgTable("player_stats", {
   usageRate:   real("usage_rate"),
   pir:         real("pir"),
 
+  dataEntryMethod: dataEntryMethodEnum("data_entry_method").notNull().default("manual"),
   scrapedAt:   timestamp("scraped_at").notNull().defaultNow(),
   updatedAt:   timestamp("updated_at").notNull().defaultNow(),
 }, (t) => ({
