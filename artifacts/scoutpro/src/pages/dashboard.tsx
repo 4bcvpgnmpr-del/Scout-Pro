@@ -6,6 +6,8 @@ import {
   useListReports, getListReportsQueryKey,
   useListTeams, getListTeamsQueryKey,
 } from "@workspace/api-client-react";
+import type { Game, Report } from "@workspace/api-client-react";
+import { useSeason } from "@/contexts/SeasonContext";
 import {
   Bell, Trophy, ChevronRight, Clock, Video, FileText, Shield, Users,
   Star, Zap, CheckCircle2, Circle, Target, Calendar, ArrowRight, Plus,
@@ -151,9 +153,24 @@ function SectionLabel({ icon: Icon, label, color }: { icon: React.ElementType; l
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const { selectedSeason } = useSeason();
+  const seasonQs = selectedSeason ? `?season=${selectedSeason.startYear}` : "";
+
   const { data: summary } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
-  const { data: games } = useListGames({ query: { queryKey: getListGamesQueryKey() } });
-  const { data: reports } = useListReports(undefined, { query: { queryKey: getListReportsQueryKey() } });
+  const { data: games } = useListGames({
+    query: {
+      queryKey: [...getListGamesQueryKey(), selectedSeason?.id],
+      queryFn: (): Promise<Game[]> =>
+        fetch(`/api/games${seasonQs}`, { credentials: "include" }).then((r) => r.json()),
+    },
+  });
+  const { data: reports } = useListReports(undefined, {
+    query: {
+      queryKey: [...getListReportsQueryKey(), selectedSeason?.id],
+      queryFn: (): Promise<Report[]> =>
+        fetch(`/api/reports${seasonQs}`, { credentials: "include" }).then((r) => r.json()),
+    },
+  });
   const { data: teams } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
   // nextGame is defined below — we re-derive gameId here lazily after nextGame is available
   // We compute nextGame inline first to feed into hooks (hooks must be unconditional)

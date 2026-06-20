@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { db, gamesTable } from "@workspace/db";
 import {
   CreateGameBody,
@@ -11,8 +11,18 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/games", async (_req, res): Promise<void> => {
-  const games = await db.select().from(gamesTable).orderBy(gamesTable.date);
+router.get("/games", async (req, res): Promise<void> => {
+  const seasonYear = req.query.season ? parseInt(req.query.season as string, 10) : null;
+
+  let query = db.select().from(gamesTable).$dynamic();
+
+  if (seasonYear && !Number.isNaN(seasonYear)) {
+    const seasonStart = `${seasonYear}-08-01`;
+    const seasonEnd   = `${seasonYear + 1}-07-31`;
+    query = query.where(and(gte(gamesTable.date, seasonStart), lte(gamesTable.date, seasonEnd)));
+  }
+
+  const games = await query.orderBy(gamesTable.date);
   res.json(games);
 });
 

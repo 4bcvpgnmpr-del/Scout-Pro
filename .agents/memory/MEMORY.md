@@ -8,3 +8,5 @@
 - [Player profile localStorage](player-profile-localstorage.md) — extended profile fields (scouting, stats, videos) stored in sp-profile-{id} via usePlayerProfile hook; DB fields (name, position, etc.) still via API.
 - [TEAM_SECTIONS must live in separate module](team-sections-hmr.md) — exporting TEAM_SECTIONS from team-scouting.tsx breaks Vite Fast Refresh; keep it in lib/team-sections.ts.
 - [Watchlist API missing field](watchlist-api-bug.md) — all three player SELECTs (list/create/update) must include watchlisted or RQ cache overwrites it.
+- [Orval mutation body wrapper](orval-mutation-body.md) — Orval-generated mutation hooks wrap body as { data: payload }; always call mutate({ data: { ...fields } }) not mutate({ ...fields }).
+- [Season selector architecture](season-selector-arch.md) — SeasonContext wraps Router in App.tsx; SeasonBar in sidebar; pages use queryFn override to pass ?season= without spec changes to existing endpoints.

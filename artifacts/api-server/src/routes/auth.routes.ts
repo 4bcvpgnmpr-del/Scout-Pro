@@ -114,6 +114,34 @@ router.get("/me", async (req, res): Promise<void> => {
   res.json(safeUser(user));
 });
 
+// ─── PATCH /api/auth/me/subscription ────────────────────────────────────────
+
+router.patch("/me/subscription", async (req, res): Promise<void> => {
+  if (!req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+
+  const { tier } = req.body as { tier?: string };
+  if (tier !== "amateur" && tier !== "professional") {
+    res.status(400).json({ error: "Tier debe ser 'amateur' o 'professional'" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ subscriptionTier: tier })
+    .where(eq(usersTable.id, req.session.userId))
+    .returning();
+
+  const safe = safeUser(updated);
+  if (req.session.user) {
+    (req.session.user as typeof safe).subscriptionTier = tier;
+  }
+
+  res.json(safe);
+});
+
 // ─── PATCH /api/auth/select-team ─────────────────────────────────────────────
 
 router.patch("/select-team", async (req, res): Promise<void> => {

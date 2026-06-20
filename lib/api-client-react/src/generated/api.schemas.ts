@@ -490,6 +490,59 @@ export interface UploadUrlResponse {
   metadata?: UploadUrlRequest;
 }
 
+export interface Season {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  isCurrent: boolean;
+  leagueCount?: number;
+}
+
+export interface SeasonInput {
+  leagueId: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+}
+
+export interface SeasonLeague {
+  id: string;
+  name: string;
+  shortName: string;
+}
+
+export type SubscriptionUpdateTier = typeof SubscriptionUpdateTier[keyof typeof SubscriptionUpdateTier];
+
+
+export const SubscriptionUpdateTier = {
+  amateur: 'amateur',
+  professional: 'professional',
+} as const;
+
+export interface SubscriptionUpdate {
+  tier: SubscriptionUpdateTier;
+}
+
+export type AuthUserSubscriptionTier = typeof AuthUserSubscriptionTier[keyof typeof AuthUserSubscriptionTier];
+
+
+export const AuthUserSubscriptionTier = {
+  amateur: 'amateur',
+  professional: 'professional',
+} as const;
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  /** @nullable */
+  name?: string | null;
+  role: string;
+  subscriptionTier: AuthUserSubscriptionTier;
+  /** @nullable */
+  selectedTeamId?: string | null;
+}
+
 export interface ErrorEnvelope {
   error: string;
 }

@@ -1,0 +1,25 @@
+I need two features added to ScoutFlow. Please implement both, in order:
+Part A — Self-service "Professional" toggle for testing
+Since there's no payment system yet, add a simple way to flip my own account's subscription tier for testing purposes.
+1. Backend endpoint
+Add PATCH /api/auth/me/subscription (protected by requireAuth) that accepts { tier: 'amateur' | 'professional' } in the body and updates the logged-in user's subscriptionTier column. Return the updated user.
+2. Frontend: account settings
+Add a small "Mi cuenta" page or dropdown panel (link it from the user avatar/name area at the bottom of the sidebar, where "Entrenador / Club Baloncesto" is shown). Include:
+
+Current plan badge (Amateur / Profesional)
+A toggle button: "Activar plan Profesional (modo prueba)" / "Volver a plan Amateur"
+Calling the toggle should hit the new PATCH /api/auth/me/subscription endpoint and refresh the AuthContext user state immediately so the rest of the app (league selector, sync panel, etc.) reacts without a page reload.
+
+Label this clearly in the UI as a temporary testing feature, e.g. a small note: "Modo de prueba — sustituir por facturación real más adelante."
+Part B — Global season selector synced across the app
+3. Backend: seasons endpoint
+Add GET /api/seasons returning all distinct season years available across leagues (derived from the existing seasons table), each with { id, name, startYear, endYear, isCurrent }. Add POST /api/admin/seasons (admin-only) to create a new season row for a league and mark it isCurrent: true, automatically setting isCurrent: false on the previous current season for that same league.
+4. Frontend: SeasonContext
+Create client/src/contexts/SeasonContext.tsx exposing { selectedSeason, setSelectedSeason, availableSeasons }. On load, fetch /api/seasons and default selectedSeason to whichever season has isCurrent: true. Wrap the app with this provider (inside AuthContext, since it doesn't need auth but should load after the user is known).
+5. Frontend: season selector in the header
+Add a season dropdown in the top bar (create one if the app doesn't have a persistent header yet — place it top-right, near where a logged-in app would show notifications/profile). It should display the current season (e.g. "Temporada 2025-26") and let the user switch between availableSeasons.
+6. Sync all season-dependent views
+Update every existing page/component that displays season-dependent data — Dashboard, Jugadores, Equipos (standings/clasificación), Hub de Scouting, Informes, and the Advanced Stats Dashboard component — so their React Query hooks include selectedSeason from SeasonContext in the query key and pass it as a ?season= param to their respective API calls. Changing the season in the header dropdown should automatically refetch and update all of these views without needing a manual refresh.
+7. Admin: manage seasons
+In the existing ADMIN sidebar section, add a "Temporadas" page (or a tab inside an existing settings page) where an admin can see all seasons per league and create a new one (e.g. adding "2026-27" when it starts), which calls POST /api/admin/seasons and immediately becomes the new selectedSeason default for everyone.
+Important: Do not remove or break any existing pages, routes, or components, including the auth, subscription, and sync features already in this project. Test that switching seasons in the header actually changes the data shown on at least the Dashboard and Jugadores pages before considering this done.

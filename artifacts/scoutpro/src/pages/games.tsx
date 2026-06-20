@@ -1,4 +1,6 @@
 import { useListGames, useDeleteGame, getListGamesQueryKey } from "@workspace/api-client-react";
+import type { Game } from "@workspace/api-client-react";
+import { useSeason } from "@/contexts/SeasonContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 import { DIFFICULTY_BADGE, DIFFICULTY_LABEL } from "@/lib/difficulty";
 
 export default function Games() {
-  const { data: games, isLoading } = useListGames({ query: { queryKey: getListGamesQueryKey() } });
+  const { selectedSeason } = useSeason();
+  const seasonQs = selectedSeason ? `?season=${selectedSeason.startYear}` : "";
+
+  const { data: games, isLoading } = useListGames({
+    query: {
+      queryKey: [...getListGamesQueryKey(), selectedSeason?.id],
+      queryFn: (): Promise<Game[]> =>
+        fetch(`/api/games${seasonQs}`, { credentials: "include" }).then((r) => r.json()),
+    },
+  });
   const deleteGame = useDeleteGame();
   const queryClient = useQueryClient();
   const { toast } = useToast();

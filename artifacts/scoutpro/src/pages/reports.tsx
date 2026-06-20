@@ -5,6 +5,8 @@ import {
   useListTeams,
   getListReportsQueryKey,
 } from "@workspace/api-client-react";
+import type { Report } from "@workspace/api-client-react";
+import { useSeason } from "@/contexts/SeasonContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,10 +28,25 @@ export default function Reports() {
   const [playerFilter, setPlayerFilter] = useState<number | undefined>();
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [leagueFilter, setLeagueFilter] = useState<string>("");
+  const { selectedSeason } = useSeason();
 
   const { data: reports, isLoading } = useListReports(
     playerFilter ? { playerId: playerFilter } : undefined,
-    { query: { queryKey: getListReportsQueryKey(playerFilter ? { playerId: playerFilter } : undefined) } },
+    {
+      query: {
+        queryKey: [
+          ...getListReportsQueryKey(playerFilter ? { playerId: playerFilter } : undefined),
+          selectedSeason?.id,
+        ],
+        queryFn: (): Promise<Report[]> => {
+          const params = new URLSearchParams();
+          if (playerFilter) params.set("playerId", String(playerFilter));
+          if (selectedSeason) params.set("season", String(selectedSeason.startYear));
+          const qs = params.toString();
+          return fetch(`/api/reports${qs ? `?${qs}` : ""}`, { credentials: "include" }).then((r) => r.json());
+        },
+      },
+    },
   );
   const { data: players } = useListPlayers();
   const { data: teams } = useListTeams();

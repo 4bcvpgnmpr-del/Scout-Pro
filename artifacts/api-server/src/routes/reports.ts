@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, avg, count, sql } from "drizzle-orm";
+import { eq, desc, avg, count, sql, and, gte, lte } from "drizzle-orm";
 import { db, reportsTable, playersTable, teamsTable, gamesTable } from "@workspace/db";
 import {
   CreateReportBody,
@@ -53,8 +53,19 @@ router.get("/reports", async (req, res): Promise<void> => {
     .leftJoin(playersTable, eq(reportsTable.playerId, playersTable.id))
     .$dynamic();
 
+  const conditions: ReturnType<typeof eq>[] = [];
   if (query.success && query.data.playerId) {
-    baseQuery = baseQuery.where(eq(reportsTable.playerId, query.data.playerId));
+    conditions.push(eq(reportsTable.playerId, query.data.playerId));
+  }
+  const seasonYear = req.query.season ? parseInt(req.query.season as string, 10) : null;
+  if (seasonYear && !Number.isNaN(seasonYear)) {
+    const seasonStart = `${seasonYear}-08-01`;
+    const seasonEnd   = `${seasonYear + 1}-07-31`;
+    conditions.push(gte(reportsTable.date, seasonStart) as ReturnType<typeof eq>);
+    conditions.push(lte(reportsTable.date, seasonEnd) as ReturnType<typeof eq>);
+  }
+  if (conditions.length > 0) {
+    baseQuery = baseQuery.where(conditions.length === 1 ? conditions[0]! : and(...conditions)!);
   }
 
   const reports = await baseQuery.orderBy(desc(reportsTable.createdAt));

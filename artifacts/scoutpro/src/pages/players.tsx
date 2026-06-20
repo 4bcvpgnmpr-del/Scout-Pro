@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListPlayers, getListPlayersQueryKey } from "@workspace/api-client-react";
+import { useSeason } from "@/contexts/SeasonContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,16 @@ const POSITIONS = [
 export default function Players() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("ALL");
+  const { selectedSeason } = useSeason();
 
   const { data: players, isLoading } = useListPlayers(
     positionFilter !== "ALL" ? { position: positionFilter } : undefined,
     {
       query: {
-        queryKey: getListPlayersQueryKey(positionFilter !== "ALL" ? { position: positionFilter } : undefined),
+        queryKey: [
+          ...getListPlayersQueryKey(positionFilter !== "ALL" ? { position: positionFilter } : undefined),
+          selectedSeason?.id,
+        ],
       },
     },
   );

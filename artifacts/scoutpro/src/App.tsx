@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
 import { SubLayout } from "@/components/sub-layout";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SeasonProvider } from "@/contexts/SeasonContext";
 import { ProtectedRoute } from "@/components/protected-route";
 
 import Dashboard from "@/pages/dashboard";
@@ -36,6 +37,8 @@ import GameMatchCenter from "@/pages/game-match-center";
 import MatchCenterHub from "@/pages/match-center-hub";
 import ScoutingHub from "@/pages/scouting-hub";
 import SyncPage from "@/pages/admin/sync";
+import AdminSeasonsPage from "@/pages/admin/seasons";
+import MiCuenta from "@/pages/mi-cuenta";
 
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
@@ -146,6 +149,16 @@ function Router() {
           <Layout><SyncPage /></Layout>
         </ProtectedRoute>
       </Route>
+      <Route path="/admin/temporadas">
+        <ProtectedRoute>
+          <Layout><AdminSeasonsPage /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/mi-cuenta">
+        <ProtectedRoute>
+          <Layout><MiCuenta /></Layout>
+        </ProtectedRoute>
+      </Route>
 
       {/* ── SubLayout: Players ───────────────────────────────────── */}
       <Route path="/players/new">
@@ -251,8 +264,10 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <AppInit />
-            <Router />
+            <SeasonProvider>
+              <AppInit />
+              <Router />
+            </SeasonProvider>
           </AuthProvider>
         </WouterRouter>
         <Toaster />

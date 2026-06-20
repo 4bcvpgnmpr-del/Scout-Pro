@@ -718,3 +718,56 @@ export const GetDashboardSummaryResponse = zod.object({
 })
 
 
+/**
+ * @summary Update the logged-in user subscription tier (testing only)
+ */
+export const UpdateMySubscriptionBody = zod.object({
+  "tier": zod.enum(['amateur', 'professional'])
+})
+
+export const UpdateMySubscriptionResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullish(),
+  "role": zod.string(),
+  "subscriptionTier": zod.enum(['amateur', 'professional']),
+  "selectedTeamId": zod.string().nullish()
+})
+
+
+/**
+ * @summary List distinct available seasons across all leagues
+ */
+export const ListSeasonsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "startYear": zod.number(),
+  "endYear": zod.number(),
+  "isCurrent": zod.boolean(),
+  "leagueCount": zod.number().optional()
+})
+export const ListSeasonsResponse = zod.array(ListSeasonsResponseItem)
+
+
+/**
+ * @summary List leagues for season management
+ */
+export const ListSeasonLeaguesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "shortName": zod.string()
+})
+export const ListSeasonLeaguesResponse = zod.array(ListSeasonLeaguesResponseItem)
+
+
+/**
+ * @summary Create a new season for a league and mark it current (admin only)
+ */
+export const CreateSeasonBody = zod.object({
+  "leagueId": zod.string(),
+  "name": zod.string(),
+  "startYear": zod.number(),
+  "endYear": zod.number()
+})
+
+

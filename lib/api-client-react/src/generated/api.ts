@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuthUser,
   DashboardSummary,
   Error,
   ErrorEnvelope,
@@ -38,6 +39,10 @@ import type {
   Report,
   ReportInput,
   ReportUpdate,
+  Season,
+  SeasonInput,
+  SeasonLeague,
+  SubscriptionUpdate,
   Team,
   TeamInput,
   TeamMedia,
@@ -2299,4 +2304,300 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 
 
 
+
+export const getUpdateMySubscriptionUrl = () => {
+
+
+
+
+  return `/api/auth/me/subscription`
+}
+
+/**
+ * @summary Update the logged-in user subscription tier (testing only)
+ */
+export const updateMySubscription = async (subscriptionUpdate: SubscriptionUpdate, options?: RequestInit): Promise<AuthUser> => {
+
+  return customFetch<AuthUser>(getUpdateMySubscriptionUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      subscriptionUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateMySubscriptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMySubscription>>, TError,{data: BodyType<SubscriptionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMySubscription>>, TError,{data: BodyType<SubscriptionUpdate>}, TContext> => {
+
+const mutationKey = ['updateMySubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMySubscription>>, {data: BodyType<SubscriptionUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMySubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMySubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof updateMySubscription>>>
+    export type UpdateMySubscriptionMutationBody = BodyType<SubscriptionUpdate>
+    export type UpdateMySubscriptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the logged-in user subscription tier (testing only)
+ */
+export const useUpdateMySubscription = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMySubscription>>, TError,{data: BodyType<SubscriptionUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMySubscription>>,
+        TError,
+        {data: BodyType<SubscriptionUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMySubscriptionMutationOptions(options));
+    }
+
+export const getListSeasonsUrl = () => {
+
+
+
+
+  return `/api/seasons`
+}
+
+/**
+ * @summary List distinct available seasons across all leagues
+ */
+export const listSeasons = async ( options?: RequestInit): Promise<Season[]> => {
+
+  return customFetch<Season[]>(getListSeasonsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSeasonsQueryKey = () => {
+    return [
+    `/api/seasons`
+    ] as const;
+    }
+
+
+export const getListSeasonsQueryOptions = <TData = Awaited<ReturnType<typeof listSeasons>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSeasonsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSeasons>>> = ({ signal }) => listSeasons({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSeasonsQueryResult = NonNullable<Awaited<ReturnType<typeof listSeasons>>>
+export type ListSeasonsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List distinct available seasons across all leagues
+ */
+
+export function useListSeasons<TData = Awaited<ReturnType<typeof listSeasons>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSeasonsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListSeasonLeaguesUrl = () => {
+
+
+
+
+  return `/api/seasons/leagues`
+}
+
+/**
+ * @summary List leagues for season management
+ */
+export const listSeasonLeagues = async ( options?: RequestInit): Promise<SeasonLeague[]> => {
+
+  return customFetch<SeasonLeague[]>(getListSeasonLeaguesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSeasonLeaguesQueryKey = () => {
+    return [
+    `/api/seasons/leagues`
+    ] as const;
+    }
+
+
+export const getListSeasonLeaguesQueryOptions = <TData = Awaited<ReturnType<typeof listSeasonLeagues>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasonLeagues>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSeasonLeaguesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSeasonLeagues>>> = ({ signal }) => listSeasonLeagues({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSeasonLeagues>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSeasonLeaguesQueryResult = NonNullable<Awaited<ReturnType<typeof listSeasonLeagues>>>
+export type ListSeasonLeaguesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List leagues for season management
+ */
+
+export function useListSeasonLeagues<TData = Awaited<ReturnType<typeof listSeasonLeagues>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSeasonLeagues>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSeasonLeaguesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSeasonUrl = () => {
+
+
+
+
+  return `/api/admin/seasons`
+}
+
+/**
+ * @summary Create a new season for a league and mark it current (admin only)
+ */
+export const createSeason = async (seasonInput: SeasonInput, options?: RequestInit): Promise<Season> => {
+
+  return customFetch<Season>(getCreateSeasonUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      seasonInput,)
+  }
+);}
+
+
+
+
+export const getCreateSeasonMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{data: BodyType<SeasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{data: BodyType<SeasonInput>}, TContext> => {
+
+const mutationKey = ['createSeason'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSeason>>, {data: BodyType<SeasonInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSeason(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSeasonMutationResult = NonNullable<Awaited<ReturnType<typeof createSeason>>>
+    export type CreateSeasonMutationBody = BodyType<SeasonInput>
+    export type CreateSeasonMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a new season for a league and mark it current (admin only)
+ */
+export const useCreateSeason = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSeason>>, TError,{data: BodyType<SeasonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSeason>>,
+        TError,
+        {data: BodyType<SeasonInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSeasonMutationOptions(options));
+    }
 

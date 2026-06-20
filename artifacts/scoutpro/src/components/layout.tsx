@@ -3,11 +3,12 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
-  Swords, RefreshCw, Target, LogOut, Zap,
+  Swords, RefreshCw, Target, LogOut, Zap, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSeason } from "@/contexts/SeasonContext";
 
 const navGroups = [
   {
@@ -49,9 +50,10 @@ const navGroups = [
   {
     label: "Admin",
     items: [
-      { name: "Usuarios",       href: "/usuarios",   icon: UserCog },
-      { name: "Sincronización", href: "/admin/sync", icon: RefreshCw },
-      { name: "Ajustes",        href: "/ajustes",    icon: Settings },
+      { name: "Usuarios",       href: "/usuarios",          icon: UserCog },
+      { name: "Sincronización", href: "/admin/sync",        icon: RefreshCw },
+      { name: "Temporadas",     href: "/admin/temporadas",  icon: CalendarDays },
+      { name: "Ajustes",        href: "/ajustes",           icon: Settings },
     ],
   },
 ];
@@ -83,7 +85,35 @@ function NavItem({
   );
 }
 
-function UserFooter() {
+function SeasonBar() {
+  const { seasons, selectedSeason, setSelectedSeason } = useSeason();
+
+  if (seasons.length === 0) return null;
+
+  return (
+    <div className="px-3 py-2 border-b border-sidebar-border">
+      <div className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/40 mb-1 px-1">
+        Temporada
+      </div>
+      <select
+        value={selectedSeason?.id ?? ""}
+        onChange={(e) => {
+          const s = seasons.find((x) => x.id === e.target.value) ?? null;
+          setSelectedSeason(s);
+        }}
+        className="w-full text-xs bg-sidebar-accent/60 text-sidebar-foreground border border-sidebar-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer"
+      >
+        {seasons.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function UserFooter({ onNavClick }: { onNavClick?: () => void }) {
   const { user, logout } = useAuth();
 
   if (!user) return null;
@@ -97,20 +127,27 @@ function UserFooter() {
   return (
     <div className="px-3 py-3 border-t border-sidebar-border">
       <div className="flex items-center gap-2.5">
-        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-          <span className="text-[11px] font-bold text-primary">{initials}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <div className="text-xs font-medium truncate">{user.name ?? user.email}</div>
-            {user.subscriptionTier === "professional" && (
-              <Zap size={10} className="text-amber-400 shrink-0" />
-            )}
+        <Link href="/mi-cuenta">
+          <div
+            onClick={onNavClick}
+            className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+              <span className="text-[11px] font-bold text-primary">{initials}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <div className="text-xs font-medium truncate">{user.name ?? user.email}</div>
+                {user.subscriptionTier === "professional" && (
+                  <Zap size={10} className="text-amber-400 shrink-0" />
+                )}
+              </div>
+              <div className="text-[10px] text-sidebar-foreground/50 truncate capitalize">
+                {user.subscriptionTier === "professional" ? "Profesional" : "Amateur"}
+              </div>
+            </div>
           </div>
-          <div className="text-[10px] text-sidebar-foreground/50 truncate capitalize">
-            {user.subscriptionTier === "professional" ? "Profesional" : "Amateur"}
-          </div>
-        </div>
+        </Link>
         <button
           onClick={() => logout()}
           title="Cerrar sesión"
@@ -133,6 +170,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
           </div>
         </Link>
       </div>
+      <SeasonBar />
       <div className="flex-1 overflow-y-auto py-3">
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
@@ -149,7 +187,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
           </div>
         ))}
       </div>
-      <UserFooter />
+      <UserFooter onNavClick={onNavClick} />
     </div>
   );
 }

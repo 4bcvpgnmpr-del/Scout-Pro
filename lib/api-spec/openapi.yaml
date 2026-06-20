@@ -21,6 +21,10 @@ tags:
     description: Summary and analytics
   - name: Storage
     description: Object storage upload and serving endpoints.
+  - name: auth
+    description: Authentication and account management
+  - name: seasons
+    description: Season management
 paths:
   /storage/uploads/request-url:
     post:
@@ -613,6 +617,78 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  /auth/me/subscription:
+    patch:
+      operationId: updateMySubscription
+      tags: [auth]
+      summary: Update the logged-in user subscription tier (testing only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdate'
+      responses:
+        '200':
+          description: Updated user object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUser'
+        '401':
+          description: Not authenticated
+
+  /seasons:
+    get:
+      operationId: listSeasons
+      tags: [seasons]
+      summary: List distinct available seasons across all leagues
+      responses:
+        '200':
+          description: List of seasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Season'
+
+  /seasons/leagues:
+    get:
+      operationId: listSeasonLeagues
+      tags: [seasons]
+      summary: List leagues for season management
+      responses:
+        '200':
+          description: List of leagues
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeasonLeague'
+
+  /admin/seasons:
+    post:
+      operationId: createSeason
+      tags: [seasons]
+      summary: Create a new season for a league and mark it current (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeasonInput'
+      responses:
+        '201':
+          description: Created season
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+        '400':
+          description: Bad request
+
 components:
   schemas:
     HealthStatus:
@@ -1186,6 +1262,73 @@ components:
           type: string
         metadata:
           $ref: '#/components/schemas/UploadUrlRequest'
+    Season:
+      type: object
+      required: [id, name, startYear, endYear, isCurrent]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startYear:
+          type: integer
+        endYear:
+          type: integer
+        isCurrent:
+          type: boolean
+        leagueCount:
+          type: integer
+
+    SeasonInput:
+      type: object
+      required: [leagueId, name, startYear, endYear]
+      properties:
+        leagueId:
+          type: string
+        name:
+          type: string
+        startYear:
+          type: integer
+        endYear:
+          type: integer
+
+    SeasonLeague:
+      type: object
+      required: [id, name, shortName]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+
+    SubscriptionUpdate:
+      type: object
+      required: [tier]
+      properties:
+        tier:
+          type: string
+          enum: [amateur, professional]
+
+    AuthUser:
+      type: object
+      required: [id, email, role, subscriptionTier]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: ["string", "null"]
+        role:
+          type: string
+        subscriptionTier:
+          type: string
+          enum: [amateur, professional]
+        selectedTeamId:
+          type: ["string", "null"]
+
     ErrorEnvelope:
       type: object
       required: [error]
