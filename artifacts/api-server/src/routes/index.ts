@@ -8,6 +8,7 @@ import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
 import teamMediaRouter from "./team-media";
 import febRouter from "./feb";
+import adminSyncRouter from "./admin-sync.routes.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(playersRouter);
 router.use(gamesRouter);
 router.use(reportsRouter);
 router.use(febRouter);
+router.use("/admin/sync", adminSyncRouter);
 
 export default router;

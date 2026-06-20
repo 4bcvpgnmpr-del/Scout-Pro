@@ -2,6 +2,7 @@
 - [PDF/canvas export with Tailwind v4](pdf-export-tailwind-v4.md) — plain html2canvas silently fails on oklch()/color-mix() colors; use html2canvas-pro.
 - [scoutpro typecheck blocked](scoutpro-typecheck-blocked.md) — TS6306 from non-composite object-storage-web ref aborts ALL file checks; verify via temp tsconfig dropping that ref.
 - [Player stats API returns strings](player-stats-strings.md) — useGetPlayerStats fields are strings not numbers; always wrap with Number() before toFixed() or arithmetic.
+- [ScoutPro sync integration](scoutpro-sync-integration.md) — stat_ prefix tables, Puppeteer-free FEB sync, seeded leagues, useMock flag location.
 - [Multi-page PDF export pattern](pdf-multipage-export.md) — html2canvas-pro captures each A4 div (794×1123px) separately; refs must type as RefObject<HTMLDivElement | null> in React 19; jsPDF adds pages via addPage() then addImage(canvas, 0,0,210,297).
 - [Object Storage local fallback](object-storage-local-fallback.md) — when PRIVATE_OBJECT_DIR is empty, storage.ts falls back to ./uploads/ on disk; PUT /api/storage/uploads/local/:uuid saves file, GET /api/storage/objects/* tries GCS then local.
 - [Player profile localStorage](player-profile-localstorage.md) — extended profile fields (scouting, stats, videos) stored in sp-profile-{id} via usePlayerProfile hook; DB fields (name, position, etc.) still via API.

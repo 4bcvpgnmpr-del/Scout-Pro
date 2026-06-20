@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
-  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair, Swords,
+  Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair, Swords, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
@@ -46,8 +46,9 @@ const navGroups = [
   {
     label: "Admin",
     items: [
-      { name: "Usuarios", href: "/usuarios", icon: UserCog },
-      { name: "Ajustes", href: "/ajustes", icon: Settings },
+      { name: "Usuarios",        href: "/usuarios",    icon: UserCog },
+      { name: "Sincronización",  href: "/admin/sync",  icon: RefreshCw },
+      { name: "Ajustes",         href: "/ajustes",     icon: Settings },
     ],
   },
 ];

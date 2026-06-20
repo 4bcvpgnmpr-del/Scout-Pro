@@ -5,6 +5,7 @@ import {
   cargarCacheDesconoce,
   scrapearTodas,
 } from "./scrapers/feb-scraper.js";
+import { registerSyncJobs } from "./jobs/sync.job.js";
 
 const rawPort = process.env["PORT"];
 
@@ -48,4 +49,6 @@ app.listen(port, async (err) => {
   });
 
   logger.info("FEB scraper: cron diario programado a las 06:00");
+
+  registerSyncJobs();
 });
