@@ -287,6 +287,7 @@ export const normalizeFebStanding = normalizeFebStats;
 export async function normalizeFebBEVStats(
   ligaId: string,
   data: import("../scrapers/feb-scraper.js").CompeticionBEVData,
+  startYear?: number,
 ): Promise<number> {
   if (!data.equipos?.length) return 0;
 
@@ -301,8 +302,8 @@ export async function normalizeFebBEVStats(
     gender:     isFem ? "F" : "M",
   });
 
-  const { startYear, endYear } = febSeasonYears();
-  const seasonId = await findOrCreateSeason(leagueId, startYear, endYear);
+  const years    = startYear ? { startYear, endYear: startYear + 1 } : febSeasonYears();
+  const seasonId = await findOrCreateSeason(leagueId, years.startYear, years.endYear);
 
   let count = 0;
   for (const row of data.equipos) {
@@ -521,7 +522,7 @@ async function upsertBEVPlayerStats(data: {
  * Normaliza y persiste estadísticas de jugadores BEV para una liga.
  * Retorna el número de registros procesados.
  */
-export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData): Promise<number> {
+export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData, startYear?: number): Promise<number> {
   if (!data.players.length) return 0;
 
   const ligaId = data.ligaId;
@@ -537,8 +538,8 @@ export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData): Promi
     gender:     isFem ? "F" : "M",
   });
 
-  const { startYear, endYear } = febSeasonYears();
-  const seasonId = await findOrCreateSeason(leagueId, startYear, endYear);
+  const years    = startYear ? { startYear, endYear: startYear + 1 } : febSeasonYears();
+  const seasonId = await findOrCreateSeason(leagueId, years.startYear, years.endYear);
 
   let count = 0;
 
@@ -588,6 +589,58 @@ export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData): Promi
   }
 
   logger.info({ ligaId, count }, "[BEV players] normalization complete");
+  return count;
+}
+
+/**
+ * Crea standings desde datos BEV para temporadas históricas.
+ * BEV no tiene W/L, así que wins/losses se guardan como 0; sólo pointsFor y gamesPlayed.
+ * Útil para poblar seasons históricas (2020-24) que no tienen datos de feb.es.
+ */
+export async function normalizeHistoricalBEVTeamStats(
+  ligaId: string,
+  data: import("../scrapers/feb-scraper.js").CompeticionBEVData,
+  startYear: number,
+): Promise<number> {
+  if (!data.equipos?.length) return 0;
+
+  const isFem =
+    data.liga.startsWith("LF") || data.liga.toLowerCase().includes("femenin");
+
+  const leagueId = await findOrCreateLeague({
+    name:       data.liga,
+    shortName:  ligaId,
+    source:     "feb",
+    externalId: ligaId,
+    gender:     isFem ? "F" : "M",
+  });
+
+  const seasonId = await findOrCreateSeason(leagueId, startYear, startYear + 1);
+
+  let count = 0;
+  for (const row of data.equipos) {
+    if (!row.equipo || row.partidos === 0) continue;
+
+    const externalId = row.equipo.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const teamId     = await findOrCreateTeam(leagueId, externalId, row.equipo);
+
+    await upsertStanding({
+      teamId,
+      seasonId,
+      group:         null,
+      rank:          0,
+      gamesPlayed:   row.partidos,
+      wins:          0,
+      losses:        0,
+      winPct:        0,
+      pointsFor:     row.puntosTotal,
+      pointsAgainst: 0,
+      pointDiff:     0,
+    });
+    count++;
+  }
+
+  logger.info({ liga: data.liga, startYear, rows: count }, "[normalizer] historical BEV team stats upserted");
   return count;
 }
 

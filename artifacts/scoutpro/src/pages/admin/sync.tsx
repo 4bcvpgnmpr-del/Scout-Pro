@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Loader2,
   ChevronRight,
+  History,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -299,6 +300,7 @@ export default function SyncPage() {
   const queryClient = useQueryClient();
   const [syncingSource, setSyncingSource] = useState<LeagueSource | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [isSyncingHistorical, setIsSyncingHistorical] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "ok" | "err" } | null>(null);
 
   const showToast = (message: string, type: "ok" | "err") => {
@@ -353,6 +355,13 @@ export default function SyncPage() {
     onSettled: () => setIsSyncingAll(false),
   });
 
+  const historicalMutation = useMutation({
+    mutationFn: () => triggerSync("historical"),
+    onSuccess: () => showToast("Importación histórica iniciada — puede tardar varios minutos", "ok"),
+    onError:   () => showToast("Error al iniciar importación histórica", "err"),
+    onSettled: () => setIsSyncingHistorical(false),
+  });
+
   const handleSync = (source: LeagueSource) => {
     setSyncingSource(source);
     syncMutation.mutate(source);
@@ -361,6 +370,11 @@ export default function SyncPage() {
   const handleSyncAll = () => {
     setIsSyncingAll(true);
     syncAllMutation.mutate();
+  };
+
+  const handleSyncHistorical = () => {
+    setIsSyncingHistorical(true);
+    historicalMutation.mutate();
   };
 
   return (
@@ -417,6 +431,42 @@ export default function SyncPage() {
             isSyncing={syncingSource === source.id}
           />
         ))}
+      </div>
+
+      {/* Historical import */}
+      <div className="bg-zinc-800/60 rounded-xl p-4 border border-zinc-700/40 mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 w-8 h-8 rounded-lg bg-indigo-900/40 border border-indigo-800/50 flex items-center justify-center shrink-0">
+              <History size={15} className="text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-200 mb-0.5">Historial 2020 → temporada actual</h3>
+              <p className="text-[11px] text-zinc-500 max-w-lg">
+                Importa estadísticas de equipo y jugadores de todas las ligas FEB desde la temporada 2020-21.
+                Proceso lento (~15 min). Seguro relanzar: los datos existentes se sobreescriben.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {["2020-21","2021-22","2022-23","2023-24","2024-25"].map((t) => (
+                  <span key={t} className="text-[10px] px-2 py-0.5 bg-zinc-700/60 text-zinc-400 rounded">{t}</span>
+                ))}
+                <span className="text-[10px] px-2 py-0.5 bg-zinc-700/60 text-zinc-500 rounded">6 ligas × cada año</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleSyncHistorical}
+            disabled={isSyncingHistorical}
+            className="shrink-0 flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white transition-colors"
+          >
+            {isSyncingHistorical ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <History size={12} />
+            )}
+            {isSyncingHistorical ? "Iniciando…" : "Importar historial"}
+          </button>
+        </div>
       </div>
 
       {/* Log table */}

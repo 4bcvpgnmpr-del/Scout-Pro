@@ -10,6 +10,7 @@ import {
   normalizeFebStats,
   normalizeFebBEVStats,
   normalizeBEVPlayerStats,
+  normalizeHistoricalBEVTeamStats,
   normalizeEuroStats,
   normalizeEuroStanding,
 } from "../db/normalizer.js";
@@ -162,6 +163,89 @@ async function upsertEuroLeagueData() {
   }
 }
 
+// ─── Historical BEV sync (2020 → current-1) ───────────────────────────────────
+
+/** Devuelve el año de inicio de la temporada activa actual. */
+function currentSeasonStartYear(): number {
+  const now = new Date();
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+/**
+ * Pobla estadísticas históricas de equipo + jugadores para UN año concreto.
+ * Equipo stats: crea standings desde BEV (sin W/L).
+ * Jugador stats: scrapa toda la cadena rankings→equipo→jugador para ese año.
+ */
+async function upsertHistoricalYearData(startYear: number): Promise<number> {
+  clearNormalizerCaches();
+  let total = 0;
+
+  // Fase 1: estadísticas de equipo
+  try {
+    const bevStats = await scrapearEstadisticasBEV(startYear);
+    for (const [ligaId, data] of Object.entries(bevStats)) {
+      const rows = await normalizeHistoricalBEVTeamStats(ligaId, data, startYear);
+      total += rows;
+    }
+    logger.info({ startYear, total }, "[historical] team stats done");
+  } catch (err) {
+    logger.warn({ startYear, err }, "[historical] team stats failed — continuando con jugadores");
+  }
+
+  // Fase 2: estadísticas de jugadores
+  try {
+    const allData = await scrapeBEVAllLeaguePlayers(startYear);
+    for (const data of allData) {
+      const rows = await normalizeBEVPlayerStats(data, startYear);
+      total += rows;
+    }
+    logger.info({ startYear, total }, "[historical] player stats done");
+  } catch (err) {
+    logger.warn({ startYear, err }, "[historical] player stats failed");
+  }
+
+  return total;
+}
+
+async function upsertHistoricalData() {
+  const logEntry = await db
+    .insert(syncLog)
+    .values({ source: "feb", status: "running" })
+    .returning()
+    .then((r) => r[0]);
+
+  try {
+    const currentYear = currentSeasonStartYear();
+    let grandTotal = 0;
+
+    for (let year = 2020; year < currentYear; year++) {
+      logger.info({ year }, "[historical sync] procesando temporada...");
+      const rows = await upsertHistoricalYearData(year);
+      grandTotal += rows;
+      // Pausa entre temporadas para no saturar BEV
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+
+    await db
+      .update(syncLog)
+      .set({ status: "success", recordsProcessed: grandTotal, finishedAt: new Date() })
+      .where(eq(syncLog.id, logEntry.id));
+
+    logger.info({ grandTotal }, "[historical sync] completed");
+  } catch (err) {
+    await db
+      .update(syncLog)
+      .set({
+        status:       "error",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        finishedAt:   new Date(),
+      })
+      .where(eq(syncLog.id, logEntry.id));
+
+    logger.error({ err }, "[historical sync] failed");
+  }
+}
+
 // ─── Schedule registration ────────────────────────────────────────────────────
 
 export function registerSyncJobs() {
@@ -194,4 +278,5 @@ export const syncHandlers = {
   feb:        upsertFebData,
   euroleague: upsertEuroLeagueData,
   bevPlayers: upsertBEVPlayerData,
+  historical: upsertHistoricalData,
 };

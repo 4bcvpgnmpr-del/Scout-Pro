@@ -442,8 +442,8 @@ function parseFraccion(raw: string): { made: number; att: number } {
  *
  * Stats de jugadores individuales NO están disponibles en estas páginas.
  */
-export async function scrapearEstadisticasBEV(): Promise<FebBEVStats> {
-  const año   = bevSeasonYear();
+export async function scrapearEstadisticasBEV(year?: number): Promise<FebBEVStats> {
+  const año   = year ?? bevSeasonYear();
   const result: FebBEVStats = {};
 
   for (const comp of BEV_COMPETICIONES) {
@@ -627,11 +627,12 @@ async function scrapeBEVPlayerIds(teamBevId: string): Promise<string[]> {
 export async function scrapeBEVPlayerStats(
   teamBevId: string,
   playerBevId: string,
+  year?: number,
 ): Promise<BEVPlayerStatsEntry | null> {
   const url    = `https://baloncestoenvivo.feb.es/jugador/${teamBevId}/${playerBevId}`;
   const html   = await fetchHtml(url);
   const $      = load(html);
-  const label  = bevSeasonLabel(bevSeasonYear()); // "25/26"
+  const label  = bevSeasonLabel(year ?? bevSeasonYear());
 
   const rawName = $(".box-jugador .nombre").text().trim();
   if (!rawName) return null;
@@ -704,8 +705,8 @@ export async function scrapeBEVPlayerStats(
  */
 export async function scrapeBEVLeaguePlayers(comp: {
   id: string; nombre: string; g: number; nm: string;
-}): Promise<BEVLeaguePlayersData> {
-  const año     = bevSeasonYear();
+}, year?: number): Promise<BEVLeaguePlayersData> {
+  const año     = year ?? bevSeasonYear();
   const players: BEVPlayerStatsEntry[] = [];
 
   try {
@@ -719,7 +720,7 @@ export async function scrapeBEVLeaguePlayers(comp: {
         for (const playerId of playerIds) {
           await new Promise((r) => setTimeout(r, 500));
           try {
-            const stats = await scrapeBEVPlayerStats(teamId, playerId);
+            const stats = await scrapeBEVPlayerStats(teamId, playerId, año);
             if (stats) players.push(stats);
           } catch (err) {
             logger.warn({ teamId, playerId, err }, "[BEV] error jugador — se omite");
@@ -741,10 +742,10 @@ export async function scrapeBEVLeaguePlayers(comp: {
  * Extrae estadísticas de jugadores de todas las ligas BEV.
  * Proceso lento (~500 requests) — pensado para ejecutarse una vez al día.
  */
-export async function scrapeBEVAllLeaguePlayers(): Promise<BEVLeaguePlayersData[]> {
+export async function scrapeBEVAllLeaguePlayers(year?: number): Promise<BEVLeaguePlayersData[]> {
   const results: BEVLeaguePlayersData[] = [];
   for (const comp of BEV_COMPETICIONES) {
-    const data = await scrapeBEVLeaguePlayers(comp);
+    const data = await scrapeBEVLeaguePlayers(comp, year);
     results.push(data);
     await new Promise((r) => setTimeout(r, 1500)); // pausa entre ligas
   }
