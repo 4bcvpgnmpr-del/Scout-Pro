@@ -969,6 +969,7 @@ export default function Scout() {
   const [comparePlayerId, setComparePlayerId] = useState<number | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterTeamId, setFilterTeamId] = useState<number | null>(null);
   const [groupByPosition, setGroupByPosition] = useState(true);
   const [showAddTeam, setShowAddTeam] = useState<false | "own" | "rival">(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -992,9 +993,11 @@ export default function Scout() {
     query: { queryKey: getListPlayersQueryKey(playerQueryParams) },
   });
 
-  const filteredPlayers = (allPlayers || []).filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredPlayers = (allPlayers || []).filter((p) => {
+    if (!p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (view.kind === "all" && filterTeamId !== null && p.teamId !== filterTeamId) return false;
+    return true;
+  });
 
   const selectedPlayer = allPlayers?.find((p) => p.id === selectedPlayerId);
   const comparePlayer = allPlayers?.find((p) => p.id === comparePlayerId)
@@ -1255,6 +1258,21 @@ export default function Scout() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugador..."
               className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-orange-500 focus:ring-2 focus:ring-orange-100" />
           </div>
+          {view.kind === "all" && teams && teams.length > 0 && (
+            <select
+              value={filterTeamId ?? ""}
+              onChange={(e) => {
+                setFilterTeamId(e.target.value ? Number(e.target.value) : null);
+                setSelectedPlayerId(null);
+              }}
+              className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 focus:ring-2 focus:ring-orange-100 cursor-pointer"
+            >
+              <option value="">Todos los equipos</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">

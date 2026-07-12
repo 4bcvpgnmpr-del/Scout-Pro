@@ -1,0 +1,70 @@
+En mi app ScoutPro, el dropdown de equipos ya muestra 
+los equipos correctamente, pero cuando selecciono uno 
+no ocurre nada. Necesito que al elegir un equipo pase lo siguiente:
+
+PROBLEMA 1 — FILTRO EN "MIS SCOUTS"
+Cuando el usuario selecciona un equipo en el filtro 
+de la pantalla "Mis scouts", la lista debe filtrarse 
+automáticamente mostrando solo los scouts de ese equipo.
+
+Busca el elemento con id="list-team" y asegúrate de que 
+tiene este evento:
+
+document.getElementById('list-team').addEventListener('change', function() {
+  renderList();
+});
+
+Dentro de la función renderList(), asegúrate de que 
+el filtro por equipo funciona así:
+
+function renderList() {
+  const q = (document.getElementById('list-search')?.value || '').toLowerCase();
+  const teamFilter = document.getElementById('list-team')?.value || '';
+  const impFilter = document.getElementById('list-imp')?.value || '';
+
+  const filtrados = scouts.filter(s => {
+    // Filtro por texto
+    if (q && !(
+      s.name?.toLowerCase().includes(q) ||
+      s.team?.toLowerCase().includes(q)
+    )) return false;
+
+    // Filtro por equipo — ESTE ES EL QUE FALLA
+    if (teamFilter && s.team !== teamFilter) return false;
+
+    // Filtro por importancia
+    if (impFilter && s.imp !== impFilter) return false;
+
+    return true;
+  });
+
+  const el = document.getElementById('list-box');
+  if (!filtrados.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <i class="ti ti-search-off"></i>
+        <p>No hay scouts para este equipo.</p>
+      </div>`;
+    return;
+  }
+
+  // Renderizar los scouts filtrados
+  el.innerHTML = filtrados.map(s => {
+    const init = s.name?.split(' ').map(w => w[0]).slice(0,2).join('') || '?';
+    const ph = s.photo 
+      ? `<img src="${s.photo}" alt="">` 
+      : `<span style="color:${IMP_TX[s.imp]}">${init}</span>`;
+    const rc = rColor(s.rating);
+    return `
+      <div class="li" onclick="openDetail(${s.id})">
+        <div class="listrip" style="background:${IMP_HEX[s.imp]}"></div>
+        <div class="liav" style="background:${IMP_BG[s.imp]}">${ph}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">
+            ${s.name}
+          </div>
+          <div style="font-size:10.5px;color:var(--ink-2);margin-top:1px">
+            ${s.pos} · ${s.team} · #${s.dorsal}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:
