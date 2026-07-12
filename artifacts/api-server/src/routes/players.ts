@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and, isNull } from "drizzle-orm";
-import { db, playersTable, teamsTable, reportsTable } from "@workspace/db";
+import { eq, sql, and, desc } from "drizzle-orm";
+import { db, playersTable, teamsTable, reportsTable, playerStats, syncPlayers, seasons } from "@workspace/db";
 import {
   CreatePlayerBody,
   UpdatePlayerBody,
@@ -137,7 +137,22 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
     return;
   }
 
-  const [stats] = await db
+  const zeros = {
+    playerId: params.data.id,
+    gamesPlayed: 0,
+    avgPoints: 0,
+    avgRebounds: 0,
+    avgAssists: 0,
+    avgSteals: 0,
+    avgBlocks: 0,
+    avgMinutes: 0,
+    avgFieldGoalPct: null,
+    avgThreePointPct: null,
+    avgFreeThrowPct: null,
+  };
+
+  // 1. Try manual scouting reports first
+  const [reportStats] = await db
     .select({
       playerId: reportsTable.playerId,
       gamesPlayed: sql<number>`COUNT(${reportsTable.id})`,
@@ -155,24 +170,63 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
     .where(eq(reportsTable.playerId, params.data.id))
     .groupBy(reportsTable.playerId);
 
-  if (!stats) {
-    res.json({
-      playerId: params.data.id,
-      gamesPlayed: 0,
-      avgPoints: 0,
-      avgRebounds: 0,
-      avgAssists: 0,
-      avgSteals: 0,
-      avgBlocks: 0,
-      avgMinutes: 0,
-      avgFieldGoalPct: null,
-      avgThreePointPct: null,
-      avgFreeThrowPct: null,
-    });
+  if (reportStats && Number(reportStats.gamesPlayed) > 0) {
+    res.json(reportStats);
     return;
   }
 
-  res.json(stats);
+  // 2. Fall back to BEV scraped stats via statPlayerExternalId
+  const [player] = await db
+    .select({ statPlayerExternalId: playersTable.statPlayerExternalId })
+    .from(playersTable)
+    .where(eq(playersTable.id, params.data.id));
+
+  if (player?.statPlayerExternalId) {
+    const [bev] = await db
+      .select({
+        gamesPlayed:  playerStats.gamesPlayed,
+        minutesAvg:   playerStats.minutesAvg,
+        points:       playerStats.points,
+        rebounds:     playerStats.rebounds,
+        assists:      playerStats.assists,
+        steals:       playerStats.steals,
+        blocks:       playerStats.blocks,
+        fg2Made:      playerStats.fg2Made,
+        fg2Att:       playerStats.fg2Att,
+        fg3Made:      playerStats.fg3Made,
+        fg3Att:       playerStats.fg3Att,
+        ftMade:       playerStats.ftMade,
+        ftAtt:        playerStats.ftAtt,
+      })
+      .from(playerStats)
+      .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
+      .innerJoin(seasons, eq(seasons.id, playerStats.seasonId))
+      .where(eq(syncPlayers.externalId, player.statPlayerExternalId))
+      .orderBy(desc(seasons.startYear))
+      .limit(1);
+
+    if (bev && bev.gamesPlayed > 0) {
+      const gp = bev.gamesPlayed;
+      const fgAtt = (bev.fg2Att ?? 0) + (bev.fg3Att ?? 0);
+      const fgMade = (bev.fg2Made ?? 0) + (bev.fg3Made ?? 0);
+      res.json({
+        playerId: params.data.id,
+        gamesPlayed: gp,
+        avgPoints:   (bev.points   ?? 0) / gp,
+        avgRebounds: (bev.rebounds ?? 0) / gp,
+        avgAssists:  (bev.assists  ?? 0) / gp,
+        avgSteals:   (bev.steals   ?? 0) / gp,
+        avgBlocks:   (bev.blocks   ?? 0) / gp,
+        avgMinutes:  bev.minutesAvg ?? 0,
+        avgFieldGoalPct:    fgAtt  > 0 ? fgMade  / fgAtt  : null,
+        avgThreePointPct:   (bev.fg3Att ?? 0) > 0 ? (bev.fg3Made ?? 0) / (bev.fg3Att ?? 0) : null,
+        avgFreeThrowPct:    (bev.ftAtt  ?? 0) > 0 ? (bev.ftMade  ?? 0) / (bev.ftAtt  ?? 0) : null,
+      });
+      return;
+    }
+  }
+
+  res.json(zeros);
 });
 
 router.get("/players/:id", async (req, res): Promise<void> => {
