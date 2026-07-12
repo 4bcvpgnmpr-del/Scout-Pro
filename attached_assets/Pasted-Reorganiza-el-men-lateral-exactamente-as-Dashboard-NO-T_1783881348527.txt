@@ -1,0 +1,179 @@
+Reorganiza el menú lateral exactamente así:
+
+─────────────────────
+🏠 Dashboard          ← NO TOCAR
+
+MI EQUIPO
+  📋 Mi plantilla     ← NUEVO
+
+RIVALES
+  👁  Scouts rivales  ← era "Mis scouts"
+  ➕ Nuevo scout      ← NO TOCAR
+  👕 Plantilla rival  ← NO TOCAR
+  🎯 Mapa de tiros    ← NO TOCAR
+
+FICHAJES
+  🔍 Explorar ligas   ← NUEVO
+  ⭐ Mis objetivos    ← NUEVO
+
+SISTEMA
+  🎨 Personalizar     ← NO TOCAR
+  ⚙️ Mi configuración ← NUEVO
+─────────────────────
+
+═══════════════════════════════════════════
+SECCIÓN RIVALES — CÓMO DEBE FUNCIONAR
+═══════════════════════════════════════════
+
+Estas tres secciones trabajan juntas 
+y están vinculadas al equipo rival 
+que el usuario está scouteando:
+
+──────────────────────────────────────────
+👁 SCOUTS RIVALES
+──────────────────────────────────────────
+Muestra todos los scouts creados de rivales.
+
+Cabecera con filtros:
+┌─────────────────────────────────────────┐
+│  👁 Scouts de rivales                   │
+│  Mi liga: Liga Femenina 2               │
+├─────────────────────────────────────────┤
+│  [🔍 Buscar jugadora...]               │
+│  [Equipo rival ▼] [Importancia ▼]      │
+│                                         │
+│  Acceso rápido por rival:              │
+│  [Todos] [Hozono] [Melilla] [Celta]   │
+│  [Sant Adrià] [Zamarat] [Pau] ...      │
+└─────────────────────────────────────────┘
+
+Los botones de acceso rápido son los equipos 
+de MI liga excepto MI equipo.
+Al pulsar uno filtra la lista automáticamente.
+
+La lista mantiene el diseño actual de tarjetas.
+
+──────────────────────────────────────────
+➕ NUEVO SCOUT
+──────────────────────────────────────────
+Mantén el formulario exactamente igual que 
+está ahora con estas mejoras:
+
+1. El campo "Equipo rival" ahora es un 
+   SELECT que carga automáticamente los 
+   equipos rivales de mi liga (todos los 
+   equipos de mi liga excepto el mío).
+
+2. Al seleccionar el equipo rival, el scout 
+   queda vinculado a ese equipo.
+
+3. Añade un campo nuevo "Partido" encima 
+   del formulario:
+   
+   ┌────────────────────────────────────┐
+   │  Partido escouteado                │
+   │  [Mi equipo] vs [Equipo rival ▼]  │
+   │  Fecha: [____/____/________]      │
+   │  Competición: [Liga ▼]            │
+   └────────────────────────────────────┘
+
+Todo lo demás del formulario igual:
+- Foto del jugador
+- Importancia (Clave/Medio/Normal)
+- Datos personales
+- Estadísticas del partido
+- Habilidades
+- Informe narrativo
+- Guardar scout
+
+──────────────────────────────────────────
+👕 PLANTILLA RIVAL
+──────────────────────────────────────────
+Mantén la funcionalidad actual pero mejora 
+la selección del equipo rival:
+
+Cabecera mejorada:
+┌─────────────────────────────────────────┐
+│  👕 Plantilla rival                     │
+├─────────────────────────────────────────┤
+│  Equipo rival:                          │
+│  [Seleccionar equipo rival...  ▼]       │
+│  (carga los equipos de mi liga)         │
+│                                         │
+│  [Exportar roster PDF] [+ Añadir]      │
+└─────────────────────────────────────────┘
+
+Al seleccionar equipo rival:
+- Muestra las jugadoras scouts de ese equipo
+- Agrupadas por posición (Base, Escolta...)
+- Con su foto, importancia y valoración
+- Al clicar una jugadora → abre su ficha
+
+──────────────────────────────────────────
+🎯 MAPA DE TIROS
+──────────────────────────────────────────
+Mantén el mapa de tiros exactamente igual.
+
+Solo añade en la cabecera un selector 
+para ver los tiros filtrados por jugadora:
+
+┌─────────────────────────────────────────┐
+│  🎯 Mapa de tiros                       │
+├─────────────────────────────────────────┤
+│  Ver tiros de:                          │
+│  [Todas las jugadoras ▼]               │
+│  (lista de jugadoras con scouts)        │
+│                                         │
+│  Tipo: [2pt][3pt][Media][TL] [Borrar]  │
+│  Estado: [Encestado / Fallado]          │
+└─────────────────────────────────────────┘
+
+Al seleccionar una jugadora concreta,
+el mapa muestra solo sus tiros registrados.
+
+═══════════════════════════════════════════
+VINCULACIÓN ENTRE SECCIONES
+═══════════════════════════════════════════
+
+Estas 3 secciones deben estar conectadas:
+
+1. Desde la PLANTILLA RIVAL puedo hacer 
+   clic en una jugadora y ver su scout 
+   completo (si existe) o crear uno nuevo.
+
+2. Desde el SCOUT de una jugadora puedo 
+   ir directamente a su MAPA DE TIROS.
+
+3. Desde el MAPA DE TIROS puedo seleccionar 
+   una jugadora y ver su scout completo.
+
+Añade estos botones de navegación:
+
+En la ficha de scout (panel detail):
+[ 🎯 Ver mapa de tiros ] → abre el mapa 
+  filtrado por esa jugadora
+
+En el mapa de tiros al seleccionar jugadora:
+[ 👁 Ver scout completo ] → abre su ficha
+
+En la plantilla rival al clicar jugadora:
+[ ➕ Crear scout ] si no tiene scout
+[ 👁 Ver scout   ] si ya tiene scout
+
+═══════════════════════════════════════════
+REGLAS FINALES
+═══════════════════════════════════════════
+
+✓ Dashboard — NO TOCAR
+✓ Diseño visual, colores, tipografía — NO TOCAR  
+✓ Ficha completa del jugador — NO TOCAR
+✓ Export PDF individual — NO TOCAR
+✓ Modo oscuro/claro — NO TOCAR
+✓ Personalización de temas — NO TOCAR
+
+✓ Todo funciona con localStorage y LIGAS_DATA
+✓ Los scouts existentes no se pierden
+✓ Si algo ya funciona bien, no lo toques
+✓ Solo añade y reorganiza, nunca elimina
+✓ Detecta automáticamente la tecnología 
+  del proyecto y adapta la solución

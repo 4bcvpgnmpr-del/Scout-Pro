@@ -1128,7 +1128,7 @@ export default function Scout() {
 
   const filteredPlayers = (allPlayers || []).filter((p) => {
     if (!p.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (view.kind === "scouts-rivales") {
+    if (view.kind === "scouts-rivales" || view.kind === "rival") {
       if (!rivalTeams.some((t) => t.id === p.teamId)) return false;
     }
     if ((view.kind === "scouts-rivales" || view.kind === "rival") && filterTeamId !== null && p.teamId !== filterTeamId) return false;
@@ -1284,7 +1284,7 @@ export default function Scout() {
     (view.kind === "own" || view.kind === "rival") && view.section
       ? view.section
       : null;
-  const showTeamScouting = !!(activeTeam && teamMediaSection);
+  const showTeamScouting = !!(activeTeam && teamMediaSection && view.kind === "own");
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans antialiased overflow-hidden">
@@ -1327,22 +1327,6 @@ export default function Scout() {
               >
                 <Users className="h-3.5 w-3.5" /> Mi plantilla
               </button>
-              {view.kind === "own" && ownTeam && (
-                <div className="ml-4 mt-0.5 mb-0.5 space-y-0.5">
-                  {TEAM_SECTIONS.map((s) => {
-                    const Icon = s.icon;
-                    const cur = (view as { section?: string }).section === s.key;
-                    return (
-                      <button key={s.key}
-                        onClick={() => { setView({ kind: "own", teamId: ownTeam.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${cur ? "text-blue-400 bg-blue-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                        {cur ? <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /> : <Icon className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />}
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
               {ownTeams.length === 0 && (
                 <button onClick={() => setShowAddTeam("own")}
                   className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-blue-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
@@ -1376,44 +1360,6 @@ export default function Scout() {
               >
                 <Shirt className="h-3.5 w-3.5" /> Plantilla rival
               </button>
-              {view.kind === "rival" && rivalTeams.length > 0 && (
-                <div className="ml-4 mt-0.5 mb-0.5 space-y-0.5">
-                  {rivalTeams.map((t) => {
-                    const active = (view as { teamId?: number }).teamId === t.id;
-                    const activeSection = active ? (view as { section?: string }).section : undefined;
-                    return (
-                      <div key={t.id}>
-                        <button
-                          onClick={() => { setView({ kind: "rival", teamId: t.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${active ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                          {active ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/10 flex-shrink-0" />}
-                          <span className="truncate">{t.name}</span>
-                        </button>
-                        {active && (
-                          <div className="ml-4 mt-0.5 space-y-0.5">
-                            {TEAM_SECTIONS.map((s) => {
-                              const Icon = s.icon;
-                              const cur = activeSection === s.key;
-                              return (
-                                <button key={s.key}
-                                  onClick={() => { setView({ kind: "rival", teamId: t.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] flex items-center gap-2 transition-all font-medium ${cur ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                                  {cur ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <Icon className="h-3 w-3 flex-shrink-0 opacity-60" />}
-                                  {s.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <button onClick={() => setShowAddTeam("rival")}
-                    className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-red-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
-                    <Plus className="h-3 w-3" /> Añadir rival
-                  </button>
-                </div>
-              )}
               {navBtn({ kind: "mapa-tiros" }, <><Target className="h-3.5 w-3.5" /> Mapa de tiros</>)}
             </div>
           </div>
@@ -1484,15 +1430,23 @@ export default function Scout() {
       {/* ── COL 2: ROSTER ─────────────────────────────────────────────────── */}
       <section className="flex flex-col bg-white flex-shrink-0 border-r border-gray-200" style={{ width: 320 }}>
         <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-          <div className="flex items-center justify-between mb-3">
+          {/* ── Title row ── */}
+          <div className="flex items-center justify-between mb-1">
             <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest truncate pr-2">{sectionTitle}</h2>
-            {view.kind !== "watchlist" && (
+            {view.kind !== "watchlist" && view.kind !== "rival" && (
               <button onClick={() => setGroupByPosition(!groupByPosition)}
                 className={`text-xs px-2 py-1 rounded-md font-semibold transition flex-shrink-0 ${groupByPosition ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
                 Por posición
               </button>
             )}
           </div>
+
+          {/* Mi liga subtitle */}
+          {(view.kind === "scouts-rivales" || view.kind === "rival") && ownLeague && (
+            <p className="text-[10px] text-blue-400 font-semibold mb-3">Mi liga: {ownLeague}</p>
+          )}
+
+          {/* ── WATCHLIST: add button ── */}
           {view.kind === "watchlist" && (
             <button onClick={() => setShowAddPlayer(true)}
               className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
@@ -1500,7 +1454,37 @@ export default function Scout() {
             </button>
           )}
 
-          {/* ── Quick team access (scouts-rivales) ── */}
+          {/* ── PLANTILLA RIVAL: team selector + add button ── */}
+          {view.kind === "rival" && (
+            <div className="mb-3 space-y-2">
+              <select
+                value={filterTeamId ?? ""}
+                onChange={(e) => { setFilterTeamId(e.target.value ? Number(e.target.value) : null); setSelectedPlayerId(null); }}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 cursor-pointer font-medium"
+              >
+                <option value="">Seleccionar equipo rival...</option>
+                {(leagueRivalTeams.length > 0 ? leagueRivalTeams : rivalTeams).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddPlayer(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-orange-500 text-white text-xs font-bold rounded-lg hover:bg-orange-600 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Crear scout
+                </button>
+                {rivalTeams.length === 0 && (
+                  <button onClick={() => setShowAddTeam("rival")}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition">
+                    <Plus className="h-3.5 w-3.5" /> Añadir rival
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── SCOUTS RIVALES: quick team chips ── */}
           {view.kind === "scouts-rivales" && leagueRivalTeams.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               <button
@@ -1521,20 +1505,30 @@ export default function Scout() {
             </div>
           )}
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugador..."
-              className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-orange-500 focus:ring-2 focus:ring-orange-100" />
-          </div>
+          {/* ── SEARCH ── */}
+          {view.kind !== "rival" && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugador..."
+                className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-orange-500 focus:ring-2 focus:ring-orange-100" />
+            </div>
+          )}
+          {view.kind === "rival" && filterTeamId !== null && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugadora..."
+                className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-orange-500 focus:ring-2 focus:ring-orange-100" />
+            </div>
+          )}
 
-          {/* Filters: team dropdown + importance */}
-          {(view.kind === "scouts-rivales" || view.kind === "rival") && !leagueRivalTeams.length && rivalTeams.length > 0 && (
+          {/* ── SCOUTS RIVALES: fallback team dropdown + importance ── */}
+          {view.kind === "scouts-rivales" && !leagueRivalTeams.length && rivalTeams.length > 0 && (
             <select
               value={filterTeamId ?? ""}
               onChange={(e) => { setFilterTeamId(e.target.value ? Number(e.target.value) : null); setSelectedPlayerId(null); }}
               className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 cursor-pointer"
             >
-              <option value="">Todos los equipos</option>
+              <option value="">Equipo rival</option>
               {rivalTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           )}
@@ -1544,18 +1538,24 @@ export default function Scout() {
               onChange={(e) => { setFilterImportancia(e.target.value); setSelectedPlayerId(null); }}
               className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 cursor-pointer"
             >
-              <option value="">Todas las importancias</option>
+              <option value="">Importancia</option>
               {IMP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {filteredPlayers.length === 0 ? (
+          {view.kind === "rival" && filterTeamId === null ? (
+            <div className="text-center py-10 text-gray-400 text-sm">
+              <span className="text-4xl mb-3 block">👕</span>
+              Selecciona un equipo rival<br />para ver su plantilla
+            </div>
+          ) : filteredPlayers.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">
               {search ? "Sin resultados."
                : view.kind === "watchlist" ? "Añade jugadores a fichar con ★"
                : view.kind === "scouts-rivales" ? "Sin scouts. Usa ➕ Nuevo scout."
+               : view.kind === "rival" ? "Sin jugadoras en este equipo. Usa ➕ Crear scout."
                : "Sin jugadores en esta vista."}
             </div>
           ) : groupByPosition && view.kind !== "watchlist" ? (
@@ -1616,7 +1616,11 @@ export default function Scout() {
       {showAddTeam !== false && <AddTeamModal defaultType={showAddTeam} onClose={() => setShowAddTeam(false)} />}
       {showAddPlayer && (
         <AddPlayerModal
-          teamId={(view.kind === "own" || view.kind === "rival") && view.teamId ? view.teamId : undefined}
+          teamId={
+            (view.kind === "own" || view.kind === "rival") && view.teamId ? view.teamId
+            : view.kind === "rival" && filterTeamId ? filterTeamId
+            : undefined
+          }
           forWatchlist={view.kind === "watchlist"}
           rivalTeams={rivalTeams}
           ownTeam={ownTeam}
