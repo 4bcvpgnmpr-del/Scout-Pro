@@ -6,12 +6,12 @@ import {
   Swords, RefreshCw, LogOut, Zap, Plus,
   CheckCircle2, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSeason, type Season } from "@/contexts/SeasonContext";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace, type Workspace } from "@/contexts/WorkspaceContext";
 
 // ─── Static season options (2020 → current+1) ─────────────────────────────────
 function buildSeasonOptions() {
@@ -123,9 +123,26 @@ async function fetchTeams(leagueId: string): Promise<StatTeam[]> {
 
 // ─── WorkspaceBar ─────────────────────────────────────────────────────────────
 
+// Calls PATCH /api/auth/select-team so stat_teams → teams table is synced
+async function syncTeamContext(teamId: string, leagueShortName: string, qc: ReturnType<typeof useQueryClient>) {
+  try {
+    await fetch("/api/auth/select-team", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ teamId, leagueShortName }),
+    });
+    // Refresh the Equipos page data
+    await qc.invalidateQueries({ queryKey: ["/api/teams"] });
+  } catch {
+    // non-fatal
+  }
+}
+
 function WorkspaceBar() {
   const { seasons, selectedSeason, setSelectedSeason } = useSeason();
   const { workspaces, activeId, activate, add, remove } = useWorkspace();
+  const queryClient = useQueryClient();
 
   const [expanded, setExpanded]     = useState(false);
   const [adding,   setAdding]       = useState(false);
@@ -149,7 +166,7 @@ function WorkspaceBar() {
     staleTime: 60_000,
   });
 
-  function handleActivate(ws: { id: string; seasonId: string; seasonName: string }) {
+  function handleActivate(ws: Workspace) {
     activate(ws.id);
     // Try API seasons first; fall back to a synthetic Season so SeasonContext always syncs
     const startYear = parseInt(ws.seasonId.split("-")[0] ?? "0") || 0;
@@ -158,6 +175,8 @@ function WorkspaceBar() {
       seasons.find((x) => x.name === ws.seasonName) ??
       { id: ws.seasonId, name: ws.seasonName, isCurrent: false, startYear, endYear: startYear + 1 };
     setSelectedSeason(s);
+    // Sync stat_teams → teams table so Equipos page updates
+    void syncTeamContext(ws.teamId, ws.leagueId, queryClient);
   }
 
   function openAdd() {
@@ -174,14 +193,17 @@ function WorkspaceBar() {
     const league = leagues.find((l) => l.id === fLeague);
     const team   = teams.find((t) => (t.id ?? t.nombre) === fTeam);
     if (!season || !league || !team) return;
+    const teamId = team.id ?? team.nombre;
     add({
       seasonId:   season.id,
       seasonName: season.name,
       leagueId:   league.id,
       leagueName: league.name,
-      teamId:     team.id ?? team.nombre,
+      teamId,
       teamName:   team.nombre,
     });
+    // Sync stat_teams → teams table so Equipos page updates immediately
+    void syncTeamContext(teamId, league.id, queryClient);
     setAdding(false);
   }
 
