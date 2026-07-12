@@ -18,6 +18,7 @@ import Games from "@/pages/games";
 import Reports from "@/pages/reports";
 import CalendarPage from "@/pages/calendar";
 import Fichajes from "@/pages/fichajes";
+import LigaJugadores from "@/pages/liga-jugadores";
 import Videos from "@/pages/videos";
 import Jugadas from "@/pages/jugadas";
 import Usuarios from "@/pages/usuarios";
@@ -123,6 +124,11 @@ function Router() {
       <Route path="/fichajes">
         <ProtectedRoute>
           <Layout><Fichajes /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/liga-jugadores">
+        <ProtectedRoute>
+          <Layout><LigaJugadores /></Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/videos">

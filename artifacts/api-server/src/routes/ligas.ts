@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, ilike, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { leagues, syncTeams } from "@workspace/db";
+import { leagues, syncTeams, syncPlayers, playerStats, seasons } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -63,6 +63,84 @@ router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
     .orderBy(syncTeams.name);
 
   res.json({ equipos: teams });
+});
+
+// GET /api/liga-jugadores — stat_players with their current-season stats
+// Query params: liga (shortName), posicion, buscar, limit (default 200)
+router.get("/liga-jugadores", async (req, res): Promise<void> => {
+  const { liga, posicion, buscar, limit: limitParam } = req.query as Record<string, string | undefined>;
+  const limit = Math.min(parseInt(limitParam ?? "200", 10) || 200, 500);
+
+  const conditions = [];
+
+  if (liga) {
+    conditions.push(eq(leagues.shortName, liga));
+  }
+  if (posicion) {
+    conditions.push(eq(syncPlayers.position, posicion));
+  }
+  if (buscar) {
+    conditions.push(
+      sql`(upper(${syncPlayers.firstName} || ' ' || ${syncPlayers.lastName}) LIKE upper(${"%" + buscar + "%"}) OR upper(${syncTeams.name}) LIKE upper(${"%" + buscar + "%"}))`,
+    );
+  }
+
+  const rows = await db
+    .select({
+      id:          syncPlayers.id,
+      firstName:   syncPlayers.firstName,
+      lastName:    syncPlayers.lastName,
+      position:    syncPlayers.position,
+      nationality: syncPlayers.nationality,
+      photoUrl:    syncPlayers.photoUrl,
+      teamId:      syncTeams.id,
+      teamName:    syncTeams.name,
+      leagueName:  leagues.shortName,
+      leagueFullName: leagues.name,
+      gender:      leagues.gender,
+      seasonName:  seasons.name,
+      gamesPlayed: playerStats.gamesPlayed,
+      minutesAvg:  playerStats.minutesAvg,
+      points:      playerStats.points,
+      rebounds:    playerStats.rebounds,
+      assists:     playerStats.assists,
+      steals:      playerStats.steals,
+      blocks:      playerStats.blocks,
+      turnovers:   playerStats.turnovers,
+      fg2Made:     playerStats.fg2Made,
+      fg2Att:      playerStats.fg2Att,
+      fg3Made:     playerStats.fg3Made,
+      fg3Att:      playerStats.fg3Att,
+      ftMade:      playerStats.ftMade,
+      ftAtt:       playerStats.ftAtt,
+      pir:         playerStats.pir,
+    })
+    .from(playerStats)
+    .innerJoin(syncPlayers, eq(playerStats.playerId, syncPlayers.id))
+    .innerJoin(syncTeams,   eq(playerStats.teamId,   syncTeams.id))
+    .innerJoin(seasons,     eq(playerStats.seasonId, seasons.id))
+    .innerJoin(leagues,     eq(syncTeams.leagueId,   leagues.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(sql`${playerStats.points} DESC NULLS LAST`)
+    .limit(limit);
+
+  res.json(rows);
+});
+
+// GET /api/liga-jugadores/ligas — distinct leagues that have player stats
+router.get("/liga-jugadores/ligas", async (_req, res): Promise<void> => {
+  const rows = await db
+    .selectDistinct({
+      shortName: leagues.shortName,
+      name:      leagues.name,
+      gender:    leagues.gender,
+    })
+    .from(playerStats)
+    .innerJoin(syncTeams, eq(playerStats.teamId, syncTeams.id))
+    .innerJoin(leagues,   eq(syncTeams.leagueId, leagues.id))
+    .orderBy(leagues.shortName);
+
+  res.json(rows);
 });
 
 export default router;

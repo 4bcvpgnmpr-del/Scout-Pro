@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
   Swords, RefreshCw, LogOut, Zap, Plus,
-  CheckCircle2, ChevronDown, ChevronUp, Trash2,
+  CheckCircle2, ChevronDown, ChevronUp, Trash2, Database,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,9 @@ const navGroups = [
     label: "Gestión",
     items: [
       { name: "Equipos",   href: "/equipos",   icon: Shield },
-      { name: "Jugadores", href: "/jugadores", icon: Users },
-      { name: "Fichajes",  href: "/fichajes",  icon: Star },
+      { name: "Jugadores",   href: "/jugadores",       icon: Users },
+      { name: "Base FEB",    href: "/liga-jugadores",  icon: Database },
+      { name: "Fichajes",    href: "/fichajes",        icon: Star },
     ],
   },
   {
