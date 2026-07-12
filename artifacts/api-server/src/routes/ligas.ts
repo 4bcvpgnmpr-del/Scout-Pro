@@ -68,13 +68,16 @@ router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
 // GET /api/liga-jugadores — stat_players with their current-season stats
 // Query params: liga (shortName), posicion, buscar, limit (default 200)
 router.get("/liga-jugadores", async (req, res): Promise<void> => {
-  const { liga, posicion, buscar, limit: limitParam } = req.query as Record<string, string | undefined>;
+  const { liga, teamId, posicion, buscar, limit: limitParam } = req.query as Record<string, string | undefined>;
   const limit = Math.min(parseInt(limitParam ?? "200", 10) || 200, 500);
 
   const conditions = [];
 
   if (liga) {
     conditions.push(eq(leagues.shortName, liga));
+  }
+  if (teamId) {
+    conditions.push(eq(syncTeams.id, teamId));
   }
   if (posicion) {
     conditions.push(eq(syncPlayers.position, posicion));
@@ -139,6 +142,33 @@ router.get("/liga-jugadores/ligas", async (_req, res): Promise<void> => {
     .innerJoin(syncTeams, eq(playerStats.teamId, syncTeams.id))
     .innerJoin(leagues,   eq(syncTeams.leagueId, leagues.id))
     .orderBy(leagues.shortName);
+
+  res.json(rows);
+});
+
+// GET /api/liga-jugadores/equipos?liga=X — teams that have player stats
+router.get("/liga-jugadores/equipos", async (req, res): Promise<void> => {
+  const { liga } = req.query as Record<string, string | undefined>;
+
+  const conditions = [sql`${playerStats.id} IS NOT NULL`];
+  if (liga) conditions.push(eq(leagues.shortName, liga));
+
+  const rows = await db
+    .select({
+      id:          syncTeams.id,
+      name:        syncTeams.name,
+      logoUrl:     syncTeams.logoUrl,
+      leagueName:  leagues.shortName,
+      leagueFullName: leagues.name,
+      gender:      leagues.gender,
+      playerCount: sql<number>`count(distinct ${playerStats.playerId})::int`,
+    })
+    .from(syncTeams)
+    .innerJoin(leagues,     eq(syncTeams.leagueId, leagues.id))
+    .innerJoin(playerStats, eq(playerStats.teamId, syncTeams.id))
+    .where(liga ? eq(leagues.shortName, liga) : undefined)
+    .groupBy(syncTeams.id, syncTeams.name, syncTeams.logoUrl, leagues.shortName, leagues.name, leagues.gender)
+    .orderBy(leagues.shortName, syncTeams.name);
 
   res.json(rows);
 });
