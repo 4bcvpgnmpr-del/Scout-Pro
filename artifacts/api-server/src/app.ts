@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -38,8 +39,12 @@ app.use(
     secret: (() => {
       const s = process.env["SESSION_SECRET"];
       if (!s) {
-        logger.warn("SESSION_SECRET not set — using insecure fallback; set it in production");
-        return "dev-insecure-fallback";
+        if (process.env["NODE_ENV"] === "production") {
+          logger.error("SESSION_SECRET is required in production — aborting startup");
+          process.exit(1);
+        }
+        logger.warn("SESSION_SECRET not set — using random per-process secret (dev only; sessions reset on restart)");
+        return randomBytes(32).toString("hex");
       }
       return s;
     })(),
