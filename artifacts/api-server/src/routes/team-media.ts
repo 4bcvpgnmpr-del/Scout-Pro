@@ -3,6 +3,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, teamMediaTable } from "@workspace/db";
 import {
   ListTeamMediaParams,
+  ListTeamMediaQueryParams,
   CreateTeamMediaParams,
   CreateTeamMediaBody,
   UpdateTeamMediaParams,
@@ -18,10 +19,19 @@ router.get("/teams/:id/media", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const query = ListTeamMediaQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  const conditions = [eq(teamMediaTable.teamId, params.data.id)];
+  if (query.data.category) {
+    conditions.push(eq(teamMediaTable.category, query.data.category));
+  }
   const media = await db
     .select()
     .from(teamMediaTable)
-    .where(eq(teamMediaTable.teamId, params.data.id))
+    .where(and(...conditions))
     .orderBy(desc(teamMediaTable.createdAt));
   res.json(media);
 });

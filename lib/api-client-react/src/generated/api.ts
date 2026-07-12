@@ -31,6 +31,7 @@ import type {
   HealthStatus,
   ListPlayersParams,
   ListReportsParams,
+  ListTeamMediaParams,
   Player,
   PlayerInput,
   PlayerStatsSummary,
@@ -657,20 +658,29 @@ export const useDeleteTeam = <TError = ErrorType<unknown>,
       return useMutation(getDeleteTeamMutationOptions(options));
     }
 
-export const getListTeamMediaUrl = (id: number,) => {
+export const getListTeamMediaUrl = (id: number,
+    params?: ListTeamMediaParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/teams/${id}/media`
+  return stringifiedParams.length > 0 ? `/api/teams/${id}/media?${stringifiedParams}` : `/api/teams/${id}/media`
 }
 
 /**
  * @summary List media for a team
  */
-export const listTeamMedia = async (id: number, options?: RequestInit): Promise<TeamMedia[]> => {
+export const listTeamMedia = async (id: number,
+    params?: ListTeamMediaParams, options?: RequestInit): Promise<TeamMedia[]> => {
 
-  return customFetch<TeamMedia[]>(getListTeamMediaUrl(id),
+  return customFetch<TeamMedia[]>(getListTeamMediaUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -683,23 +693,25 @@ export const listTeamMedia = async (id: number, options?: RequestInit): Promise<
 
 
 
-export const getListTeamMediaQueryKey = (id: number,) => {
+export const getListTeamMediaQueryKey = (id: number,
+    params?: ListTeamMediaParams,) => {
     return [
-    `/api/teams/${id}/media`
+    `/api/teams/${id}/media`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListTeamMediaQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMedia>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListTeamMediaQueryOptions = <TData = Awaited<ReturnType<typeof listTeamMedia>>, TError = ErrorType<unknown>>(id: number,
+    params?: ListTeamMediaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListTeamMediaQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListTeamMediaQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMedia>>> = ({ signal }) => listTeamMedia(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamMedia>>> = ({ signal }) => listTeamMedia(id,params, { signal, ...requestOptions });
 
 
 
@@ -717,11 +729,12 @@ export type ListTeamMediaQueryError = ErrorType<unknown>
  */
 
 export function useListTeamMedia<TData = Awaited<ReturnType<typeof listTeamMedia>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number,
+    params?: ListTeamMediaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamMedia>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListTeamMediaQueryOptions(id,options)
+  const queryOptions = getListTeamMediaQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

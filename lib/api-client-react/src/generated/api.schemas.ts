@@ -547,6 +547,23 @@ export interface ErrorEnvelope {
   error: string;
 }
 
+export type ListTeamMediaParams = {
+category?: ListTeamMediaCategory;
+};
+
+export type ListTeamMediaCategory = typeof ListTeamMediaCategory[keyof typeof ListTeamMediaCategory];
+
+
+export const ListTeamMediaCategory = {
+  photo: 'photo',
+  video: 'video',
+  system: 'system',
+  highlight: 'highlight',
+  video_partido: 'video_partido',
+  video_rival: 'video_rival',
+  video_propio: 'video_propio',
+} as const;
+
 export type ListPlayersParams = {
 /**
  * @nullable

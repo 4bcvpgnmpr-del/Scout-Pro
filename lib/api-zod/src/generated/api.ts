@@ -140,6 +140,10 @@ export const ListTeamMediaParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const ListTeamMediaQueryParams = zod.object({
+  "category": zod.enum(['photo', 'video', 'system', 'highlight', 'video_partido', 'video_rival', 'video_propio']).optional()
+})
+
 export const ListTeamMediaResponseItem = zod.object({
   "id": zod.number(),
   "teamId": zod.number(),

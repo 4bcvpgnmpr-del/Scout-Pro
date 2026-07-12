@@ -35,7 +35,11 @@ app.use(
       pool,
       createTableIfMissing: true,
     }),
-    secret: process.env["SESSION_SECRET"] ?? "dev-fallback-secret-change-in-prod",
+    secret: (() => {
+      const s = process.env["SESSION_SECRET"];
+      if (!s) throw new Error("SESSION_SECRET env var is required");
+      return s;
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {

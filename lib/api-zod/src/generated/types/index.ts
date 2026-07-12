@@ -18,6 +18,8 @@ export * from './getTopPlayersParams';
 export * from './healthStatus';
 export * from './listPlayersParams';
 export * from './listReportsParams';
+export * from './listTeamMediaCategory';
+export * from './listTeamMediaParams';
 export * from './player';
 export * from './playerInput';
 export * from './playerStatsSummary';
