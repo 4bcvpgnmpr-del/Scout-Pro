@@ -20,7 +20,7 @@ import {
   Trophy, Plus, Search, Trash2, ClipboardList, X, ChevronRight, ChevronDown,
   Camera, Loader2, Star, Users, Swords, UserSearch, GitCompare,
   TrendingUp, TrendingDown, Minus, Settings, Download, SlidersHorizontal,
-  Eye, EyeOff, Calendar,
+  Eye, EyeOff, Calendar, Home, Target, Shirt, UserCog,
 } from "lucide-react";
 import { ScoutFlowLogo } from "@/components/logo";
 import { useTheme } from "@/hooks/use-theme";
@@ -29,6 +29,7 @@ import { TEAM_SECTIONS, type TeamSection } from "@/lib/team-sections";
 import { THEMES, FONTS } from "@/lib/themes";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 import { useReportPrefs, REPORT_SECTIONS } from "@/hooks/use-report-prefs";
+import { ShotMap } from "@/components/shot-map";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const POSITION_LABELS: Record<string, string> = {
@@ -36,10 +37,40 @@ const POSITION_LABELS: Record<string, string> = {
 };
 
 type SidebarView =
-  | { kind: "all" }
+  | { kind: "scouts-rivales" }
+  | { kind: "mapa-tiros"; filterPlayerId?: number }
   | { kind: "own"; teamId?: number; section?: TeamSection }
   | { kind: "rival"; teamId?: number; section?: TeamSection }
   | { kind: "watchlist" };
+
+// ─── Importancia helpers ───────────────────────────────────────────────────────
+type ImportanciaVal = "clave" | "medio" | "normal";
+
+function getImportancia(playerId: number): ImportanciaVal | null {
+  try {
+    const raw = localStorage.getItem(`sp-profile-${playerId}`);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    const imp = p.importancia;
+    if (imp === "clave" || imp === "medio" || imp === "normal") return imp;
+    return null;
+  } catch { return null; }
+}
+
+function setImportanciaLocal(playerId: number, imp: ImportanciaVal) {
+  try {
+    const key = `sp-profile-${playerId}`;
+    const raw = localStorage.getItem(key);
+    const p: Record<string, unknown> = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    localStorage.setItem(key, JSON.stringify({ ...p, importancia: imp }));
+  } catch { /* noop */ }
+}
+
+const IMP_OPTIONS: { value: ImportanciaVal; label: string; dot: string }[] = [
+  { value: "clave",  label: "Clave",  dot: "bg-red-500" },
+  { value: "medio",  label: "Medio",  dot: "bg-amber-500" },
+  { value: "normal", label: "Normal", dot: "bg-gray-400" },
+];
 
 // ─── Player Avatar ─────────────────────────────────────────────────────────────
 function PlayerAvatar({
@@ -260,23 +291,43 @@ function AddTeamModal({ defaultType, onClose }: { defaultType: "own" | "rival"; 
 }
 
 // ─── Add Player Modal ──────────────────────────────────────────────────────────
-function AddPlayerModal({ teamId, forWatchlist, onClose }: { teamId?: number; forWatchlist?: boolean; onClose: () => void }) {
+function AddPlayerModal({ teamId, forWatchlist, rivalTeams, ownTeam, onClose }: {
+  teamId?: number; forWatchlist?: boolean;
+  rivalTeams?: { id: number; name: string }[];
+  ownTeam?: { id: number; name: string } | null;
+  onClose: () => void;
+}) {
   const [name, setName] = useState("");
   const [num, setNum] = useState("");
   const [pos, setPos] = useState("PG");
+  const [importancia, setImportancia] = useState<ImportanciaVal>("normal");
+  const [rivalTeamId, setRivalTeamId] = useState<string>(teamId ? String(teamId) : "");
+  const [partDate, setPartDate] = useState("");
+  const [competition, setCompetition] = useState("liga");
   const createPlayer = useCreatePlayer();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const save = () => {
     if (!name.trim()) return;
+    const resolvedTeamId = teamId ?? (rivalTeamId ? parseInt(rivalTeamId) : null);
     createPlayer.mutate({
-      data: { name: name.trim().toUpperCase(), position: pos, teamId: teamId ?? null, jerseyNumber: num ? parseInt(num) : null, watchlisted: forWatchlist ?? false },
+      data: { name: name.trim().toUpperCase(), position: pos, teamId: resolvedTeamId, jerseyNumber: num ? parseInt(num) : null, watchlisted: forWatchlist ?? false },
     }, {
-      onSuccess: () => {
+      onSuccess: (newPlayer) => {
+        const profile: Record<string, unknown> = { importancia };
+        if (partDate || rivalTeamId) {
+          profile.partido = {
+            rivalTeamId: rivalTeamId ? parseInt(rivalTeamId) : null,
+            rivalTeamName: rivalTeams?.find((t) => t.id === parseInt(rivalTeamId))?.name ?? "",
+            date: partDate,
+            competition,
+          };
+        }
+        localStorage.setItem(`sp-profile-${newPlayer.id}`, JSON.stringify(profile));
         queryClient.invalidateQueries({ queryKey: getListPlayersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
-        toast({ title: "Jugador añadido" });
+        toast({ title: "Scout añadido" });
         onClose();
       },
     });
@@ -284,28 +335,98 @@ function AddPlayerModal({ teamId, forWatchlist, onClose }: { teamId?: number; fo
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Nuevo Jugador</h2>
-            {forWatchlist && <p className="text-sm text-amber-600 font-medium mt-0.5 flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> A fichar</p>}
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-8 pt-7 pb-5 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Nuevo Scout</h2>
+              {forWatchlist && <p className="text-sm text-amber-600 font-medium mt-0.5 flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> A fichar</p>}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
         </div>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre completo"
-          className="w-full mb-3 p-3 border border-gray-200 rounded-lg outline-orange-500 text-gray-900" />
-        <input type="text" value={num} onChange={(e) => setNum(e.target.value)} placeholder="Número de dorsal"
-          className="w-full mb-3 p-3 border border-gray-200 rounded-lg outline-orange-500 text-gray-900" />
-        <div className="flex gap-2 mb-6">
-          {POSITIONS.map((p) => (
-            <button key={p} onClick={() => setPos(p)}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${pos === p ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{p}</button>
-          ))}
+
+        <div className="px-8 py-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Partido escouteado */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Partido escouteado</p>
+            {ownTeam && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400 font-medium w-20 flex-shrink-0">Mi equipo</span>
+                <span className="font-bold text-gray-700">{ownTeam.name}</span>
+              </div>
+            )}
+            {(rivalTeams && rivalTeams.length > 0) && !teamId && (
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1 block">Equipo rival</label>
+                <select value={rivalTeamId} onChange={(e) => setRivalTeamId(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500">
+                  <option value="">Sin especificar</option>
+                  {rivalTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1 block">Fecha</label>
+                <input type="date" value={partDate} onChange={(e) => setPartDate(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 outline-orange-500" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 font-medium mb-1 block">Competición</label>
+                <select value={competition} onChange={(e) => setCompetition(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500">
+                  <option value="liga">Liga</option>
+                  <option value="copa">Copa</option>
+                  <option value="europeo">Europeo</option>
+                  <option value="amistoso">Amistoso</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Jugador */}
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Nombre completo</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="NOMBRE APELLIDO"
+              className="w-full p-3 border border-gray-200 rounded-lg outline-orange-500 text-gray-900 font-medium" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Dorsal</label>
+            <input type="text" value={num} onChange={(e) => setNum(e.target.value)} placeholder="#00"
+              className="w-full p-3 border border-gray-200 rounded-lg outline-orange-500 text-gray-900" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Posición</label>
+            <div className="flex gap-2">
+              {POSITIONS.map((p) => (
+                <button key={p} onClick={() => setPos(p)}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition ${pos === p ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{p}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 font-medium mb-1 block">Importancia</label>
+            <div className="flex gap-2">
+              {IMP_OPTIONS.map((opt) => (
+                <button key={opt.value} onClick={() => setImportancia(opt.value)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                    importancia === opt.value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${opt.dot}`} />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3">
+
+        <div className="px-8 pb-7 flex gap-3">
           <button onClick={save} disabled={createPlayer.isPending}
             className="flex-1 bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition disabled:opacity-60">
-            {createPlayer.isPending ? "Guardando..." : "Guardar"}
+            {createPlayer.isPending ? "Guardando..." : "Guardar scout"}
           </button>
           <button onClick={onClose} className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-200 transition">Cancelar</button>
         </div>
@@ -674,10 +795,10 @@ function BoxScore({ report }: { report: BoxScoreReport }) {
 }
 
 // ─── Report Panel (single player) ─────────────────────────────────────────────
-function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHandedness, playerTeamName, playerTeamLogoUrl, isWatchlisted, onCompare }: {
+function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHandedness, playerTeamName, playerTeamLogoUrl, isWatchlisted, onCompare, onViewShotMap }: {
   playerId: number; playerName: string; playerPos: string;
   playerHandedness?: string | null; playerTeamName?: string | null; playerTeamLogoUrl?: string | null;
-  playerPhotoUrl?: string | null; isWatchlisted?: boolean; onCompare: () => void;
+  playerPhotoUrl?: string | null; isWatchlisted?: boolean; onCompare: () => void; onViewShotMap?: () => void;
 }) {
   const { contentRef, exportPdf, exporting } = useExportPdf(`informe-${playerName}`);
   const queryClient = useQueryClient();
@@ -774,6 +895,12 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHa
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {exporting ? "..." : "PDF"}
           </button>
+          {onViewShotMap && (
+            <button onClick={onViewShotMap}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition">
+              <Target className="h-4 w-4" /> Tiros
+            </button>
+          )}
           <button onClick={onCompare}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition">
             <GitCompare className="h-4 w-4" /> Comparar
@@ -964,12 +1091,13 @@ function ReportPanel({ playerId, playerName, playerPos, playerPhotoUrl, playerHa
 // ─── Main Scout Page ───────────────────────────────────────────────────────────
 export default function Scout() {
   const [, setLocation] = useLocation();
-  const [view, setView] = useState<SidebarView>({ kind: "all" });
+  const [view, setView] = useState<SidebarView>({ kind: "scouts-rivales" });
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [comparePlayerId, setComparePlayerId] = useState<number | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch] = useState("");
   const [filterTeamId, setFilterTeamId] = useState<number | null>(null);
+  const [filterImportancia, setFilterImportancia] = useState<string>("");
   const [groupByPosition, setGroupByPosition] = useState(true);
   const [showAddTeam, setShowAddTeam] = useState<false | "own" | "rival">(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -983,6 +1111,11 @@ export default function Scout() {
   const { data: teams } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
   const ownTeams = teams?.filter((t) => t.teamType === "own") ?? [];
   const rivalTeams = teams?.filter((t) => t.teamType === "rival") ?? [];
+  const ownTeam = ownTeams[0] ?? null;
+  const ownLeague = ownTeam?.league ?? null;
+  const leagueRivalTeams = ownLeague
+    ? rivalTeams.filter((t) => t.league === ownLeague)
+    : rivalTeams;
 
   const playerQueryParams =
     view.kind === "watchlist" ? { watchlisted: true }
@@ -995,7 +1128,13 @@ export default function Scout() {
 
   const filteredPlayers = (allPlayers || []).filter((p) => {
     if (!p.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (view.kind === "all" && filterTeamId !== null && p.teamId !== filterTeamId) return false;
+    if (view.kind === "scouts-rivales") {
+      if (!rivalTeams.some((t) => t.id === p.teamId)) return false;
+    }
+    if ((view.kind === "scouts-rivales" || view.kind === "rival") && filterTeamId !== null && p.teamId !== filterTeamId) return false;
+    if (view.kind === "scouts-rivales" && filterImportancia) {
+      if (getImportancia(p.id) !== filterImportancia) return false;
+    }
     return true;
   });
 
@@ -1124,12 +1263,15 @@ export default function Scout() {
     );
   };
 
-  const sectionTitle = {
-    all: "Todos los Jugadores",
-    own: ownTeams.find((t) => view.kind === "own" && t.id === (view as { teamId?: number }).teamId)?.name ?? "Mi Equipo",
-    rival: rivalTeams.find((t) => view.kind === "rival" && t.id === (view as { teamId?: number }).teamId)?.name ?? "Equipo Rival",
-    watchlist: "Jugadores a Fichar",
-  }[view.kind];
+  const sectionTitle =
+    view.kind === "scouts-rivales" ? "Scouts de Rivales"
+    : view.kind === "mapa-tiros" ? "Mapa de Tiros"
+    : view.kind === "watchlist" ? "Mis Objetivos"
+    : view.kind === "own"
+      ? (ownTeams.find((t) => t.id === (view as { teamId?: number }).teamId)?.name ?? "Mi Plantilla")
+    : view.kind === "rival"
+      ? (rivalTeams.find((t) => t.id === (view as { teamId?: number }).teamId)?.name ?? "Plantilla Rival")
+    : "Jugadores";
 
   const showComparison = !!(selectedPlayer && comparePlayerData);
 
@@ -1149,81 +1291,152 @@ export default function Scout() {
 
       {/* ── COL 1: SIDEBAR ────────────────────────────────────────────────── */}
       <aside className="flex flex-col flex-shrink-0 overflow-hidden" style={{ background: "#0f172a", width: 272 }}>
-        {/* Logo */}
         <div className="px-5 py-5 flex-shrink-0 border-b border-white/5">
           <ScoutFlowLogo size="md" />
         </div>
 
         <div className="flex-1 overflow-y-auto">
+
+          {/* ── DASHBOARD ── */}
+          <div className="pt-4 pb-2 px-3">
+            <Link href="/">
+              <button className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5">
+                <Home className="h-3.5 w-3.5" /> Dashboard
+              </button>
+            </Link>
+          </div>
+
+          <div className="mx-5 h-px bg-white/5" />
+
           {/* ── MI EQUIPO ── */}
-          <div className="pt-5 pb-2">
+          <div className="pt-4 pb-2">
             <div className="px-5 mb-2 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
               <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Mi Equipo</span>
             </div>
             <div className="px-3 space-y-0.5">
-              {ownTeams.length === 0 && <p className="text-gray-700 text-xs px-3 py-1.5 italic">Sin equipo propio</p>}
-              {ownTeams.map((team) => renderTeamRow(team, "own"))}
-              <button onClick={() => setShowAddTeam("own")}
-                className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-blue-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
-                <Plus className="h-3 w-3" /> Añadir mi equipo
+              <button
+                onClick={() => {
+                  if (ownTeam) setView({ kind: "own", teamId: ownTeam.id, section: "roster" });
+                  else setView({ kind: "own" });
+                  setSelectedPlayerId(null); setComparePlayerId(null);
+                }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
+                  view.kind === "own" ? "text-blue-300 bg-blue-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                }`}
+              >
+                <Users className="h-3.5 w-3.5" /> Mi plantilla
               </button>
+              {view.kind === "own" && ownTeam && (
+                <div className="ml-4 mt-0.5 mb-0.5 space-y-0.5">
+                  {TEAM_SECTIONS.map((s) => {
+                    const Icon = s.icon;
+                    const cur = (view as { section?: string }).section === s.key;
+                    return (
+                      <button key={s.key}
+                        onClick={() => { setView({ kind: "own", teamId: ownTeam.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${cur ? "text-blue-400 bg-blue-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
+                        {cur ? <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" /> : <Icon className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />}
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {ownTeams.length === 0 && (
+                <button onClick={() => setShowAddTeam("own")}
+                  className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-blue-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
+                  <Plus className="h-3 w-3" /> Añadir mi equipo
+                </button>
+              )}
             </div>
           </div>
 
           <div className="mx-5 h-px bg-white/5" />
 
-          {/* ── EQUIPOS RIVALES ── */}
+          {/* ── RIVALES ── */}
           <div className="pt-4 pb-2">
             <div className="px-5 mb-2 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Equipos Rivales</span>
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Rivales</span>
             </div>
             <div className="px-3 space-y-0.5">
-              {rivalTeams.length === 0 && <p className="text-gray-700 text-xs px-3 py-1.5 italic">Sin rivales</p>}
-              {rivalTeams.map((team) => renderTeamRow(team, "rival"))}
-              <button onClick={() => setShowAddTeam("rival")}
-                className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-red-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
-                <Plus className="h-3 w-3" /> Añadir rival
+              {navBtn({ kind: "scouts-rivales" }, <><Eye className="h-3.5 w-3.5" /> Scouts rivales</>)}
+              <button
+                onClick={() => { setShowAddPlayer(true); }}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5"
+              >
+                <Plus className="h-3.5 w-3.5" /> Nuevo scout
               </button>
+              <button
+                onClick={() => { setView({ kind: "rival" }); setSelectedPlayerId(null); setComparePlayerId(null); setFilterTeamId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
+                  view.kind === "rival" ? "text-orange-300 bg-orange-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                }`}
+              >
+                <Shirt className="h-3.5 w-3.5" /> Plantilla rival
+              </button>
+              {view.kind === "rival" && rivalTeams.length > 0 && (
+                <div className="ml-4 mt-0.5 mb-0.5 space-y-0.5">
+                  {rivalTeams.map((t) => {
+                    const active = (view as { teamId?: number }).teamId === t.id;
+                    return (
+                      <button key={t.id}
+                        onClick={() => { setView({ kind: "rival", teamId: t.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${active ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
+                        {active ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/10 flex-shrink-0" />}
+                        <span className="truncate">{t.name}</span>
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => setShowAddTeam("rival")}
+                    className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-red-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
+                    <Plus className="h-3 w-3" /> Añadir rival
+                  </button>
+                </div>
+              )}
+              {navBtn({ kind: "mapa-tiros" }, <><Target className="h-3.5 w-3.5" /> Mapa de tiros</>)}
             </div>
           </div>
 
           <div className="mx-5 h-px bg-white/5" />
 
-          {/* ── A FICHAR ── */}
-          <div className="pt-4 pb-4">
+          {/* ── FICHAJES ── */}
+          <div className="pt-4 pb-2">
             <div className="px-5 mb-2 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">A Fichar</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Fichajes</span>
             </div>
-            <div className="px-3">
-              {navBtn({ kind: "watchlist" }, <><Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /> Jugadores a Fichar</>)}
+            <div className="px-3 space-y-0.5">
+              <Link href="/fichajes">
+                <button className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5">
+                  <Search className="h-3.5 w-3.5" /> Explorar ligas
+                </button>
+              </Link>
+              {navBtn({ kind: "watchlist" }, <><Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" /> Mis objetivos</>)}
             </div>
           </div>
-        </div>
 
-        {/* ── BOTTOM NAV ── */}
-        <div className="border-t border-white/5 px-3 py-4 space-y-0.5">
-          <Link href="/reports">
-            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
-              <ClipboardList className="h-4 w-4 flex-shrink-0" /> Todos los informes
-            </button>
-          </Link>
-          <Link href="/games">
-            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
-              <Trophy className="h-4 w-4 flex-shrink-0" /> Partidos
-            </button>
-          </Link>
-          <Link href="/calendar">
-            <button className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-gray-200 hover:bg-white/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
-              <Calendar className="h-4 w-4 flex-shrink-0" /> Calendario
-            </button>
-          </Link>
-          <button onClick={() => setShowSettings(true)}
-            className="w-full text-left text-gray-500 text-[13px] font-medium hover:text-orange-300 hover:bg-orange-500/5 transition-all py-2.5 px-3 rounded-xl flex items-center gap-3">
-            <Settings className="h-4 w-4 flex-shrink-0" /> Personalizar
-          </button>
+          <div className="mx-5 h-px bg-white/5" />
+
+          {/* ── SISTEMA ── */}
+          <div className="pt-4 pb-5">
+            <div className="px-5 mb-2 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Sistema</span>
+            </div>
+            <div className="px-3 space-y-0.5">
+              <button onClick={() => setShowSettings(true)}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-orange-300 hover:bg-orange-500/5">
+                <Settings className="h-3.5 w-3.5" /> Personalizar
+              </button>
+              <button onClick={() => setLocation("/mi-cuenta")}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5">
+                <UserCog className="h-3.5 w-3.5" /> Mi configuración
+              </button>
+            </div>
+          </div>
+
         </div>
       </aside>
 
@@ -1233,6 +1446,20 @@ export default function Scout() {
           section={teamMediaSection!}
           onSectionChange={(s) => { setView({ kind: teamKind, teamId: activeTeam!.id, section: s }); setSelectedPlayerId(null); setComparePlayerId(null); }}
         />
+      ) : view.kind === "mapa-tiros" ? (
+        <div className="flex-1 overflow-hidden">
+          <ShotMap
+            players={(allPlayers ?? []).filter((p) => rivalTeams.some((t) => t.id === p.teamId)).map((p) => ({
+              id: p.id, name: p.name, teamName: p.teamName,
+            }))}
+            initialPlayerId={(view as { filterPlayerId?: number }).filterPlayerId ?? null}
+            onViewScout={(pid) => {
+              setView({ kind: "scouts-rivales" });
+              setSelectedPlayerId(pid);
+              setComparePlayerId(null);
+            }}
+          />
+        </div>
       ) : (
       <>
       {/* ── COL 2: ROSTER ─────────────────────────────────────────────────── */}
@@ -1253,24 +1480,53 @@ export default function Scout() {
               <Plus className="h-4 w-4" /> AÑADIR A FICHAR
             </button>
           )}
+
+          {/* ── Quick team access (scouts-rivales) ── */}
+          {view.kind === "scouts-rivales" && leagueRivalTeams.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              <button
+                onClick={() => { setFilterTeamId(null); setSelectedPlayerId(null); }}
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full transition border ${filterTeamId === null ? "bg-gray-900 text-white border-gray-900" : "text-gray-500 border-gray-200 hover:border-gray-400 bg-white"}`}
+              >
+                Todos
+              </button>
+              {leagueRivalTeams.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setFilterTeamId(filterTeamId === t.id ? null : t.id); setSelectedPlayerId(null); }}
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full transition border truncate max-w-[90px] ${filterTeamId === t.id ? "bg-orange-500 text-white border-orange-500" : "text-gray-500 border-gray-200 hover:border-orange-300 bg-white"}`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar jugador..."
               className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 outline-orange-500 focus:ring-2 focus:ring-orange-100" />
           </div>
-          {view.kind === "all" && teams && teams.length > 0 && (
+
+          {/* Filters: team dropdown + importance */}
+          {(view.kind === "scouts-rivales" || view.kind === "rival") && !leagueRivalTeams.length && rivalTeams.length > 0 && (
             <select
               value={filterTeamId ?? ""}
-              onChange={(e) => {
-                setFilterTeamId(e.target.value ? Number(e.target.value) : null);
-                setSelectedPlayerId(null);
-              }}
-              className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 focus:ring-2 focus:ring-orange-100 cursor-pointer"
+              onChange={(e) => { setFilterTeamId(e.target.value ? Number(e.target.value) : null); setSelectedPlayerId(null); }}
+              className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 cursor-pointer"
             >
               <option value="">Todos los equipos</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
+              {rivalTeams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
+          {view.kind === "scouts-rivales" && (
+            <select
+              value={filterImportancia}
+              onChange={(e) => { setFilterImportancia(e.target.value); setSelectedPlayerId(null); }}
+              className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white outline-orange-500 cursor-pointer"
+            >
+              <option value="">Todas las importancias</option>
+              {IMP_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           )}
         </div>
@@ -1278,7 +1534,10 @@ export default function Scout() {
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">
-              {search ? "Sin resultados." : view.kind === "watchlist" ? "Añade jugadores a fichar con ★" : "Sin jugadores. Añade uno arriba."}
+              {search ? "Sin resultados."
+               : view.kind === "watchlist" ? "Añade jugadores a fichar con ★"
+               : view.kind === "scouts-rivales" ? "Sin scouts. Usa ➕ Nuevo scout."
+               : "Sin jugadores en esta vista."}
             </div>
           ) : groupByPosition && view.kind !== "watchlist" ? (
             <div className="space-y-4">
@@ -1327,6 +1586,7 @@ export default function Scout() {
             playerTeamLogoUrl={selectedPlayer.teamLogoUrl}
             isWatchlisted={selectedPlayer.watchlisted ?? false}
             onCompare={() => setShowPicker(true)}
+            onViewShotMap={() => { setView({ kind: "mapa-tiros", filterPlayerId: selectedPlayer.id }); setSelectedPlayerId(null); }}
           />
         )}
       </main>
@@ -1339,6 +1599,8 @@ export default function Scout() {
         <AddPlayerModal
           teamId={(view.kind === "own" || view.kind === "rival") && view.teamId ? view.teamId : undefined}
           forWatchlist={view.kind === "watchlist"}
+          rivalTeams={rivalTeams}
+          ownTeam={ownTeam}
           onClose={() => setShowAddPlayer(false)}
         />
       )}
