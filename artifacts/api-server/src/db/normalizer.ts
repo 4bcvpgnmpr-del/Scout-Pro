@@ -121,10 +121,24 @@ async function findOrCreateTeam(
   const key = `${leagueId}:${externalId}`;
   if (_teamCache.has(key)) return _teamCache.get(key)!;
 
+  // Primary lookup: by (leagueId, externalId)
   let row = await db.query.syncTeams.findFirst({
     where: (t, { and, eq: eq_ }) =>
       and(eq_(t.leagueId, leagueId), eq_(t.externalId, externalId)),
   });
+
+  // Secondary lookup: by (leagueId, name) — prevents duplicates when the same
+  // team arrives via a different source with a different externalId (e.g. BEV
+  // numeric IDs vs. FEB slugs).
+  if (!row) {
+    row = await db.query.syncTeams.findFirst({
+      where: (t, { and, sql: sql_ }) =>
+        and(
+          sql_`${t.leagueId} = ${leagueId}`,
+          sql_`upper(${t.name}) = upper(${name})`,
+        ),
+    });
+  }
 
   if (!row) {
     const inserted = await db
