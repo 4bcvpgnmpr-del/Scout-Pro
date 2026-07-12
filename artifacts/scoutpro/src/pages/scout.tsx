@@ -1380,13 +1380,32 @@ export default function Scout() {
                 <div className="ml-4 mt-0.5 mb-0.5 space-y-0.5">
                   {rivalTeams.map((t) => {
                     const active = (view as { teamId?: number }).teamId === t.id;
+                    const activeSection = active ? (view as { section?: string }).section : undefined;
                     return (
-                      <button key={t.id}
-                        onClick={() => { setView({ kind: "rival", teamId: t.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${active ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                        {active ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/10 flex-shrink-0" />}
-                        <span className="truncate">{t.name}</span>
-                      </button>
+                      <div key={t.id}>
+                        <button
+                          onClick={() => { setView({ kind: "rival", teamId: t.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium ${active ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
+                          {active ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <span className="w-1.5 h-1.5 rounded-full bg-white/10 flex-shrink-0" />}
+                          <span className="truncate">{t.name}</span>
+                        </button>
+                        {active && (
+                          <div className="ml-4 mt-0.5 space-y-0.5">
+                            {TEAM_SECTIONS.map((s) => {
+                              const Icon = s.icon;
+                              const cur = activeSection === s.key;
+                              return (
+                                <button key={s.key}
+                                  onClick={() => { setView({ kind: "rival", teamId: t.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] flex items-center gap-2 transition-all font-medium ${cur ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
+                                  {cur ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" /> : <Icon className="h-3 w-3 flex-shrink-0 opacity-60" />}
+                                  {s.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                   <button onClick={() => setShowAddTeam("rival")}

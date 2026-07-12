@@ -14,6 +14,12 @@ const objectStorageService = new ObjectStorageService();
 
 const LOCAL_UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo",
+  "application/pdf",
+]);
+
 async function ensureUploadsDir() {
   await fsp.mkdir(LOCAL_UPLOADS_DIR, { recursive: true });
 }
@@ -32,6 +38,11 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   }
 
   const { name, size, contentType } = parsed.data;
+
+  if (!ALLOWED_MIME_TYPES.has(contentType)) {
+    res.status(400).json({ error: `Unsupported file type: ${contentType}` });
+    return;
+  }
 
   try {
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
@@ -73,6 +84,20 @@ router.put("/storage/uploads/local/:uuid", async (req: Request, res: Response) =
   }
   try {
     await ensureUploadsDir();
+    // Validate MIME type from the pre-registered meta file
+    const metaPath = path.join(LOCAL_UPLOADS_DIR, `${uuid}.meta`);
+    try {
+      const metaRaw = await fsp.readFile(metaPath, "utf8");
+      const meta = JSON.parse(metaRaw) as { contentType?: string };
+      if (meta.contentType && !ALLOWED_MIME_TYPES.has(meta.contentType)) {
+        res.status(400).json({ error: `Unsupported file type: ${meta.contentType}` });
+        return;
+      }
+    } catch {
+      // Meta file missing — slot was never pre-registered; reject
+      res.status(404).json({ error: "Upload slot not found" });
+      return;
+    }
     const dest = path.join(LOCAL_UPLOADS_DIR, uuid);
     const writeStream = fs.createWriteStream(dest);
     req.pipe(writeStream);
