@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
-  Swords, RefreshCw, Target, LogOut, Zap, CalendarDays, Plus,
+  Swords, RefreshCw, LogOut, Zap, Plus,
   CheckCircle2, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -24,10 +24,9 @@ const navGroups = [
   {
     label: "Gestión",
     items: [
-      { name: "Seleccionar Equipo", href: "/equipos/seleccionar", icon: Target },
-      { name: "Equipos",            href: "/equipos",             icon: Shield },
-      { name: "Jugadores",          href: "/jugadores",           icon: Users },
-      { name: "Fichajes",           href: "/fichajes",            icon: Star },
+      { name: "Equipos",   href: "/equipos",   icon: Shield },
+      { name: "Jugadores", href: "/jugadores", icon: Users },
+      { name: "Fichajes",  href: "/fichajes",  icon: Star },
     ],
   },
   {
@@ -55,10 +54,9 @@ const navGroups = [
   {
     label: "Admin",
     items: [
-      { name: "Usuarios",       href: "/usuarios",          icon: UserCog },
-      { name: "Sincronización", href: "/admin/sync",        icon: RefreshCw },
-      { name: "Temporadas",     href: "/admin/temporadas",  icon: CalendarDays },
-      { name: "Ajustes",        href: "/ajustes",           icon: Settings },
+      { name: "Usuarios",       href: "/usuarios",   icon: UserCog },
+      { name: "Sincronización", href: "/admin/sync", icon: RefreshCw },
+      { name: "Ajustes",        href: "/ajustes",    icon: Settings },
     ],
   },
 ];
