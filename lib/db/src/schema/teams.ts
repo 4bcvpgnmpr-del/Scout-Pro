@@ -9,6 +9,7 @@ export const teamsTable = pgTable("teams", {
   city: text("city"),
   logoUrl: text("logo_url"),
   teamType: text("team_type").notNull().default("rival"),
+  statTeamExternalId: text("stat_team_external_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -9,6 +9,7 @@ export interface AuthUser {
   role: string;
   subscriptionTier: "amateur" | "professional";
   selectedTeamId: string | null;
+  selectedLeagueShortName: string | null;
 }
 
 interface AuthContextValue {

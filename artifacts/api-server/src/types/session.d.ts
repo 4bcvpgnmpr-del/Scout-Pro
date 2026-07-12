@@ -10,6 +10,7 @@ declare module "express-session" {
       role: string;
       subscriptionTier: "amateur" | "professional";
       selectedTeamId: string | null;
+      selectedLeagueShortName: string | null;
     };
   }
 }

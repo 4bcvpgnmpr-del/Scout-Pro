@@ -118,7 +118,10 @@ export default function SelectTeamPage() {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body:    JSON.stringify({ teamId }),
+        body:    JSON.stringify({
+          teamId,
+          leagueShortName: selectedLeague?.id ?? null,
+        }),
       });
       updateSelectedTeam(teamId);
       setSaved(true);

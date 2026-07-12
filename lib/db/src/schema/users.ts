@@ -17,8 +17,9 @@ export const usersTable = pgTable("users", {
   name:             text("name"),
   role:             text("role").notNull().default("entrenador"),
   subscriptionTier: subscriptionTierEnum("subscription_tier").notNull().default("amateur"),
-  selectedTeamId:   uuid("selected_team_id"),
-  createdAt:        timestamp("created_at").notNull().defaultNow(),
+  selectedTeamId:        text("selected_team_id"),
+  selectedLeagueShortName: text("selected_league_short_name"),
+  createdAt:             timestamp("created_at").notNull().defaultNow(),
 });
 
 // ─── Sessions (connect-pg-simple compatible) ──────────────────────────────────

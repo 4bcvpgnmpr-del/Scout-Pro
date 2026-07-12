@@ -1,8 +1,8 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
+import { eq, isNotNull } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, teamsTable, leagues, syncTeams } from "@workspace/db";
 
 const router = Router();
 
@@ -10,12 +10,13 @@ const SALT_ROUNDS = 10;
 
 function safeUser(u: typeof usersTable.$inferSelect) {
   return {
-    id:               u.id,
-    email:            u.email,
-    name:             u.name,
-    role:             u.role,
-    subscriptionTier: u.subscriptionTier,
-    selectedTeamId:   u.selectedTeamId,
+    id:                      u.id,
+    email:                   u.email,
+    name:                    u.name,
+    role:                    u.role,
+    subscriptionTier:        u.subscriptionTier,
+    selectedTeamId:          u.selectedTeamId,
+    selectedLeagueShortName: u.selectedLeagueShortName,
   };
 }
 
@@ -143,6 +144,13 @@ router.patch("/me/subscription", async (req, res): Promise<void> => {
 });
 
 // ─── PATCH /api/auth/select-team ─────────────────────────────────────────────
+//
+// Body: { teamId: string, leagueShortName: string }
+// teamId      = stat_teams.external_id of the chosen team (or team name for manual leagues)
+// leagueShortName = stat_leagues.short_name (e.g. "liga_fem_eb", "manual-own")
+//
+// Side-effect: syncs the `teams` scouting table so the Scout page sees the
+// correct own/rival teams without any manual setup.
 
 router.patch("/select-team", async (req, res): Promise<void> => {
   if (!req.session?.userId) {
@@ -150,17 +158,116 @@ router.patch("/select-team", async (req, res): Promise<void> => {
     return;
   }
 
-  const { teamId } = req.body as { teamId?: string | null };
+  const { teamId, leagueShortName } = req.body as {
+    teamId?: string | null;
+    leagueShortName?: string | null;
+  };
 
-  await db.update(usersTable)
-    .set({ selectedTeamId: teamId ?? null })
-    .where(eq(usersTable.id, req.session.userId));
+  // 1. Persist selection on user record
+  const [updatedUser] = await db
+    .update(usersTable)
+    .set({
+      selectedTeamId:          teamId          ?? null,
+      selectedLeagueShortName: leagueShortName ?? null,
+    })
+    .where(eq(usersTable.id, req.session.userId))
+    .returning();
 
   if (req.session.user) {
-    req.session.user.selectedTeamId = teamId ?? null;
+    req.session.user.selectedTeamId          = teamId          ?? null;
+    req.session.user.selectedLeagueShortName = leagueShortName ?? null;
   }
 
-  res.json({ ok: true, selectedTeamId: teamId ?? null });
+  // 2. Sync stat_teams → scouting teams table (skip manual leagues)
+  if (teamId && leagueShortName && !leagueShortName.startsWith("manual")) {
+    try {
+      await syncLeagueTeams(teamId, leagueShortName);
+    } catch (err) {
+      // Sync failure is non-fatal — selection is already saved
+      req.log?.warn({ err }, "league sync failed after team selection");
+    }
+  }
+
+  res.json({ ok: true, user: safeUser(updatedUser) });
 });
+
+// ─── Helper: sync stat_teams → teams table ───────────────────────────────────
+
+async function syncLeagueTeams(
+  selectedExternalId: string,
+  leagueShortName: string,
+): Promise<void> {
+  // Find the stat_league
+  const league = await db.query.leagues.findFirst({
+    where: eq(leagues.shortName, leagueShortName),
+  });
+  if (!league) return;
+
+  // Get all stat_teams in this league
+  const statTeamRows = await db
+    .select()
+    .from(syncTeams)
+    .where(eq(syncTeams.leagueId, league.id));
+
+  if (statTeamRows.length === 0) return;
+
+  // Load existing scouting teams that are already linked to stat data
+  const existingLinked = await db
+    .select()
+    .from(teamsTable)
+    .where(isNotNull(teamsTable.statTeamExternalId));
+
+  const linkedMap = new Map(
+    existingLinked.map((t) => [t.statTeamExternalId!, t]),
+  );
+
+  for (const st of statTeamRows) {
+    const extId    = st.externalId ?? st.name;
+    const isOwn    = extId === selectedExternalId;
+    const teamType = isOwn ? "own" : "rival";
+
+    const existing = linkedMap.get(extId);
+
+    if (existing) {
+      await db
+        .update(teamsTable)
+        .set({
+          teamType,
+          name:    st.name,
+          logoUrl: st.logoUrl ?? existing.logoUrl,
+          league:  leagueShortName,
+        })
+        .where(eq(teamsTable.id, existing.id));
+    } else {
+      await db.insert(teamsTable).values({
+        name:               st.name,
+        league:             leagueShortName,
+        logoUrl:            st.logoUrl ?? null,
+        teamType,
+        statTeamExternalId: extId,
+      });
+    }
+  }
+
+  // Ensure any previously-own team in the same league is now rival
+  // (handles the "user changes their team" scenario for manually-linked teams)
+  await db
+    .update(teamsTable)
+    .set({ teamType: "rival" })
+    .where(
+      eq(teamsTable.league, leagueShortName),
+    );
+
+  // Re-apply own to the selected one
+  const ownRow = await db.query.teamsTable.findFirst({
+    where: eq(teamsTable.statTeamExternalId, selectedExternalId),
+  });
+  if (ownRow) {
+    await db
+      .update(teamsTable)
+      .set({ teamType: "own" })
+      .where(eq(teamsTable.id, ownRow.id));
+  }
+}
 
 export default router;
