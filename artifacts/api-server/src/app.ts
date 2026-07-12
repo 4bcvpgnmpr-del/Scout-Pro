@@ -37,7 +37,10 @@ app.use(
     }),
     secret: (() => {
       const s = process.env["SESSION_SECRET"];
-      if (!s) throw new Error("SESSION_SECRET env var is required");
+      if (!s) {
+        logger.warn("SESSION_SECRET not set — using insecure fallback; set it in production");
+        return "dev-insecure-fallback";
+      }
       return s;
     })(),
     resave: false,
