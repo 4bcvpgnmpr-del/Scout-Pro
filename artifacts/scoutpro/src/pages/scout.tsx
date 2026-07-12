@@ -1188,50 +1188,6 @@ export default function Scout() {
     </button>
   );
 
-  const renderTeamRow = (
-    team: { id: number; name: string; logoUrl?: string | null; teamType?: string | null },
-    kind: "own" | "rival",
-  ) => {
-    const active = (view.kind === "own" || view.kind === "rival") && view.kind === kind && view.teamId === team.id;
-    const currentSection: TeamSection =
-      (view.kind === "own" || view.kind === "rival") && view.kind === kind && view.teamId === team.id && view.section
-        ? view.section
-        : "roster";
-    return (
-      <div key={team.id}>
-        <div className="flex items-center gap-1.5">
-          <TeamLogoUpload team={team} />
-          <button
-            onClick={() => { setView({ kind, teamId: team.id, section: "roster" }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-            className={`flex-1 min-w-0 text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium
-              ${active ? "text-white bg-white/8" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"}`}>
-            <span className="truncate flex-1">{team.name}</span>
-            <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${active ? "rotate-180 text-orange-400" : "text-gray-600"}`} />
-          </button>
-        </div>
-        {active && (
-          <div className="ml-11 mt-1 mb-1 space-y-0.5">
-            {TEAM_SECTIONS.map((s) => {
-              const Icon = s.icon;
-              const isCurrent = currentSection === s.key;
-              return (
-                <button key={s.key}
-                  onClick={() => { setView({ kind, teamId: team.id, section: s.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 transition-all font-medium
-                    ${isCurrent ? "text-orange-400 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"}`}>
-                  {isCurrent
-                    ? <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-                    : <Icon className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />}
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderPlayerCard = (player: (typeof filteredPlayers)[0]) => {
     const isSelected = selectedPlayerId === player.id;
     const isCompare = comparePlayerId === player.id;
