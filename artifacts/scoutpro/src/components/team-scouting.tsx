@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, Link } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { getStoredProfile } from "@/hooks/use-player-profile";
 import {
   useListTeamMedia,
@@ -568,28 +568,68 @@ function PlayerRosterRow({ player, onToggleFavorite }: {
 }
 
 // ── Plantilla section (synced with Centro de Partido) ─────────────────────────
+// Extended player type that includes seasonYear returned by the API
+interface PlayerWithSeason {
+  id: number;
+  name: string;
+  position: string;
+  teamId: number | null;
+  teamName: string | null;
+  teamLogoUrl: string | null;
+  jerseyNumber: number | null;
+  age: number | null;
+  height: string | null;
+  weight: number | null;
+  nationality: string | null;
+  handedness: string | null;
+  photoUrl: string | null;
+  notes: string | null;
+  watchlisted: boolean;
+  seasonYear: number | null;
+  statPlayerExternalId: string | null;
+  createdAt: string;
+}
+
 export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: number; teamName: string; showAddButton?: boolean }) {
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [posFilter, setPosFilter] = useState("Todos");
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const updatePlayer = useUpdatePlayer();
 
-  const { data: players, isLoading } = useListPlayers(
-    { teamId },
-    { query: { queryKey: getListPlayersQueryKey({ teamId }) } },
-  );
+  // Fetch all players for this team — includes seasonYear (extra field from backend)
+  const { data: rawPlayers, isLoading } = useQuery<PlayerWithSeason[]>({
+    queryKey: ["players-with-season", teamId],
+    queryFn:  () => fetch(`/api/players?teamId=${teamId}`).then((r) => r.json()),
+  });
+
+  // Derive distinct available years sorted descending
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    (rawPlayers ?? []).forEach((p) => { if (p.seasonYear) years.add(p.seasonYear); });
+    return [...years].sort((a, b) => b - a);
+  }, [rawPlayers]);
+
+  // Auto-select the latest year on first load
+  useEffect(() => {
+    if (availableYears.length > 0 && selectedYear === null) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
 
   const filtered = useMemo(() => {
-    let list = players ?? [];
+    let list = (rawPlayers ?? []).filter((p) =>
+      selectedYear == null || p.seasonYear === selectedYear || !p.seasonYear
+    );
     if (posFilter !== "Todos") list = list.filter(p => p.position === posFilter);
     if (search.trim()) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
-    return [...list].sort((a, b) => (a.jerseyNumber ?? 99) - (b.jerseyNumber ?? 99));
-  }, [players, posFilter, search]);
+    return [...list].sort((a, b) => ((a as { jerseyNumber?: number | null }).jerseyNumber ?? 99) - ((b as { jerseyNumber?: number | null }).jerseyNumber ?? 99));
+  }, [rawPlayers, selectedYear, posFilter, search]);
 
   const handleToggleFavorite = (playerId: number, current: boolean) => {
     updatePlayer.mutate({ id: playerId, data: { watchlisted: !current } }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPlayersQueryKey({ teamId }) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["players-with-season", teamId] }),
     });
   };
 
@@ -602,6 +642,27 @@ export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: 
           <Plus className="h-4 w-4" /> Añadir Jugador
         </button>
       )}
+
+      {/* Season selector */}
+      {availableYears.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Temporada</span>
+          {availableYears.map((y) => (
+            <button
+              key={y}
+              onClick={() => setSelectedYear(y)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                selectedYear === y
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {y}/{y + 1}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -626,7 +687,7 @@ export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: 
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-300" /></div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm">
-          {(players ?? []).length === 0 ? `No hay jugadores en ${teamName}.` : "Sin resultados."}
+          {(rawPlayers ?? []).length === 0 ? `No hay jugadores en ${teamName}.` : "Sin resultados."}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -646,7 +707,7 @@ export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: 
             </thead>
             <tbody>
               {filtered.map(p => (
-                <PlayerRosterRow key={p.id} player={p} onToggleFavorite={handleToggleFavorite} />
+                <PlayerRosterRow key={p.id} player={p as Parameters<typeof PlayerRosterRow>[0]["player"]} onToggleFavorite={handleToggleFavorite} />
               ))}
             </tbody>
           </table>

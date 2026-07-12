@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, isNull } from "drizzle-orm";
 import { db, playersTable, teamsTable, reportsTable } from "@workspace/db";
 import {
   CreatePlayerBody,
@@ -59,6 +59,8 @@ router.get("/players", async (req, res): Promise<void> => {
       photoUrl: playersTable.photoUrl,
       notes: playersTable.notes,
       watchlisted: playersTable.watchlisted,
+      seasonYear: playersTable.seasonYear,
+      statPlayerExternalId: playersTable.statPlayerExternalId,
       createdAt: playersTable.createdAt,
     })
     .from(playersTable)
@@ -77,6 +79,15 @@ router.get("/players", async (req, res): Promise<void> => {
 
   if (query.success && query.data.watchlisted != null) {
     conditions.push(eq(playersTable.watchlisted, query.data.watchlisted));
+  }
+
+  // seasonYear: filter by year, or null to include manually-added players (no season)
+  const rawSeasonYear = req.query.seasonYear;
+  if (rawSeasonYear != null) {
+    const sy = parseInt(String(rawSeasonYear), 10);
+    if (!isNaN(sy)) {
+      conditions.push(eq(playersTable.seasonYear, sy));
+    }
   }
 
   if (conditions.length > 0) {

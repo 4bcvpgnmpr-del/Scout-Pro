@@ -17,6 +17,7 @@ export const playersTable = pgTable("players", {
   notes: text("notes"),
   watchlisted: boolean("watchlisted").notNull().default(false),
   statPlayerExternalId: text("stat_player_external_id"),
+  seasonYear: integer("season_year"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

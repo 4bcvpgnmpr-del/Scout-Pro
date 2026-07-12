@@ -1,7 +1,7 @@
 {
   "primera-feb": {
     "liga": "Primera FEB",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -185,7 +185,7 @@
   },
   "segunda-feb": {
     "liga": "Segunda FEB",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -332,7 +332,7 @@
   },
   "liga-femenina-endesa": {
     "liga": "Liga Femenina Endesa",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -499,7 +499,7 @@
   },
   "lf-challenge": {
     "liga": "LF Challenge",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -666,7 +666,7 @@
   },
   "lf2": {
     "liga": "LF2",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -813,7 +813,7 @@
   },
   "tercera-feb": {
     "liga": "Tercera FEB",
-    "actualizacion": "2026-07-12T23:31:19.268Z",
+    "actualizacion": "2026-07-12T23:40:29.016Z",
     "clasificacion": [],
     "resultados": []
   }
