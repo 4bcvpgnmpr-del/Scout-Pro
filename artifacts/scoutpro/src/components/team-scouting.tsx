@@ -145,7 +145,7 @@ function VideoCard({ media, onDelete }: { media: TeamMedia; onDelete: () => void
 export function TeamMediaSection({ teamId, category }: { teamId: number; category: MediaCategory }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: allMedia, isLoading } = useListTeamMedia(teamId, {
+  const { data: allMedia, isLoading } = useListTeamMedia(teamId, undefined, {
     query: { queryKey: getListTeamMediaQueryKey(teamId) },
   });
   const createMedia = useCreateTeamMedia();
