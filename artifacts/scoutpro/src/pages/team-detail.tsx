@@ -4,6 +4,7 @@ import {
   useGetTeam,
   useDeleteTeam,
   useCreateReport,
+  useListTeams,
   getListTeamsQueryKey,
   getGetTeamQueryKey,
   getListPlayersQueryKey,
@@ -41,6 +42,7 @@ export default function TeamDetail() {
     { teamId },
     { query: { enabled: !!teamId, queryKey: getListPlayersQueryKey({ teamId }) } },
   );
+  const { data: allTeams } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
   const { data: allReports } = useListReports(undefined, {
     query: { enabled: !!teamId, queryKey: getListReportsQueryKey() },
   });
@@ -83,12 +85,23 @@ export default function TeamDetail() {
     });
   };
 
-  const handleDeleteTeam = () => {
-    if (!confirm(`¿Eliminar ${team?.name}? Esta acción no se puede deshacer.`)) return;
+  const handleDeleteTeam = async () => {
+    const isOwn = team?.teamType === "own";
+    const rivals = isOwn ? (allTeams ?? []).filter((t) => t.teamType !== "own") : [];
+    const msg = isOwn && rivals.length > 0
+      ? `¿Eliminar ${team?.name} y sus ${rivals.length} equipo(s) rival(es)? Esta acción no se puede deshacer.`
+      : `¿Eliminar ${team?.name}? Esta acción no se puede deshacer.`;
+    if (!confirm(msg)) return;
+
+    // Cascade: delete all rivals first if removing own team
+    if (rivals.length > 0) {
+      await Promise.all(rivals.map((r) => fetch(`/api/teams/${r.id}`, { method: "DELETE" })));
+    }
+
     deleteTeam.mutate({ id: teamId }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListTeamsQueryKey() });
-        toast({ title: "Equipo eliminado" });
+        toast({ title: isOwn && rivals.length > 0 ? `Equipo y ${rivals.length} rival(es) eliminados` : "Equipo eliminado" });
         setLocation("/equipos");
       },
     });

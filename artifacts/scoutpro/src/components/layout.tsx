@@ -10,8 +10,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSeason } from "@/contexts/SeasonContext";
+import { useSeason, type Season } from "@/contexts/SeasonContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+
+// ─── Static season options (2020 → current+1) ─────────────────────────────────
+function buildSeasonOptions() {
+  const current = new Date().getFullYear();
+  const options: { id: string; name: string }[] = [];
+  for (let y = 2020; y <= current + 1; y++) {
+    const short = String(y + 1).slice(2);
+    options.push({ id: `${y}-${short}`, name: `${y}/${y + 1}` });
+  }
+  return options;
+}
+const SEASON_OPTIONS = buildSeasonOptions();
 
 // ─── Nav groups ───────────────────────────────────────────────────────────────
 
@@ -139,12 +151,18 @@ function WorkspaceBar() {
 
   function handleActivate(ws: { id: string; seasonId: string; seasonName: string }) {
     activate(ws.id);
-    const s = seasons.find((x) => x.id === ws.seasonId);
-    if (s) setSelectedSeason(s);
+    // Try API seasons first; fall back to a synthetic Season so SeasonContext always syncs
+    const startYear = parseInt(ws.seasonId.split("-")[0] ?? "0") || 0;
+    const s: Season =
+      seasons.find((x) => x.id === ws.seasonId) ??
+      seasons.find((x) => x.name === ws.seasonName) ??
+      { id: ws.seasonId, name: ws.seasonName, isCurrent: false, startYear, endYear: startYear + 1 };
+    setSelectedSeason(s);
   }
 
   function openAdd() {
-    setFSeason(selectedSeason?.id ?? seasons[0]?.id ?? "");
+    // Pre-select the most recent season option
+    setFSeason(SEASON_OPTIONS[SEASON_OPTIONS.length - 1]?.id ?? "");
     setFLeague("");
     setFTeam("");
     setAdding(true);
@@ -152,13 +170,13 @@ function WorkspaceBar() {
 
   function handleSave() {
     if (!fSeason || !fLeague || !fTeam) return;
-    const season = seasons.find((s) => s.id === fSeason);
+    const season = SEASON_OPTIONS.find((s) => s.id === fSeason);
     const league = leagues.find((l) => l.id === fLeague);
     const team   = teams.find((t) => (t.id ?? t.nombre) === fTeam);
     if (!season || !league || !team) return;
     add({
       seasonId:   season.id,
-      seasonName: season.name ?? season.id,
+      seasonName: season.name,
       leagueId:   league.id,
       leagueName: league.name,
       teamId:     team.id ?? team.nombre,
@@ -263,7 +281,7 @@ function WorkspaceBar() {
             className="w-full text-xs bg-sidebar-accent/60 border border-sidebar-border rounded px-2 py-1 text-sidebar-foreground outline-none focus:ring-1 focus:ring-primary/50"
           >
             <option value="">— Temporada —</option>
-            {seasons.map((s) => (
+            {SEASON_OPTIONS.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
