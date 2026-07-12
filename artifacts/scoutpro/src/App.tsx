@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import { SubLayout } from "@/components/sub-layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SeasonProvider } from "@/contexts/SeasonContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ProtectedRoute } from "@/components/protected-route";
 
 import Dashboard from "@/pages/dashboard";
@@ -264,10 +265,12 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <SeasonProvider>
-              <AppInit />
-              <Router />
-            </SeasonProvider>
+            <WorkspaceProvider>
+              <SeasonProvider>
+                <AppInit />
+                <Router />
+              </SeasonProvider>
+            </WorkspaceProvider>
           </AuthProvider>
         </WouterRouter>
         <Toaster />

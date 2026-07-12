@@ -3,12 +3,17 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
-  Swords, RefreshCw, Target, LogOut, Zap, CalendarDays,
+  Swords, RefreshCw, Target, LogOut, Zap, CalendarDays, Plus,
+  CheckCircle2, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ScoutFlowLogo, ScoutFlowMark } from "@/components/logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSeason } from "@/contexts/SeasonContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+
+// ─── Nav groups ───────────────────────────────────────────────────────────────
 
 const navGroups = [
   {
@@ -58,6 +63,8 @@ const navGroups = [
   },
 ];
 
+// ─── NavItem ──────────────────────────────────────────────────────────────────
+
 function NavItem({
   item,
   location,
@@ -85,33 +92,235 @@ function NavItem({
   );
 }
 
-function SeasonBar() {
-  const { seasons, selectedSeason, setSelectedSeason } = useSeason();
+// ─── API helpers (reuse from select-team logic) ───────────────────────────────
 
-  if (seasons.length === 0) return null;
+interface League { id: string; name: string; }
+interface StatTeam { id: string | null; nombre: string; shortName: string | null; }
+
+async function fetchLeagues(): Promise<League[]> {
+  const res = await fetch("/api/ligas", { credentials: "include" });
+  if (!res.ok) return [];
+  const rows = await res.json() as Array<{ shortName: string; name: string }>;
+  return rows.map((r) => ({ id: r.shortName, name: r.name }));
+}
+
+async function fetchTeams(leagueId: string): Promise<StatTeam[]> {
+  const res = await fetch(`/api/equipos/${encodeURIComponent(leagueId)}`, { credentials: "include" });
+  if (!res.ok) return [];
+  const data = await res.json() as { equipos: StatTeam[] };
+  return data.equipos;
+}
+
+// ─── WorkspaceBar ─────────────────────────────────────────────────────────────
+
+function WorkspaceBar() {
+  const { seasons, selectedSeason, setSelectedSeason } = useSeason();
+  const { workspaces, activeId, activate, add, remove } = useWorkspace();
+
+  const [expanded, setExpanded]     = useState(false);
+  const [adding,   setAdding]       = useState(false);
+
+  // Form state
+  const [fSeason,  setFSeason]  = useState("");
+  const [fLeague,  setFLeague]  = useState("");
+  const [fTeam,    setFTeam]    = useState("");
+
+  const { data: leagues = [] } = useQuery<League[]>({
+    queryKey: ["ws-leagues"],
+    queryFn: fetchLeagues,
+    enabled: adding,
+    staleTime: 60_000,
+  });
+
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<StatTeam[]>({
+    queryKey: ["ws-teams", fLeague],
+    queryFn: () => fetchTeams(fLeague),
+    enabled: adding && fLeague !== "",
+    staleTime: 60_000,
+  });
+
+  function handleActivate(ws: { id: string; seasonId: string; seasonName: string }) {
+    activate(ws.id);
+    const s = seasons.find((x) => x.id === ws.seasonId);
+    if (s) setSelectedSeason(s);
+  }
+
+  function openAdd() {
+    setFSeason(selectedSeason?.id ?? seasons[0]?.id ?? "");
+    setFLeague("");
+    setFTeam("");
+    setAdding(true);
+  }
+
+  function handleSave() {
+    if (!fSeason || !fLeague || !fTeam) return;
+    const season = seasons.find((s) => s.id === fSeason);
+    const league = leagues.find((l) => l.id === fLeague);
+    const team   = teams.find((t) => (t.id ?? t.nombre) === fTeam);
+    if (!season || !league || !team) return;
+    add({
+      seasonId:   season.id,
+      seasonName: season.name ?? season.id,
+      leagueId:   league.id,
+      leagueName: league.name,
+      teamId:     team.id ?? team.nombre,
+      teamName:   team.nombre,
+    });
+    setAdding(false);
+  }
+
+  const activeWs = workspaces.find((w) => w.id === activeId);
 
   return (
-    <div className="px-3 py-2 border-b border-sidebar-border">
-      <div className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/40 mb-1 px-1">
-        Temporada
+    <div className="border-b border-sidebar-border">
+      {/* Header row */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/40">
+          Contexto de trabajo
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={openAdd}
+            title="Añadir contexto"
+            className="text-sidebar-foreground/40 hover:text-primary transition-colors"
+          >
+            <Plus size={13} />
+          </button>
+          {workspaces.length > 0 && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
+            >
+              {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+          )}
+        </div>
       </div>
-      <select
-        value={selectedSeason?.id ?? ""}
-        onChange={(e) => {
-          const s = seasons.find((x) => x.id === e.target.value) ?? null;
-          setSelectedSeason(s);
-        }}
-        className="w-full text-xs bg-sidebar-accent/60 text-sidebar-foreground border border-sidebar-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer"
-      >
-        {seasons.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
+
+      {/* Active workspace pill */}
+      {activeWs && !expanded && !adding && (
+        <div className="px-3 pb-2">
+          <div className="bg-sidebar-accent/60 rounded-md px-2 py-1.5 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-medium truncate">{activeWs.teamName}</div>
+              <div className="text-[9px] text-sidebar-foreground/40 truncate">
+                {activeWs.seasonName} · {activeWs.leagueName}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded list */}
+      {expanded && !adding && workspaces.length > 0 && (
+        <div className="px-2 pb-2 space-y-0.5">
+          {workspaces.map((ws) => {
+            const isActive = ws.id === activeId;
+            return (
+              <div
+                key={ws.id}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${
+                  isActive
+                    ? "bg-primary/15 text-sidebar-foreground"
+                    : "hover:bg-sidebar-accent/60 text-sidebar-foreground/70"
+                }`}
+                onClick={() => { handleActivate(ws); setExpanded(false); }}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? "bg-primary" : "bg-sidebar-foreground/20"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-medium truncate">{ws.teamName}</div>
+                  <div className="text-[9px] text-sidebar-foreground/40 truncate">
+                    {ws.seasonName} · {ws.leagueName}
+                  </div>
+                </div>
+                {isActive && <CheckCircle2 size={11} className="text-primary shrink-0" />}
+                <button
+                  onClick={(e) => { e.stopPropagation(); remove(ws.id); }}
+                  title="Eliminar"
+                  className="opacity-0 group-hover:opacity-100 text-sidebar-foreground/30 hover:text-red-400 transition-all shrink-0"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!adding && workspaces.length === 0 && (
+        <div className="px-3 pb-2">
+          <p className="text-[10px] text-sidebar-foreground/30 italic">Sin contextos guardados</p>
+        </div>
+      )}
+
+      {/* Add form */}
+      {adding && (
+        <div className="px-3 pb-3 space-y-1.5">
+          {/* Season */}
+          <select
+            value={fSeason}
+            onChange={(e) => setFSeason(e.target.value)}
+            className="w-full text-xs bg-sidebar-accent/60 border border-sidebar-border rounded px-2 py-1 text-sidebar-foreground outline-none focus:ring-1 focus:ring-primary/50"
+          >
+            <option value="">— Temporada —</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+
+          {/* League */}
+          <select
+            value={fLeague}
+            onChange={(e) => { setFLeague(e.target.value); setFTeam(""); }}
+            className="w-full text-xs bg-sidebar-accent/60 border border-sidebar-border rounded px-2 py-1 text-sidebar-foreground outline-none focus:ring-1 focus:ring-primary/50"
+          >
+            <option value="">— Liga —</option>
+            {leagues.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+
+          {/* Team */}
+          <select
+            value={fTeam}
+            onChange={(e) => setFTeam(e.target.value)}
+            disabled={!fLeague || teamsLoading}
+            className="w-full text-xs bg-sidebar-accent/60 border border-sidebar-border rounded px-2 py-1 text-sidebar-foreground outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-40"
+          >
+            <option value="">
+              {teamsLoading ? "Cargando…" : fLeague ? "— Equipo —" : "— Elige liga primero —"}
+            </option>
+            {teams.map((t) => {
+              const id = t.id ?? t.nombre;
+              return <option key={id} value={id}>{t.nombre}</option>;
+            })}
+          </select>
+
+          {/* Buttons */}
+          <div className="flex gap-1.5 pt-0.5">
+            <button
+              onClick={handleSave}
+              disabled={!fSeason || !fLeague || !fTeam}
+              className="flex-1 text-[11px] font-medium bg-primary text-primary-foreground rounded px-2 py-1 disabled:opacity-40 hover:opacity-90 transition-opacity"
+            >
+              Guardar
+            </button>
+            <button
+              onClick={() => setAdding(false)}
+              className="flex-1 text-[11px] text-sidebar-foreground/60 border border-sidebar-border rounded px-2 py-1 hover:bg-sidebar-accent/40 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// ─── UserFooter ───────────────────────────────────────────────────────────────
 
 function UserFooter({ onNavClick }: { onNavClick?: () => void }) {
   const { user, logout } = useAuth();
@@ -160,6 +369,8 @@ function UserFooter({ onNavClick }: { onNavClick?: () => void }) {
   );
 }
 
+// ─── SidebarContent ───────────────────────────────────────────────────────────
+
 function SidebarContent({ location, onNavClick }: { location: string; onNavClick?: () => void }) {
   return (
     <div className="flex flex-col h-full">
@@ -170,7 +381,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
           </div>
         </Link>
       </div>
-      <SeasonBar />
+      <WorkspaceBar />
       <div className="flex-1 overflow-y-auto py-3">
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
@@ -191,6 +402,8 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
     </div>
   );
 }
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
