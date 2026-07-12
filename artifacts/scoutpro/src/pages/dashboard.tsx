@@ -340,7 +340,7 @@ export default function Dashboard() {
   ];
 
   const quickLinks = [
-    { href: "/scout", icon: Target, label: "Nuevo Scouting", sub: "Analiza a tu rival", iconCls: "text-orange-400", bg: "bg-orange-500/10" },
+    { href: "/scouting", icon: Target, label: "Hub Scouting", sub: "Gestiona el scouting", iconCls: "text-orange-400", bg: "bg-orange-500/10" },
     { href: "/videos", icon: Video, label: "Vídeos", sub: "Gestiona tus vídeos", iconCls: "text-purple-400", bg: "bg-purple-500/10" },
     { href: "/jugadores", icon: Users, label: "Jugadores", sub: "Gestiona jugadores", iconCls: "text-blue-400", bg: "bg-blue-500/10" },
     { href: "/fichajes", icon: Star, label: "Fichajes", sub: "Busca y sigue talento", iconCls: "text-amber-400", bg: "bg-amber-500/10" },
@@ -678,7 +678,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {gameScouting.fortalezas.length > 3 && (
-                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scouting"}>
                           <span className="text-[10px] text-primary/60 hover:text-primary transition cursor-pointer">
                             +{gameScouting.fortalezas.length - 3} más →
                           </span>
@@ -686,7 +686,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   ) : (
-                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scouting"}>
                       <span className="text-xs text-muted-foreground/50 hover:text-primary cursor-pointer transition">Analizar en Centro de Partido →</span>
                     </Link>
                   )}
@@ -709,7 +709,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                       {gameScouting.debilidades.length > 3 && (
-                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                        <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scouting"}>
                           <span className="text-[10px] text-primary/60 hover:text-primary transition cursor-pointer">
                             +{gameScouting.debilidades.length - 3} más →
                           </span>
@@ -717,7 +717,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   ) : (
-                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scout"}>
+                    <Link href={nextGame ? `/games/${nextGame.id}/match-center` : "/scouting"}>
                       <span className="text-xs text-muted-foreground/50 hover:text-primary cursor-pointer transition">Identificar en Centro de Partido →</span>
                     </Link>
                   )}
@@ -735,7 +735,7 @@ export default function Dashboard() {
               )}
 
               {/* CTA */}
-              <Link href={nextGame ? `/games/${nextGame.id}/match-center` : (rivalInfo.id ? `/teams/${rivalInfo.id}` : "/scout")}>
+              <Link href={nextGame ? `/games/${nextGame.id}/match-center` : (rivalInfo.id ? `/teams/${rivalInfo.id}` : "/scouting")}>
                 <button className="w-full py-2.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-bold text-primary hover:text-primary transition flex items-center justify-center gap-1.5">
                   Abrir Centro de Partido <ArrowRight className="h-3.5 w-3.5" />
                 </button>
