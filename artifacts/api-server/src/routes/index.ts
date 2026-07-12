@@ -11,12 +11,14 @@ import febRouter from "./feb";
 import adminSyncRouter from "./admin-sync.routes.js";
 import authRouter from "./auth.routes.js";
 import seasonsRouter from "./seasons.js";
+import ligasRouter from "./ligas.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(storageRouter);
 router.use(dashboardRouter);
+router.use(ligasRouter);
 router.use(teamsRouter);
 router.use(teamMediaRouter);
 router.use(playersRouter);

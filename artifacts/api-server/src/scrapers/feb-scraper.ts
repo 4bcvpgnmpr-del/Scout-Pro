@@ -515,3 +515,238 @@ export async function scrapearEstadisticasBEV(): Promise<FebBEVStats> {
 
   return result;
 }
+
+// ── Scraper de jugadores BEV ───────────────────────────────────────────────────
+// Cadena confirmada (2026-07):
+//   rankings.aspx?g=N&t=Y&nm=SLUG → Equipo.aspx?i=TEAM_ID hrefs
+//   Equipo.aspx?i=TEAM_ID         → Jugador.aspx?i=TEAM_ID&c=PLAYER_ID hrefs
+//   jugador/TEAM_ID/PLAYER_ID     → tabla 2 (totales) plain-text cells
+//
+// Estructura tabla totales confirmada:
+//   fila 0: cabeceras de sección (colspan)
+//   fila 1: FASE Part MIN PT T2 T3 TC TL RO RD RT AS BR BP TF TC-MT MT FC FR VA
+//   fila 2: "Temp: 25/26. Equipo: NOMBRE" (label colspan)
+//   fila 3+: datos por fase (LR / PO / CF…)
+// Celda MIN = "MM:SS"; fracciones = "made/att"; resto = enteros plain text.
+
+export interface BEVPlayerStatsEntry {
+  teamBevId:    string;
+  teamName:     string;
+  playerBevId:  string;
+  firstName:    string;
+  lastName:     string;
+  photoUrl:     string;
+  gamesPlayed:  number;
+  minutesTotal: number;  // minutos decimales
+  points:       number;
+  fg2Made:      number; fg2Att: number;
+  fg3Made:      number; fg3Att: number;
+  ftMade:       number; ftAtt:  number;
+  offRebounds:  number; defRebounds: number; rebounds: number;
+  assists:      number; steals:      number; turnovers: number;
+  blocks:       number; fouls:       number;
+  pir:          number;
+}
+
+export interface BEVLeaguePlayersData {
+  ligaId:  string;
+  players: BEVPlayerStatsEntry[];
+}
+
+function parseMinutesBEV(raw: string): number {
+  const parts = raw.split(":");
+  return (parseInt(parts[0] ?? "0", 10) || 0) + (parseInt(parts[1] ?? "0", 10) || 0) / 60;
+}
+
+function parseFracBEV(raw: string): { made: number; att: number } {
+  const [a, b] = raw.split("/");
+  return { made: parseInt(a ?? "0", 10) || 0, att: parseInt(b ?? "0", 10) || 0 };
+}
+
+/**
+ * Parsea "APELLIDOS, NOMBRE" → { firstName, lastName }
+ * Si no hay coma, intenta split por espacios (último token = apellido).
+ */
+function parseBEVName(raw: string): { firstName: string; lastName: string } {
+  const comma = raw.indexOf(",");
+  if (comma !== -1) {
+    return {
+      lastName:  raw.slice(0, comma).trim(),
+      firstName: raw.slice(comma + 1).trim(),
+    };
+  }
+  const parts = raw.trim().split(/\s+/);
+  if (parts.length === 1) return { firstName: "", lastName: raw.trim() };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.at(-1)! };
+}
+
+/** Etiqueta de temporada para el parámetro `t=` de BEV (ej. año=2025 → "25/26"). */
+function bevSeasonLabel(año: number): string {
+  return `${String(año).slice(-2)}/${String(año + 1).slice(-2)}`;
+}
+
+/**
+ * Extrae IDs de equipo únicos de la página rankings.aspx de una liga.
+ * Los hrefs "Equipo.aspx?i=XXXXX" aparecen en las tablas de rankings.
+ */
+async function scrapeBEVTeamIds(g: number, nm: string, año: number): Promise<string[]> {
+  const url  = `https://baloncestoenvivo.feb.es/rankings.aspx?g=${g}&t=${año}&nm=${nm}`;
+  const html = await fetchHtml(url);
+  const $    = load(html);
+  const ids  = new Set<string>();
+  $("a[href]").each((_, el) => {
+    const m = ($(el).attr("href") ?? "").match(/Equipo\.aspx\?i=(\d+)/i);
+    if (m) ids.add(m[1]!);
+  });
+  return [...ids];
+}
+
+/**
+ * Extrae IDs de jugador únicos de la página de un equipo (Equipo.aspx?i=TEAM_ID).
+ * Los hrefs "Jugador.aspx?i=TEAM_ID&c=PLAYER_ID" aparecen en la tabla de plantilla.
+ */
+async function scrapeBEVPlayerIds(teamBevId: string): Promise<string[]> {
+  const url  = `https://baloncestoenvivo.feb.es/Equipo.aspx?i=${teamBevId}`;
+  const html = await fetchHtml(url);
+  const $    = load(html);
+  const ids  = new Set<string>();
+  $("a[href]").each((_, el) => {
+    const m = ($(el).attr("href") ?? "").match(/Jugador\.aspx\?i=\d+&c=(\d+)/i);
+    if (m) ids.add(m[1]!);
+  });
+  return [...ids];
+}
+
+/**
+ * Extrae estadísticas de temporada actual de la página de un jugador.
+ * URL: https://baloncestoenvivo.feb.es/jugador/{teamId}/{playerId}
+ *
+ * Suma todas las fases (LR + PO + CF…) de la temporada activa.
+ * Devuelve null si el jugador no tiene registros en la temporada actual.
+ */
+export async function scrapeBEVPlayerStats(
+  teamBevId: string,
+  playerBevId: string,
+): Promise<BEVPlayerStatsEntry | null> {
+  const url    = `https://baloncestoenvivo.feb.es/jugador/${teamBevId}/${playerBevId}`;
+  const html   = await fetchHtml(url);
+  const $      = load(html);
+  const label  = bevSeasonLabel(bevSeasonYear()); // "25/26"
+
+  const rawName = $(".box-jugador .nombre").text().trim();
+  if (!rawName) return null;
+
+  const { firstName, lastName } = parseBEVName(rawName);
+  const photoUrl  = $(".box-jugador .foto img").attr("src") ?? "";
+  const teamName  = $(".box-jugador .equipo a").text().trim();
+
+  // Tabla de TOTALES = 3ª tabla de la página (índice 2)
+  const rows = $("table").eq(2).find("tr").toArray();
+
+  let inTarget = false;
+  let hasData  = false;
+  const acc = {
+    gamesPlayed: 0, minutesTotal: 0, points: 0,
+    fg2Made: 0, fg2Att: 0, fg3Made: 0, fg3Att: 0,
+    ftMade:  0, ftAtt:  0,
+    offRebounds: 0, defRebounds: 0, rebounds: 0,
+    assists: 0, steals: 0, turnovers: 0, blocks: 0, fouls: 0, pir: 0,
+  };
+
+  for (const tr of rows) {
+    const tds     = $(tr).find("td");
+    const rowText = $(tr).text().replace(/\s+/g, " ").trim();
+
+    // Fila de etiqueta de temporada (colspan, contiene "Temp:")
+    if (rowText.includes("Temp:")) {
+      inTarget = rowText.includes(label);
+      continue;
+    }
+
+    if (!inTarget) continue;
+    if (tds.length < 20) continue;                  // cabeceras o filas incompletas
+    const cell = (i: number) => tds.eq(i).text().trim();
+    if (cell(0) === "FASE") continue;               // fila de cabecera de columnas
+
+    acc.gamesPlayed  += parseInt(cell(1), 10)  || 0;
+    acc.minutesTotal += parseMinutesBEV(cell(2));
+    acc.points       += parseInt(cell(3), 10)  || 0;
+
+    const t2 = parseFracBEV(cell(4));
+    acc.fg2Made += t2.made; acc.fg2Att += t2.att;
+
+    const t3 = parseFracBEV(cell(5));
+    acc.fg3Made += t3.made; acc.fg3Att += t3.att;
+
+    const tl = parseFracBEV(cell(7));
+    acc.ftMade += tl.made; acc.ftAtt += tl.att;
+
+    acc.offRebounds += parseInt(cell(8),  10) || 0;
+    acc.defRebounds += parseInt(cell(9),  10) || 0;
+    acc.rebounds    += parseInt(cell(10), 10) || 0;
+    acc.assists     += parseInt(cell(11), 10) || 0;
+    acc.steals      += parseInt(cell(12), 10) || 0;
+    acc.turnovers   += parseInt(cell(13), 10) || 0;
+    acc.blocks      += parseInt(cell(16), 10) || 0; // MT (tapones realizados)
+    acc.fouls       += parseInt(cell(17), 10) || 0; // FC (faltas cometidas)
+    acc.pir         += parseInt(cell(19), 10) || 0; // VA (valoración)
+    hasData = true;
+  }
+
+  if (!hasData || acc.gamesPlayed === 0) return null;
+
+  return { teamBevId, teamName, playerBevId, firstName, lastName, photoUrl, ...acc };
+}
+
+/**
+ * Extrae estadísticas de jugadores de una liga BEV completa.
+ * Cadena: rankings.aspx → IDs de equipo → Equipo.aspx → IDs de jugador → jugador page.
+ */
+export async function scrapeBEVLeaguePlayers(comp: {
+  id: string; nombre: string; g: number; nm: string;
+}): Promise<BEVLeaguePlayersData> {
+  const año     = bevSeasonYear();
+  const players: BEVPlayerStatsEntry[] = [];
+
+  try {
+    const teamIds = await scrapeBEVTeamIds(comp.g, comp.nm, año);
+    logger.info({ liga: comp.nombre, equipos: teamIds.length }, "[BEV] equipos descubiertos para jugadores");
+
+    for (const teamId of teamIds) {
+      await new Promise((r) => setTimeout(r, 800));
+      try {
+        const playerIds = await scrapeBEVPlayerIds(teamId);
+        for (const playerId of playerIds) {
+          await new Promise((r) => setTimeout(r, 500));
+          try {
+            const stats = await scrapeBEVPlayerStats(teamId, playerId);
+            if (stats) players.push(stats);
+          } catch (err) {
+            logger.warn({ teamId, playerId, err }, "[BEV] error jugador — se omite");
+          }
+        }
+      } catch (err) {
+        logger.warn({ teamId, err }, "[BEV] error plantilla equipo — se omite");
+      }
+    }
+  } catch (err) {
+    logger.warn({ liga: comp.nombre, err }, "[BEV] error en scrapeBEVLeaguePlayers");
+  }
+
+  logger.info({ liga: comp.nombre, jugadores: players.length }, "[BEV] stats jugadores extraídas");
+  return { ligaId: comp.id, players };
+}
+
+/**
+ * Extrae estadísticas de jugadores de todas las ligas BEV.
+ * Proceso lento (~500 requests) — pensado para ejecutarse una vez al día.
+ */
+export async function scrapeBEVAllLeaguePlayers(): Promise<BEVLeaguePlayersData[]> {
+  const results: BEVLeaguePlayersData[] = [];
+  for (const comp of BEV_COMPETICIONES) {
+    const data = await scrapeBEVLeaguePlayers(comp);
+    results.push(data);
+    await new Promise((r) => setTimeout(r, 1500)); // pausa entre ligas
+  }
+  return results;
+}

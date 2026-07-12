@@ -11,3 +11,4 @@
 - [Orval mutation body wrapper](orval-mutation-body.md) — Orval-generated mutation hooks wrap body as { data: payload }; always call mutate({ data: { ...fields } }) not mutate({ ...fields }).
 - [Season selector architecture](season-selector-arch.md) — SeasonContext wraps Router in App.tsx; SeasonBar in sidebar; pages use queryFn override to pass ?season= without spec changes to existing endpoints.
 - [BEV scraper conventions](bev-scraper.md) — baloncestoenvivo.feb.es has TEAM stats only (no player stats); uses t=startYear; cells have values on 2nd non-empty line.
+- [BEV player scraper chain](bev-player-scraper.md) — rankings.aspx → Equipo.aspx team IDs → Equipo.aspx roster → jugador/TEAM/PLAYER stats; cells are plain text; table index 2 = totals; season label row contains "Temp: YY/YY".

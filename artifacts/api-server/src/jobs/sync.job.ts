@@ -2,13 +2,14 @@ import cron from "node-cron";
 import { db } from "@workspace/db";
 import { syncLog, leagues } from "@workspace/db";
 import { fetchAllEuroLeagues } from "../scrapers/euroleague.client.js";
-import { scrapearTodas, scrapearEstadisticasBEV } from "../scrapers/feb-scraper.js";
+import { scrapearTodas, scrapearEstadisticasBEV, scrapeBEVAllLeaguePlayers } from "../scrapers/feb-scraper.js";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import {
   clearNormalizerCaches,
   normalizeFebStats,
   normalizeFebBEVStats,
+  normalizeBEVPlayerStats,
   normalizeEuroStats,
   normalizeEuroStanding,
 } from "../db/normalizer.js";
@@ -67,6 +68,45 @@ async function upsertFebData() {
       .where(eq(syncLog.id, logEntry.id));
 
     logger.error({ err }, "[FEB sync] failed");
+  }
+}
+
+// ─── BEV player stats sync ────────────────────────────────────────────────────
+
+async function upsertBEVPlayerData() {
+  const logEntry = await db
+    .insert(syncLog)
+    .values({ source: "feb", status: "running" })
+    .returning()
+    .then((r) => r[0]);
+
+  try {
+    clearNormalizerCaches();
+
+    const allData = await scrapeBEVAllLeaguePlayers();
+    let total = 0;
+    for (const data of allData) {
+      const rows = await normalizeBEVPlayerStats(data);
+      total += rows;
+    }
+
+    await db
+      .update(syncLog)
+      .set({ status: "success", recordsProcessed: total, finishedAt: new Date() })
+      .where(eq(syncLog.id, logEntry.id));
+
+    logger.info({ total }, "[BEV players sync] completed");
+  } catch (err) {
+    await db
+      .update(syncLog)
+      .set({
+        status:       "error",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        finishedAt:   new Date(),
+      })
+      .where(eq(syncLog.id, logEntry.id));
+
+    logger.error({ err }, "[BEV players sync] failed");
   }
 }
 
@@ -139,6 +179,12 @@ export function registerSyncJobs() {
     logger.info("[cron] Nightly maintenance done");
   });
 
+  // BEV player stats — diario a las 04:00 (proceso lento, ~500 requests)
+  cron.schedule("0 4 * * *", async () => {
+    logger.info("[cron] Starting BEV player stats sync...");
+    await upsertBEVPlayerData();
+  });
+
   logger.info("[ScoutFlow] Sync jobs registered ✓");
 }
 
@@ -147,4 +193,5 @@ export function registerSyncJobs() {
 export const syncHandlers = {
   feb:        upsertFebData,
   euroleague: upsertEuroLeagueData,
+  bevPlayers: upsertBEVPlayerData,
 };

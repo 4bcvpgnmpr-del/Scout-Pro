@@ -14,39 +14,42 @@ interface League {
   gender: string;
   level: number;
   isAutomated: boolean;
+  teamCount: number;
 }
 
-interface Team {
-  id: string;
-  name: string;
+interface StatTeam {
+  id: string | null;
+  nombre: string;
   shortName: string | null;
   logoUrl: string | null;
-  league?: string;
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
 
 async function fetchLeagues(): Promise<League[]> {
-  const res = await fetch("/api/admin/sync/status", { credentials: "include" });
+  const res = await fetch("/api/ligas", { credentials: "include" });
   if (!res.ok) return [];
-  const sources = await res.json() as Array<{ id: string; leagues: string[] }>;
-  return sources.flatMap((s) =>
-    s.leagues.map((name, i) => ({
-      id:          `${s.id}-${i}`,
-      name,
-      shortName:   name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 4),
-      source:      s.id,
-      gender:      name.startsWith("LF") ? "F" : "M",
-      level:       1,
-      isAutomated: s.id !== "manual",
-    })),
-  );
+  const rows = await res.json() as Array<{
+    shortName: string; name: string; source: string;
+    gender: string; level: number; isAutomated: boolean; teamCount: number;
+  }>;
+  return rows.map((r) => ({
+    id:          r.shortName,
+    name:        r.name,
+    shortName:   r.shortName.toUpperCase().slice(0, 4),
+    source:      r.source,
+    gender:      r.gender,
+    level:       r.level,
+    isAutomated: r.isAutomated,
+    teamCount:   r.teamCount,
+  }));
 }
 
-async function fetchTeams(): Promise<Team[]> {
-  const res = await fetch("/api/teams", { credentials: "include" });
+async function fetchLeagueTeams(ligaId: string): Promise<StatTeam[]> {
+  const res = await fetch(`/api/equipos/${encodeURIComponent(ligaId)}`, { credentials: "include" });
   if (!res.ok) return [];
-  return res.json();
+  const data = await res.json() as { equipos: StatTeam[] };
+  return data.equipos;
 }
 
 // ─── Components ───────────────────────────────────────────────────────────────
@@ -87,35 +90,37 @@ export default function SelectTeamPage() {
 
   const { data: leagues = [] } = useQuery({
     queryKey: ["leagues-list"],
-    queryFn: fetchLeagues,
+    queryFn:  fetchLeagues,
   });
 
-  const { data: teams = [] } = useQuery({
-    queryKey: ["teams-all"],
-    queryFn: fetchTeams,
-    enabled: step === "team",
+  const { data: leagueTeams = [], isLoading: teamsLoading } = useQuery({
+    queryKey: ["league-teams", selectedLeague?.id],
+    queryFn:  () => fetchLeagueTeams(selectedLeague!.id),
+    enabled:  step === "team" && selectedLeague !== null,
   });
 
-  const filteredTeams = teams.filter((t) =>
-    (t.name + (t.shortName ?? "")).toLowerCase().includes(searchTeam.toLowerCase())
+  const filteredTeams = leagueTeams.filter((t) =>
+    (t.nombre + (t.shortName ?? "")).toLowerCase().includes(searchTeam.toLowerCase())
   );
 
   const handleSelectLeague = (league: League) => {
     if (league.isAutomated && user?.subscriptionTier !== "professional") return;
     setSelectedLeague(league);
+    setSearchTeam("");
     setStep("team");
   };
 
-  const handleSelectTeam = async (team: Team) => {
+  const handleSelectTeam = async (team: StatTeam) => {
+    const teamId = team.id ?? team.nombre;
     setSaving(true);
     try {
       await fetch("/api/auth/select-team", {
-        method: "PATCH",
+        method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ teamId: team.id }),
+        body:    JSON.stringify({ teamId }),
       });
-      updateSelectedTeam(team.id);
+      updateSelectedTeam(teamId);
       setSaved(true);
       setTimeout(() => navigate("/"), 1000);
     } finally {
@@ -137,7 +142,7 @@ export default function SelectTeamPage() {
         )}
         <div>
           <h1 className="text-xl font-medium">
-            {step === "league" ? "Selecciona tu liga" : `Equipos de ${selectedLeague?.name}`}
+            {step === "league" ? "Selecciona tu liga" : `Equipos — ${selectedLeague?.name}`}
           </h1>
           <p className="text-sm text-zinc-500 mt-0.5">
             {step === "league"
@@ -151,9 +156,8 @@ export default function SelectTeamPage() {
       {step === "league" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {leagues.length === 0 && (
-            /* Fallback: show manual option if API returns nothing */
             <button
-              onClick={() => handleSelectLeague({ id: "manual", name: "Liga propia", shortName: "OWN", source: "manual", gender: "M", level: 1, isAutomated: false })}
+              onClick={() => handleSelectLeague({ id: "manual", name: "Liga propia", shortName: "OWN", source: "manual", gender: "M", level: 1, isAutomated: false, teamCount: 0 })}
               className="bg-zinc-800/60 rounded-xl p-4 border border-zinc-700/40 text-left hover:border-zinc-500 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
@@ -192,6 +196,9 @@ export default function SelectTeamPage() {
                 <div className="flex items-center gap-1.5">
                   <GenderBadge gender={league.gender} />
                   <SourceBadge source={league.source} />
+                  {league.teamCount > 0 && (
+                    <span className="text-[10px] text-zinc-500">{league.teamCount} equipos</span>
+                  )}
                 </div>
                 {blocked && (
                   <p className="text-[11px] text-zinc-600 mt-2">Disponible con el plan Profesional</p>
@@ -199,10 +206,9 @@ export default function SelectTeamPage() {
               </button>
             );
           })}
-          {/* Always show manual option */}
           {leagues.length > 0 && !leagues.find((l) => l.source === "manual") && (
             <button
-              onClick={() => handleSelectLeague({ id: "manual-own", name: "Liga propia", shortName: "OWN", source: "manual", gender: "M", level: 9, isAutomated: false })}
+              onClick={() => handleSelectLeague({ id: "manual-own", name: "Liga propia", shortName: "OWN", source: "manual", gender: "M", level: 9, isAutomated: false, teamCount: 0 })}
               className="bg-zinc-800/60 rounded-xl p-4 border border-zinc-700/40 text-left hover:border-zinc-500 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
@@ -231,20 +237,23 @@ export default function SelectTeamPage() {
             />
           </div>
 
-          {filteredTeams.length === 0 ? (
+          {teamsLoading ? (
+            <div className="text-center py-8 text-sm text-zinc-500">Cargando equipos…</div>
+          ) : filteredTeams.length === 0 ? (
             <div className="text-center py-8 text-sm text-zinc-500">
-              No hay equipos registrados.{" "}
-              <a href="/teams/new" className="text-zinc-300 hover:text-white">
-                Añadir equipo
-              </a>
+              No hay equipos en esta liga.{" "}
+              <button onClick={() => setStep("league")} className="text-zinc-300 hover:text-white underline">
+                Cambiar liga
+              </button>
             </div>
           ) : (
             <div className="space-y-2">
               {filteredTeams.map((team) => {
-                const isSelected = user?.selectedTeamId === team.id;
+                const teamId = team.id ?? team.nombre;
+                const isSelected = user?.selectedTeamId === teamId;
                 return (
                   <button
-                    key={team.id}
+                    key={teamId}
                     onClick={() => handleSelectTeam(team)}
                     disabled={saving}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${
@@ -255,10 +264,10 @@ export default function SelectTeamPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-300">
-                        {team.shortName?.[0] ?? team.name[0]}
+                        {team.shortName?.[0] ?? team.nombre[0]}
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-medium">{team.name}</p>
+                        <p className="text-sm font-medium">{team.nombre}</p>
                         {team.shortName && (
                           <p className="text-[11px] text-zinc-500">{team.shortName}</p>
                         )}

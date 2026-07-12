@@ -3,7 +3,7 @@ import {
   leagues, seasons, syncTeams, syncPlayers, playerStats, standings,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import type { CompeticionData } from "../scrapers/feb-scraper.js";
+import type { CompeticionData, BEVLeaguePlayersData } from "../scrapers/feb-scraper.js";
 import type { EuroPlayerStat, EuroStanding } from "../scrapers/euroleague.client.js";
 import { logger } from "../lib/logger.js";
 
@@ -401,6 +401,194 @@ export async function normalizeEuroStats(stat: EuroPlayerStat): Promise<void> {
       .values({ playerId, teamId, seasonId, ...payload })
       .onConflictDoNothing();
   }
+}
+
+// ─── BEV player normalizer ────────────────────────────────────────────────────
+
+/**
+ * Busca o crea un jugador con identidad BEV (externalId = "bev-{playerBevId}").
+ * Guarda firstName/lastName tal como vienen del scraper.
+ */
+async function findOrCreateBEVPlayer(opts: {
+  playerBevId: string;
+  firstName:   string;
+  lastName:    string;
+  photoUrl:    string;
+}): Promise<string> {
+  const externalId = `bev-${opts.playerBevId}`;
+  if (_playerCache.has(externalId)) return _playerCache.get(externalId)!;
+
+  let row = await db.query.syncPlayers.findFirst({
+    where: (p, { eq: eq_ }) => eq_(p.externalId, externalId),
+  });
+
+  if (!row) {
+    const inserted = await db
+      .insert(syncPlayers)
+      .values({
+        externalId,
+        firstName: opts.firstName,
+        lastName:  opts.lastName,
+        photoUrl:  opts.photoUrl || null,
+      })
+      .onConflictDoNothing()
+      .returning();
+    row = inserted[0] ?? await db.query.syncPlayers.findFirst({
+      where: (p, { eq: eq_ }) => eq_(p.externalId, externalId),
+    });
+  } else if (opts.photoUrl && !row.photoUrl) {
+    await db
+      .update(syncPlayers)
+      .set({ photoUrl: opts.photoUrl, updatedAt: new Date() })
+      .where(eq(syncPlayers.id, row.id));
+  }
+
+  const id = row!.id;
+  _playerCache.set(externalId, id);
+  return id;
+}
+
+/**
+ * Upserts player_stats for one BEV player entry.
+ * Computes minutesAvg, tsPercent, efgPercent from raw totals.
+ */
+async function upsertBEVPlayerStats(data: {
+  playerId:    string;
+  teamId:      string;
+  seasonId:    string;
+  gamesPlayed: number;
+  minutesTotal: number;
+  points:      number;
+  fg2Made: number; fg2Att: number;
+  fg3Made: number; fg3Att: number;
+  ftMade:  number; ftAtt:  number;
+  offRebounds: number; defRebounds: number; rebounds: number;
+  assists:     number; steals:      number; turnovers: number;
+  blocks:      number; fouls:       number;
+  pir:         number;
+}): Promise<void> {
+  const { playerId, teamId, seasonId } = data;
+
+  const minutesAvg  = data.gamesPlayed > 0 ? data.minutesTotal / data.gamesPlayed : 0;
+  const fgAtt       = data.fg2Att + data.fg3Att;
+  const tsPercent   = (2 * fgAtt + 0.44 * data.ftAtt) > 0
+    ? data.points / (2 * (fgAtt + 0.44 * data.ftAtt))
+    : null;
+  const efgPercent  = fgAtt > 0
+    ? (data.fg2Made + data.fg3Made + 0.5 * data.fg3Made) / fgAtt
+    : null;
+
+  const payload = {
+    gamesPlayed:  data.gamesPlayed,
+    minutesTotal: data.minutesTotal,
+    minutesAvg,
+    points:       data.points,
+    fg2Made:      data.fg2Made, fg2Att: data.fg2Att,
+    fg3Made:      data.fg3Made, fg3Att: data.fg3Att,
+    ftMade:       data.ftMade,  ftAtt:  data.ftAtt,
+    offRebounds:  data.offRebounds,
+    defRebounds:  data.defRebounds,
+    rebounds:     data.rebounds,
+    assists:      data.assists,
+    steals:       data.steals,
+    turnovers:    data.turnovers,
+    blocks:       data.blocks,
+    fouls:        data.fouls,
+    pir:          data.pir,
+    tsPercent,
+    efgPercent,
+    dataEntryMethod: "scraped" as const,
+    scrapedAt:    new Date(),
+    updatedAt:    new Date(),
+  };
+
+  const existing = await db.query.playerStats.findFirst({
+    where: (s, { and, eq: eq_ }) =>
+      and(eq_(s.playerId, playerId), eq_(s.teamId, teamId), eq_(s.seasonId, seasonId)),
+  });
+
+  if (existing) {
+    await db.update(playerStats).set(payload).where(eq(playerStats.id, existing.id));
+  } else {
+    await db
+      .insert(playerStats)
+      .values({ playerId, teamId, seasonId, ...payload })
+      .onConflictDoNothing();
+  }
+}
+
+/**
+ * Normaliza y persiste estadísticas de jugadores BEV para una liga.
+ * Retorna el número de registros procesados.
+ */
+export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData): Promise<number> {
+  if (!data.players.length) return 0;
+
+  const ligaId = data.ligaId;
+  const isFem  = ligaId.startsWith("lf") || ligaId.includes("femenin");
+
+  // Liga — usa los mismos parámetros que normalizeFebStats para reutilizar
+  // el registro ya existente en la BD.
+  const leagueId = await findOrCreateLeague({
+    name:       ligaId,   // si ya existe, este valor se ignora (onConflictDoNothing)
+    shortName:  ligaId,
+    source:     "feb",
+    externalId: ligaId,
+    gender:     isFem ? "F" : "M",
+  });
+
+  const { startYear, endYear } = febSeasonYears();
+  const seasonId = await findOrCreateSeason(leagueId, startYear, endYear);
+
+  let count = 0;
+
+  for (const p of data.players) {
+    try {
+      // Equipo — externalId = "bev-{teamBevId}" para evitar colisiones con
+      // los slugs de www.feb.es; si ya existe con ese externalId, se reutiliza.
+      const teamId = await findOrCreateTeam(
+        leagueId,
+        `bev-${p.teamBevId}`,
+        p.teamName,
+      );
+
+      const playerId = await findOrCreateBEVPlayer({
+        playerBevId: p.playerBevId,
+        firstName:   p.firstName,
+        lastName:    p.lastName,
+        photoUrl:    p.photoUrl,
+      });
+
+      await upsertBEVPlayerStats({
+        playerId, teamId, seasonId,
+        gamesPlayed:  p.gamesPlayed,
+        minutesTotal: p.minutesTotal,
+        points:       p.points,
+        fg2Made:      p.fg2Made, fg2Att: p.fg2Att,
+        fg3Made:      p.fg3Made, fg3Att: p.fg3Att,
+        ftMade:       p.ftMade,  ftAtt:  p.ftAtt,
+        offRebounds:  p.offRebounds,
+        defRebounds:  p.defRebounds,
+        rebounds:     p.rebounds,
+        assists:      p.assists,
+        steals:       p.steals,
+        turnovers:    p.turnovers,
+        blocks:       p.blocks,
+        fouls:        p.fouls,
+        pir:          p.pir,
+      });
+
+      count++;
+    } catch (err) {
+      logger.warn(
+        { ligaId, playerBevId: p.playerBevId, err },
+        "[BEV players] error normalizando jugador — se omite",
+      );
+    }
+  }
+
+  logger.info({ ligaId, count }, "[BEV players] normalization complete");
+  return count;
 }
 
 export async function normalizeEuroStanding(standing: EuroStanding): Promise<void> {
