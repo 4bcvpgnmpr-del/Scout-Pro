@@ -1102,6 +1102,7 @@ export default function Scout() {
   const [showAddTeam, setShowAddTeam] = useState<false | "own" | "rival">(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [expandedTeamIds, setExpandedTeamIds] = useState<Set<number>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
   useTheme();
@@ -1240,7 +1241,12 @@ export default function Scout() {
     (view.kind === "own" || view.kind === "rival") && view.section
       ? view.section
       : null;
-  const showTeamScouting = !!(activeTeam && teamMediaSection && view.kind === "own");
+  const showTeamScouting = !!(activeTeam && teamMediaSection && (view.kind === "own" || view.kind === "rival"));
+  const toggleTeam = (id: number) => setExpandedTeamIds((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans antialiased overflow-hidden">
@@ -1266,29 +1272,55 @@ export default function Scout() {
 
           {/* ── MI EQUIPO ── */}
           <div className="pt-4 pb-2">
-            <div className="px-5 mb-2 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Mi Equipo</span>
+            <div className="px-5 mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Mi Equipo</span>
+              </div>
+              <button onClick={() => setShowAddTeam("own")} title="Añadir equipo"
+                className="text-gray-600 hover:text-blue-400 transition-colors"><Plus className="h-3 w-3" /></button>
             </div>
             <div className="px-3 space-y-0.5">
-              <button
-                onClick={() => {
-                  if (ownTeam) setView({ kind: "own", teamId: ownTeam.id, section: "roster" });
-                  else setView({ kind: "own" });
-                  setSelectedPlayerId(null); setComparePlayerId(null);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
-                  view.kind === "own" ? "text-blue-300 bg-blue-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-                }`}
-              >
-                <Users className="h-3.5 w-3.5" /> Mi plantilla
-              </button>
-              {ownTeams.length === 0 && (
+              {ownTeams.length === 0 ? (
                 <button onClick={() => setShowAddTeam("own")}
                   className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-blue-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
                   <Plus className="h-3 w-3" /> Añadir mi equipo
                 </button>
-              )}
+              ) : ownTeams.map((team) => {
+                const isExpanded = expandedTeamIds.has(team.id);
+                const isActiveTeam = view.kind === "own" && view.teamId === team.id;
+                return (
+                  <div key={team.id}>
+                    <button
+                      onClick={() => toggleTeam(team.id)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
+                        isActiveTeam ? "text-blue-300 bg-blue-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                      }`}
+                    >
+                      <div className="w-2 h-2 rounded-sm bg-blue-500/60 shrink-0" />
+                      <span className="flex-1 truncate text-left">{team.name}</span>
+                      {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-0.5 mb-1 ml-2 pl-3 border-l border-white/5 space-y-0.5">
+                        {TEAM_SECTIONS.map((sec) => {
+                          const active = view.kind === "own" && view.teamId === team.id && view.section === sec.key;
+                          return (
+                            <button key={sec.key}
+                              onClick={() => { setView({ kind: "own", teamId: team.id, section: sec.key }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+                              className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-all text-[13px] font-medium ${
+                                active ? "text-blue-300 bg-blue-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                              }`}>
+                              <sec.icon className="h-3.5 w-3.5 shrink-0" />
+                              {sec.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1296,27 +1328,64 @@ export default function Scout() {
 
           {/* ── RIVALES ── */}
           <div className="pt-4 pb-2">
-            <div className="px-5 mb-2 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Rivales</span>
+            <div className="px-5 mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.14em]">Rivales</span>
+              </div>
+              <button onClick={() => setShowAddTeam("rival")} title="Añadir rival"
+                className="text-gray-600 hover:text-red-400 transition-colors"><Plus className="h-3 w-3" /></button>
             </div>
             <div className="px-3 space-y-0.5">
               {navBtn({ kind: "scouts-rivales" }, <><Eye className="h-3.5 w-3.5" /> Scouts rivales</>)}
-              <button
-                onClick={() => { setShowAddPlayer(true); }}
-                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5"
-              >
+              {navBtn({ kind: "mapa-tiros" }, <><Target className="h-3.5 w-3.5" /> Mapa de tiros</>)}
+              <button onClick={() => setShowAddPlayer(true)}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5">
                 <Plus className="h-3.5 w-3.5" /> Nuevo scout
               </button>
-              <button
-                onClick={() => { setView({ kind: "rival" }); setSelectedPlayerId(null); setComparePlayerId(null); setFilterTeamId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
-                  view.kind === "rival" ? "text-orange-300 bg-orange-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-                }`}
-              >
-                <Shirt className="h-3.5 w-3.5" /> Plantilla rival
-              </button>
-              {navBtn({ kind: "mapa-tiros" }, <><Target className="h-3.5 w-3.5" /> Mapa de tiros</>)}
+
+              {/* Per-rival-team expandable nodes */}
+              {(leagueRivalTeams.length > 0 ? leagueRivalTeams : rivalTeams).map((team) => {
+                const isExpanded = expandedTeamIds.has(team.id);
+                const isActiveTeam = view.kind === "rival" && view.teamId === team.id;
+                return (
+                  <div key={team.id}>
+                    <button
+                      onClick={() => toggleTeam(team.id)}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
+                        isActiveTeam ? "text-orange-300 bg-orange-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                      }`}
+                    >
+                      <div className="w-2 h-2 rounded-sm bg-red-500/50 shrink-0" />
+                      <span className="flex-1 truncate text-left">{team.name}</span>
+                      {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-0.5 mb-1 ml-2 pl-3 border-l border-white/5 space-y-0.5">
+                        {TEAM_SECTIONS.map((sec) => {
+                          const active = view.kind === "rival" && view.teamId === team.id && view.section === sec.key;
+                          return (
+                            <button key={sec.key}
+                              onClick={() => { setView({ kind: "rival", teamId: team.id, section: sec.key }); setSelectedPlayerId(null); setComparePlayerId(null); setFilterTeamId(null); }}
+                              className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-all text-[13px] font-medium ${
+                                active ? "text-orange-300 bg-orange-500/10" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                              }`}>
+                              <sec.icon className="h-3.5 w-3.5 shrink-0" />
+                              {sec.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {rivalTeams.length === 0 && (
+                <button onClick={() => setShowAddTeam("rival")}
+                  className="w-full text-left text-gray-600 text-[11px] py-2 px-3 hover:text-red-400 transition-all flex items-center gap-2 rounded-lg hover:bg-white/5">
+                  <Plus className="h-3 w-3" /> Añadir rival
+                </button>
+              )}
             </div>
           </div>
 
