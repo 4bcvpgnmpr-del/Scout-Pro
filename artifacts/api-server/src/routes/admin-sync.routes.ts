@@ -115,7 +115,7 @@ router.get("/status", async (_req, res) => {
 
 // ─── POST /all ────────────────────────────────────────────────────────────────
 
-router.post("/all", requireAuth, requirePro, async (_req, res) => {
+router.post("/all", requireAuth, async (_req, res) => {
   try {
     Promise.allSettled([
       syncHandlers.feb(),
@@ -130,7 +130,7 @@ router.post("/all", requireAuth, requirePro, async (_req, res) => {
 
 // ─── POST /:source ────────────────────────────────────────────────────────────
 
-router.post("/:source", requireAuth, requirePro, async (req, res): Promise<void> => {
+router.post("/:source", requireAuth, async (req, res): Promise<void> => {
   const { source } = req.params;
   const handler = syncHandlers[source as keyof typeof syncHandlers];
 

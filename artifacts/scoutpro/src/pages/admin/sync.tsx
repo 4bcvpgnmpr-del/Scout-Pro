@@ -11,6 +11,7 @@ import {
   Loader2,
   ChevronRight,
   History,
+  Users,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -301,6 +302,7 @@ export default function SyncPage() {
   const [syncingSource, setSyncingSource] = useState<LeagueSource | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [isSyncingHistorical, setIsSyncingHistorical] = useState(false);
+  const [isSyncingBEVPlayers, setIsSyncingBEVPlayers] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "ok" | "err" } | null>(null);
 
   const showToast = (message: string, type: "ok" | "err") => {
@@ -308,7 +310,7 @@ export default function SyncPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const useMock = true;
+  const useMock = false;
 
   const { data: sources = MOCK_SOURCES } = useQuery({
     queryKey: ["sync-status"],
@@ -362,6 +364,13 @@ export default function SyncPage() {
     onSettled: () => setIsSyncingHistorical(false),
   });
 
+  const bevPlayersMutation = useMutation({
+    mutationFn: () => triggerSync("bevPlayers"),
+    onSuccess: () => showToast("Sync de jugadores BEV iniciado — puede tardar ~15 min", "ok"),
+    onError:   () => showToast("Error al iniciar sync de jugadores BEV", "err"),
+    onSettled: () => setIsSyncingBEVPlayers(false),
+  });
+
   const handleSync = (source: LeagueSource) => {
     setSyncingSource(source);
     syncMutation.mutate(source);
@@ -375,6 +384,11 @@ export default function SyncPage() {
   const handleSyncHistorical = () => {
     setIsSyncingHistorical(true);
     historicalMutation.mutate();
+  };
+
+  const handleSyncBEVPlayers = () => {
+    setIsSyncingBEVPlayers(true);
+    bevPlayersMutation.mutate();
   };
 
   return (
@@ -431,6 +445,41 @@ export default function SyncPage() {
             isSyncing={syncingSource === source.id}
           />
         ))}
+      </div>
+
+      {/* BEV Players sync */}
+      <div className="bg-zinc-800/60 rounded-xl p-4 border border-zinc-700/40 mb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 w-8 h-8 rounded-lg bg-emerald-900/40 border border-emerald-800/50 flex items-center justify-center shrink-0">
+              <Users size={15} className="text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-200 mb-0.5">Jugadores BEV — temporada actual</h3>
+              <p className="text-[11px] text-zinc-500 max-w-lg">
+                Importa estadísticas individuales de jugadores de todas las ligas FEB desde baloncestoenvivo.feb.es.
+                Proceso lento (~15 min). Se ejecuta automáticamente cada noche a las 04:00.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {["1ª FEB","2ª FEB","3ª FEB","LF Endesa","LF Challenge","LF2"].map((l) => (
+                  <span key={l} className="text-[10px] px-2 py-0.5 bg-zinc-700/60 text-zinc-400 rounded">{l}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleSyncBEVPlayers}
+            disabled={isSyncingBEVPlayers}
+            className="shrink-0 flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-md bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white transition-colors"
+          >
+            {isSyncingBEVPlayers ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Users size={12} />
+            )}
+            {isSyncingBEVPlayers ? "Iniciando…" : "Sync jugadores"}
+          </button>
+        </div>
       </div>
 
       {/* Historical import */}
