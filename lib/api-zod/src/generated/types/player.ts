@@ -33,5 +33,9 @@ export interface Player {
   /** @nullable */
   notes?: string | null;
   watchlisted?: boolean;
+  /** @nullable */
+  seasonYear?: number | null;
+  /** @nullable */
+  statPlayerExternalId?: string | null;
   createdAt: string;
 }

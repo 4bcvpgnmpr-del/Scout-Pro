@@ -11,15 +11,35 @@ export default function Teams() {
   const { workspaces, activeId } = useWorkspace();
   const activeWs = workspaces.find((w) => w.id === activeId);
 
-  const playerCountByTeam = (teamId: number) =>
-    players?.filter((p) => p.teamId === teamId).length ?? 0;
+  // Parse active season start year from workspace seasonId ("2025-26" → 2025)
+  const activeSeasonYear = activeWs
+    ? parseInt(activeWs.seasonId.split("-")[0] ?? "0", 10) || null
+    : null;
 
-  // If there's an active workspace, only show teams from that league
+  const playerCountByTeam = (teamId: number) =>
+    (players ?? []).filter(
+      (p) => p.teamId === teamId && (activeSeasonYear == null || p.seasonYear === activeSeasonYear)
+    ).length;
+
+  // Teams with at least one player in the active season (eliminates same-club old-season duplicates)
+  const teamsWithSeasonPlayers = activeSeasonYear
+    ? new Set(
+        (players ?? [])
+          .filter((p) => p.seasonYear === activeSeasonYear && p.teamId != null)
+          .map((p) => p.teamId!)
+      )
+    : null;
+
+  // Filter: active workspace league + must have players in active season
   const visibleTeams = activeWs
-    ? (teams ?? []).filter((t) => t.league === activeWs.leagueId)
+    ? (teams ?? []).filter(
+        (t) =>
+          t.league === activeWs.leagueId &&
+          (teamsWithSeasonPlayers == null || teamsWithSeasonPlayers.has(t.id))
+      )
     : (teams ?? []);
 
-  const ownTeams  = visibleTeams.filter((t) => t.teamType === "own");
+  const ownTeams   = visibleTeams.filter((t) => t.teamType === "own");
   const rivalTeams = visibleTeams.filter((t) => t.teamType !== "own");
 
   return (

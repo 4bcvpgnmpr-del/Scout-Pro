@@ -235,6 +235,8 @@ export const ListPlayersResponseItem = zod.object({
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "watchlisted": zod.boolean().optional(),
+  "seasonYear": zod.number().nullish(),
+  "statPlayerExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListPlayersResponse = zod.array(ListPlayersResponseItem)
@@ -282,6 +284,8 @@ export const GetPlayerResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "watchlisted": zod.boolean().optional(),
+  "seasonYear": zod.number().nullish(),
+  "statPlayerExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -324,6 +328,8 @@ export const UpdatePlayerResponse = zod.object({
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "watchlisted": zod.boolean().optional(),
+  "seasonYear": zod.number().nullish(),
+  "statPlayerExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

@@ -854,6 +854,10 @@ components:
           type: ["string", "null"]
         watchlisted:
           type: boolean
+        seasonYear:
+          type: ["integer", "null"]
+        statPlayerExternalId:
+          type: ["string", "null"]
         createdAt:
           type: string
 
