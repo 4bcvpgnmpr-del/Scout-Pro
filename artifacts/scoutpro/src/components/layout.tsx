@@ -13,11 +13,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSeason, type Season } from "@/contexts/SeasonContext";
 import { useWorkspace, type Workspace } from "@/contexts/WorkspaceContext";
 
-// ─── Static season options (last 3 seasons + upcoming) ───────────────────────
+// ─── Static season options (previous + current + 2 upcoming) ─────────────────
 function buildSeasonOptions() {
   const current = new Date().getFullYear();
   const options: { id: string; name: string }[] = [];
-  for (let y = current - 3; y <= current; y++) {
+  // current-2 = temporada pasada, current-1 = esta temporada, current/current+1 = futuras
+  for (let y = current - 2; y <= current + 1; y++) {
     const short = String(y + 1).slice(2);
     options.push({ id: `${y}-${short}`, name: `${y}/${y + 1}` });
   }
@@ -186,8 +187,13 @@ function WorkspaceBar() {
   }
 
   function openAdd() {
-    // Pre-select the most recent season option
-    setFSeason(SEASON_OPTIONS[SEASON_OPTIONS.length - 1]?.id ?? "");
+    // Pre-select "esta temporada" = startYear of currentYear - 1 (e.g. 2025 → 2025/26)
+    const currentYear = new Date().getFullYear();
+    const defaultSeason =
+      SEASON_OPTIONS.find((s) => s.id.startsWith(`${currentYear - 1}-`)) ??
+      SEASON_OPTIONS[1] ??
+      SEASON_OPTIONS[0];
+    setFSeason(defaultSeason?.id ?? "");
     setFLeague("");
     setFTeam("");
     setAdding(true);
