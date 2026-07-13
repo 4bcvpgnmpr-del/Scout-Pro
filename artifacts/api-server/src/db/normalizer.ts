@@ -267,7 +267,7 @@ export async function normalizeFebStats(
     await upsertStanding({
       teamId,
       seasonId,
-      group:         null,
+      group:         row.groupName ?? null,
       rank:          row.posicion,
       gamesPlayed:   row.pj,
       wins:          row.pg,

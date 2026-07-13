@@ -1,7 +1,7 @@
 {
   "primera-feb": {
     "liga": "Primera FEB",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -185,7 +185,7 @@
   },
   "segunda-feb": {
     "liga": "Segunda FEB",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -332,7 +332,7 @@
   },
   "liga-femenina-endesa": {
     "liga": "Liga Femenina Endesa",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -499,7 +499,7 @@
   },
   "lf-challenge": {
     "liga": "LF Challenge",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -666,7 +666,7 @@
   },
   "lf2": {
     "liga": "LF2",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [
       {
         "posicion": 1,
@@ -676,7 +676,8 @@
         "pp": 4,
         "pf": 1812,
         "pc": 1442,
-        "pts": 48
+        "pts": 48,
+        "groupName": "A"
       },
       {
         "posicion": 2,
@@ -686,7 +687,8 @@
         "pp": 6,
         "pf": 1799,
         "pc": 1528,
-        "pts": 46
+        "pts": 46,
+        "groupName": "A"
       },
       {
         "posicion": 3,
@@ -696,7 +698,8 @@
         "pp": 6,
         "pf": 1855,
         "pc": 1634,
-        "pts": 46
+        "pts": 46,
+        "groupName": "A"
       },
       {
         "posicion": 4,
@@ -706,7 +709,8 @@
         "pp": 6,
         "pf": 1865,
         "pc": 1724,
-        "pts": 46
+        "pts": 46,
+        "groupName": "A"
       },
       {
         "posicion": 5,
@@ -716,7 +720,8 @@
         "pp": 10,
         "pf": 1661,
         "pc": 1583,
-        "pts": 42
+        "pts": 42,
+        "groupName": "A"
       },
       {
         "posicion": 6,
@@ -726,7 +731,8 @@
         "pp": 12,
         "pf": 1707,
         "pc": 1727,
-        "pts": 40
+        "pts": 40,
+        "groupName": "A"
       },
       {
         "posicion": 7,
@@ -736,7 +742,8 @@
         "pp": 13,
         "pf": 1756,
         "pc": 1656,
-        "pts": 39
+        "pts": 39,
+        "groupName": "A"
       },
       {
         "posicion": 8,
@@ -746,7 +753,8 @@
         "pp": 14,
         "pf": 1751,
         "pc": 1825,
-        "pts": 38
+        "pts": 38,
+        "groupName": "A"
       },
       {
         "posicion": 9,
@@ -756,7 +764,8 @@
         "pp": 14,
         "pf": 1591,
         "pc": 1758,
-        "pts": 38
+        "pts": 38,
+        "groupName": "A"
       },
       {
         "posicion": 10,
@@ -766,7 +775,8 @@
         "pp": 16,
         "pf": 1643,
         "pc": 1721,
-        "pts": 36
+        "pts": 36,
+        "groupName": "A"
       },
       {
         "posicion": 11,
@@ -776,7 +786,8 @@
         "pp": 18,
         "pf": 1384,
         "pc": 1593,
-        "pts": 34
+        "pts": 34,
+        "groupName": "A"
       },
       {
         "posicion": 12,
@@ -786,7 +797,8 @@
         "pp": 19,
         "pf": 1809,
         "pc": 1938,
-        "pts": 33
+        "pts": 33,
+        "groupName": "A"
       },
       {
         "posicion": 13,
@@ -796,7 +808,8 @@
         "pp": 19,
         "pf": 1645,
         "pc": 1785,
-        "pts": 33
+        "pts": 33,
+        "groupName": "A"
       },
       {
         "posicion": 14,
@@ -806,14 +819,169 @@
         "pp": 25,
         "pf": 1591,
         "pc": 1955,
-        "pts": 27
+        "pts": 27,
+        "groupName": "A"
+      },
+      {
+        "posicion": 1,
+        "equipo": "MARISTAS CORUÑA",
+        "pj": 26,
+        "pg": 23,
+        "pp": 3,
+        "pf": 1934,
+        "pc": 1543,
+        "pts": 49,
+        "groupName": "B"
+      },
+      {
+        "posicion": 2,
+        "equipo": "IBAIZABAL",
+        "pj": 26,
+        "pg": 19,
+        "pp": 7,
+        "pf": 1599,
+        "pc": 1468,
+        "pts": 45,
+        "groupName": "B"
+      },
+      {
+        "posicion": 3,
+        "equipo": "MIPELLETYMAS B.F. LEON",
+        "pj": 26,
+        "pg": 18,
+        "pp": 8,
+        "pf": 1926,
+        "pc": 1714,
+        "pts": 44,
+        "groupName": "B"
+      },
+      {
+        "posicion": 4,
+        "equipo": "MARISCOS ANTÓN CORTEGADA",
+        "pj": 26,
+        "pg": 18,
+        "pp": 8,
+        "pf": 1831,
+        "pc": 1666,
+        "pts": 44,
+        "groupName": "B"
+      },
+      {
+        "posicion": 5,
+        "equipo": "ROMAKURUMA U.E.MATARÓ",
+        "pj": 26,
+        "pg": 14,
+        "pp": 12,
+        "pf": 1564,
+        "pc": 1545,
+        "pts": 40,
+        "groupName": "B"
+      },
+      {
+        "posicion": 6,
+        "equipo": "MANRESA CBF A",
+        "pj": 26,
+        "pg": 13,
+        "pp": 13,
+        "pf": 1550,
+        "pc": 1591,
+        "pts": 39,
+        "groupName": "B"
+      },
+      {
+        "posicion": 7,
+        "equipo": "ABRIL ADBA SANFER",
+        "pj": 26,
+        "pg": 13,
+        "pp": 13,
+        "pf": 1584,
+        "pc": 1664,
+        "pts": 39,
+        "groupName": "B"
+      },
+      {
+        "posicion": 8,
+        "equipo": "HORBISA SPIRIT GREENKW BARAKAL",
+        "pj": 26,
+        "pg": 13,
+        "pp": 13,
+        "pf": 1597,
+        "pc": 1621,
+        "pts": 39,
+        "groupName": "B"
+      },
+      {
+        "posicion": 9,
+        "equipo": "TALENOM BOET MATARÓ",
+        "pj": 26,
+        "pg": 12,
+        "pp": 14,
+        "pf": 1686,
+        "pc": 1706,
+        "pts": 38,
+        "groupName": "B"
+      },
+      {
+        "posicion": 10,
+        "equipo": "SMARTLOG OINTXE",
+        "pj": 26,
+        "pg": 10,
+        "pp": 16,
+        "pf": 1643,
+        "pc": 1799,
+        "pts": 36,
+        "groupName": "B"
+      },
+      {
+        "posicion": 11,
+        "equipo": "SIROKO GIJON BASKETBALL",
+        "pj": 26,
+        "pg": 10,
+        "pp": 16,
+        "pf": 1794,
+        "pc": 1847,
+        "pts": 36,
+        "groupName": "B"
+      },
+      {
+        "posicion": 12,
+        "equipo": "C.B. ARXIL",
+        "pj": 26,
+        "pg": 9,
+        "pp": 17,
+        "pf": 1548,
+        "pc": 1668,
+        "pts": 35,
+        "groupName": "B"
+      },
+      {
+        "posicion": 13,
+        "equipo": "ROBLES LLEIDA",
+        "pj": 26,
+        "pg": 7,
+        "pp": 19,
+        "pf": 1666,
+        "pc": 1835,
+        "pts": 33,
+        "groupName": "B"
+      },
+      {
+        "posicion": 14,
+        "equipo": "TGN BASQUET A",
+        "pj": 26,
+        "pg": 3,
+        "pp": 23,
+        "pf": 1533,
+        "pc": 1788,
+        "pts": 29,
+        "groupName": "B"
       }
     ],
     "resultados": []
   },
   "tercera-feb": {
     "liga": "Tercera FEB",
-    "actualizacion": "2026-07-13T22:51:21.912Z",
+    "actualizacion": "2026-07-13T23:00:28.954Z",
     "clasificacion": [],
     "resultados": []
   }

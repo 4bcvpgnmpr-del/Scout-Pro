@@ -29,6 +29,7 @@ export interface ClasificacionEntry {
   pf: number;
   pc: number;
   pts: number;
+  groupName?: string;
 }
 
 export interface ResultadoEntry {
@@ -118,6 +119,10 @@ const COMPETICIONES = [
     nombre: "LF2",
     standingsUrl: "https://www.feb.es/ligafemenina2/clasificacion.aspx",
     mainUrl: "https://www.feb.es/ligafemenina2/",
+    standingsGroups: [
+      { id: "88868", name: "A" },
+      { id: "88869", name: "B" },
+    ],
   },
   {
     id: "tercera-feb",
@@ -194,16 +199,53 @@ async function fetchHtml(url: string, timeoutMs = 15000): Promise<string> {
  * Estructura esperada: table.tabla-estadistica con celdas td.posicion,
  * td.equipo a, td.jugados, td.ganados, td.perdidos, td.favor, td.contra, td.puntos
  */
-async function scrapearClasificacion(url: string, liga: string): Promise<ClasificacionEntry[]> {
-  const html = await fetchHtml(url);
+async function scrapearClasificacion(
+  url: string,
+  liga: string,
+  groupId?: string,
+  groupLabel?: string,
+): Promise<ClasificacionEntry[]> {
+  let html: string;
+
+  if (groupId) {
+    // Fetch page first to get ASP.NET ViewState, then POST to select the group
+    const initialHtml = await fetchHtml(url);
+    const $init = load(initialHtml);
+    const viewstate = ($init("input#__VIEWSTATE").val() as string) ?? "";
+    const vsg      = ($init("input#__VIEWSTATEGENERATOR").val() as string) ?? "";
+    const ev       = ($init("input#__EVENTVALIDATION").val() as string) ?? "";
+
+    const body = new URLSearchParams({
+      __EVENTTARGET:           "_ctl0:gruposDropDownList",
+      __EVENTARGUMENT:         "",
+      __VIEWSTATE:             viewstate,
+      __VIEWSTATEGENERATOR:    vsg,
+      __EVENTVALIDATION:       ev,
+      "_ctl0:gruposDropDownList": groupId,
+    }).toString();
+
+    const resp = await fetch(url, {
+      method:  "POST",
+      headers: {
+        "User-Agent":   USER_AGENT,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer":      url,
+      },
+      body,
+      signal: AbortSignal.timeout(15000),
+    });
+    html = await resp.text();
+  } else {
+    html = await fetchHtml(url);
+  }
+
   const $ = load(html);
   const clasificacion: ClasificacionEntry[] = [];
 
   $("table.tabla-estadistica tr").each((_i, fila) => {
     const pos = parseInt($(fila).find("td.posicion").text().trim(), 10);
-    if (isNaN(pos)) return; // cabecera o separador
+    if (isNaN(pos)) return;
 
-    // El nombre del equipo está dentro de un <a> en td.equipo
     const equipo =
       $(fila).find("td.equipo a").text().trim() ||
       $(fila).find("td.equipo").text().trim().replace(/\s+/g, " ");
@@ -211,18 +253,19 @@ async function scrapearClasificacion(url: string, liga: string): Promise<Clasifi
     if (!equipo) return;
 
     clasificacion.push({
-      posicion: pos,
+      posicion:  pos,
       equipo,
-      pj: parseInt($(fila).find("td.jugados").text().trim(), 10) || 0,
-      pg: parseInt($(fila).find("td.ganados").text().trim(), 10) || 0,
-      pp: parseInt($(fila).find("td.perdidos").text().trim(), 10) || 0,
-      pf: parseInt($(fila).find("td.favor").text().trim(), 10) || 0,
-      pc: parseInt($(fila).find("td.contra").text().trim(), 10) || 0,
-      pts: parseInt($(fila).find("td.puntos").text().trim(), 10) || 0,
+      pj:        parseInt($(fila).find("td.jugados").text().trim(),  10) || 0,
+      pg:        parseInt($(fila).find("td.ganados").text().trim(),  10) || 0,
+      pp:        parseInt($(fila).find("td.perdidos").text().trim(), 10) || 0,
+      pf:        parseInt($(fila).find("td.favor").text().trim(),    10) || 0,
+      pc:        parseInt($(fila).find("td.contra").text().trim(),   10) || 0,
+      pts:       parseInt($(fila).find("td.puntos").text().trim(),   10) || 0,
+      groupName: groupLabel,
     });
   });
 
-  logger.info({ liga, registros: clasificacion.length }, "FEB: clasificación extraída");
+  logger.info({ liga, grupo: groupLabel ?? "default", registros: clasificacion.length }, "FEB: clasificación extraída");
   return clasificacion;
 }
 
@@ -291,9 +334,21 @@ export async function scrapearTodas(): Promise<FebStats> {
     try {
       logger.info({ liga: comp.nombre }, "FEB scraper: procesando...");
 
-      // Ejecutamos clasificación y resultados en paralelo
+      // For multi-group leagues, scrape each group separately and merge
+      const scrapeClasificacion = async (): Promise<ClasificacionEntry[]> => {
+        if ("standingsGroups" in comp && comp.standingsGroups) {
+          const groupResults = await Promise.allSettled(
+            comp.standingsGroups.map((g) =>
+              scrapearClasificacion(comp.standingsUrl, comp.nombre, g.id, g.name),
+            ),
+          );
+          return groupResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+        }
+        return scrapearClasificacion(comp.standingsUrl, comp.nombre);
+      };
+
       const [clasificacion, resultados] = await Promise.allSettled([
-        scrapearClasificacion(comp.standingsUrl, comp.nombre),
+        scrapeClasificacion(),
         scrapearResultados(comp.mainUrl, comp.nombre),
       ]);
 
@@ -348,8 +403,20 @@ export async function scrapearUna(id: string): Promise<CompeticionData | null> {
   const comp = COMPETICIONES.find((c) => c.id === id);
   if (!comp) return null;
 
+  const scrapeClasificacion = async (): Promise<ClasificacionEntry[]> => {
+    if ("standingsGroups" in comp && comp.standingsGroups) {
+      const groupResults = await Promise.allSettled(
+        comp.standingsGroups.map((g) =>
+          scrapearClasificacion(comp.standingsUrl, comp.nombre, g.id, g.name),
+        ),
+      );
+      return groupResults.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+    }
+    return scrapearClasificacion(comp.standingsUrl, comp.nombre);
+  };
+
   const [clasificacion, resultados] = await Promise.allSettled([
-    scrapearClasificacion(comp.standingsUrl, comp.nombre),
+    scrapeClasificacion(),
     scrapearResultados(comp.mainUrl, comp.nombre),
   ]);
 
