@@ -64,6 +64,7 @@ export const ListTeamsResponseItem = zod.object({
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
   "teamType": zod.enum(['own', 'rival']).optional(),
+  "statTeamExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
@@ -95,6 +96,7 @@ export const GetTeamResponse = zod.object({
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
   "teamType": zod.enum(['own', 'rival']).optional(),
+  "statTeamExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -121,6 +123,7 @@ export const UpdateTeamResponse = zod.object({
   "city": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
   "teamType": zod.enum(['own', 'rival']).optional(),
+  "statTeamExternalId": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

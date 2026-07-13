@@ -31,6 +31,8 @@ export interface Team {
   /** @nullable */
   logoUrl?: string | null;
   teamType?: TeamTeamType;
+  /** @nullable */
+  statTeamExternalId?: string | null;
   createdAt: string;
 }
 

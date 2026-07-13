@@ -736,6 +736,8 @@ components:
         teamType:
           type: string
           enum: [own, rival]
+        statTeamExternalId:
+          type: ["string", "null"]
         createdAt:
           type: string
 

@@ -22,10 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   ArrowLeft, Trash2, Users, BarChart2, ClipboardList,
-  Video, Library, Loader2, Pencil, Plus, Camera,
+  Video, Library, Loader2, Pencil, Plus, Camera, Trophy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TeamMediaSection, PlantillaSection, EstadisticasSection } from "@/components/team-scouting";
+import { TeamMediaSection, PlantillaSection, EstadisticasSection, ClasificacionSection } from "@/components/team-scouting";
 import { useMemo } from "react";
 
 export default function TeamDetail() {
@@ -184,12 +184,13 @@ export default function TeamDetail() {
       <Tabs defaultValue="plantilla">
         <TabsList className="w-full justify-start h-auto flex-wrap gap-1 bg-transparent border-b border-border rounded-none p-0 pb-px">
           {[
-            { value: "plantilla",    label: "Plantilla",    icon: Users },
-            { value: "estadisticas", label: "Estadísticas", icon: BarChart2 },
-            { value: "fotos",        label: "Fotos",        icon: Camera },
-            { value: "videos",       label: "Vídeos",       icon: Video },
-            { value: "sistemas",     label: "Sistemas",     icon: ClipboardList },
-            { value: "highlights",   label: "Highlights",   icon: Library },
+            { value: "plantilla",      label: "Plantilla",    icon: Users },
+            { value: "estadisticas",   label: "Estadísticas", icon: BarChart2 },
+            { value: "clasificacion",  label: "Clasificación", icon: Trophy },
+            { value: "fotos",          label: "Fotos",        icon: Camera },
+            { value: "videos",         label: "Vídeos",       icon: Video },
+            { value: "sistemas",       label: "Sistemas",     icon: ClipboardList },
+            { value: "highlights",     label: "Highlights",   icon: Library },
           ].map(({ value, label, icon: Icon }) => (
             <TabsTrigger key={value} value={value}
               className="flex items-center gap-1.5 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-foreground transition">
@@ -206,6 +207,13 @@ export default function TeamDetail() {
         {/* ── Estadísticas ── */}
         <TabsContent value="estadisticas" className="mt-6">
           <EstadisticasSection teamId={teamId} />
+        </TabsContent>
+
+        {/* ── Clasificación ── */}
+        <TabsContent value="clasificacion" className="mt-6">
+          <div className="bg-card rounded-2xl p-6 border">
+            <ClasificacionSection statTeamExternalId={team.statTeamExternalId} />
+          </div>
         </TabsContent>
 
         {/* ── Fotos ── */}
