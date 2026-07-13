@@ -4,12 +4,14 @@ import {
   useGetReport,
   useGetPlayer,
   useGetGame,
+  useGetPlayerStats,
   useDeleteReport,
   getListReportsQueryKey,
   getGetReportQueryKey,
   getGetDashboardSummaryQueryKey,
   getGetPlayerQueryKey,
   getGetGameQueryKey,
+  getGetPlayerStatsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,9 @@ export default function ReportDetail() {
   });
   const { data: game } = useGetGame(report?.gameId ?? 0, {
     query: { enabled: !!report?.gameId, queryKey: getGetGameQueryKey(report?.gameId ?? 0) },
+  });
+  const { data: seasonStats } = useGetPlayerStats(report?.playerId ?? 0, {
+    query: { enabled: !!report?.playerId, queryKey: getGetPlayerStatsQueryKey(report?.playerId ?? 0) },
   });
   const deleteReport = useDeleteReport();
 
@@ -204,6 +209,60 @@ export default function ReportDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Season stats from BEV/FEB */}
+        {seasonStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Estadísticas de temporada
+                <span className="ml-auto text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {seasonStats.gamesPlayed} PJ · promedio por partido
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
+                {[
+                  { label: "PTS", value: Number(seasonStats.avgPoints).toFixed(1) },
+                  { label: "REB", value: Number(seasonStats.avgRebounds).toFixed(1) },
+                  { label: "AST", value: Number(seasonStats.avgAssists).toFixed(1) },
+                  { label: "ROB", value: Number(seasonStats.avgSteals).toFixed(1) },
+                  { label: "TAP", value: Number(seasonStats.avgBlocks).toFixed(1) },
+                  { label: "MIN", value: Number(seasonStats.avgMinutes).toFixed(1) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
+                    <div className="text-2xl font-display text-primary">{value}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
+              {(seasonStats.avgFieldGoalPct != null || seasonStats.avgThreePointPct != null || seasonStats.avgFreeThrowPct != null) && (
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                  {seasonStats.avgFieldGoalPct != null && (
+                    <div className="bg-card border rounded-xl p-3 text-center">
+                      <div className="text-xl font-display">{(Number(seasonStats.avgFieldGoalPct) * 100).toFixed(1)}%</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div>
+                    </div>
+                  )}
+                  {seasonStats.avgThreePointPct != null && (
+                    <div className="bg-card border rounded-xl p-3 text-center">
+                      <div className="text-xl font-display">{(Number(seasonStats.avgThreePointPct) * 100).toFixed(1)}%</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div>
+                    </div>
+                  )}
+                  {seasonStats.avgFreeThrowPct != null && (
+                    <div className="bg-card border rounded-xl p-3 text-center">
+                      <div className="text-xl font-display">{(Number(seasonStats.avgFreeThrowPct) * 100).toFixed(1)}%</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {(report.strengths || report.weaknesses) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
