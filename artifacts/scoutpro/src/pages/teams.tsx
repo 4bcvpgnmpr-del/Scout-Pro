@@ -3,23 +3,39 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Plus, Shield, Users } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Teams() {
   const { data: teams, isLoading } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
   const { data: players } = useListPlayers();
+  const { workspaces, activeId } = useWorkspace();
+  const activeWs = workspaces.find((w) => w.id === activeId);
 
   const playerCountByTeam = (teamId: number) =>
     players?.filter((p) => p.teamId === teamId).length ?? 0;
 
-  const ownTeams = teams?.filter((t) => t.teamType === "own") ?? [];
-  const rivalTeams = teams?.filter((t) => t.teamType !== "own") ?? [];
+  // If there's an active workspace, only show teams from that league
+  const visibleTeams = activeWs
+    ? (teams ?? []).filter((t) => t.league === activeWs.leagueId)
+    : (teams ?? []);
+
+  const ownTeams  = visibleTeams.filter((t) => t.teamType === "own");
+  const rivalTeams = visibleTeams.filter((t) => t.teamType !== "own");
 
   return (
     <div className="space-y-8 max-w-[1400px]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black uppercase italic tracking-tight">Equipos</h1>
-          <p className="text-muted-foreground text-sm mt-1">Equipos y plantillas bajo seguimiento.</p>
+          {activeWs ? (
+            <p className="text-muted-foreground text-sm mt-1">
+              Liga: <span className="font-semibold text-foreground">{activeWs.leagueName}</span>
+              <span className="mx-1.5 text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground/60">{activeWs.teamName}</span>
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm mt-1">Equipos y plantillas bajo seguimiento.</p>
+          )}
         </div>
         <Link href="/teams/new">
           <Button className="font-black tracking-wide uppercase text-xs px-5">
