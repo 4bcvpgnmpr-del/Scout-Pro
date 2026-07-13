@@ -13,11 +13,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSeason, type Season } from "@/contexts/SeasonContext";
 import { useWorkspace, type Workspace } from "@/contexts/WorkspaceContext";
 
-// ─── Static season options (2020 → current+1) ─────────────────────────────────
+// ─── Static season options (last 3 seasons + upcoming) ───────────────────────
 function buildSeasonOptions() {
   const current = new Date().getFullYear();
   const options: { id: string; name: string }[] = [];
-  for (let y = 2020; y <= current + 1; y++) {
+  for (let y = current - 3; y <= current; y++) {
     const short = String(y + 1).slice(2);
     options.push({ id: `${y}-${short}`, name: `${y}/${y + 1}` });
   }

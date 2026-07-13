@@ -196,7 +196,7 @@ router.patch("/select-team", async (req, res): Promise<void> => {
 
 // ─── Helper: sync stat_teams → teams table ───────────────────────────────────
 
-async function syncLeagueTeams(
+export async function syncLeagueTeams(
   selectedExternalId: string,
   leagueShortName: string,
 ): Promise<void> {

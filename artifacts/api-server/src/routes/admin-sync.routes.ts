@@ -4,6 +4,7 @@ import { syncLog, leagues } from "@workspace/db";
 import { desc, gte, eq } from "drizzle-orm";
 import { syncHandlers, upsertHistoricalYearData } from "../jobs/sync.job.js";
 import { requireAuth, requirePro } from "../lib/auth.middleware.js";
+import { syncLeagueTeams } from "./auth.routes.js";
 
 const router = Router();
 
@@ -144,6 +145,38 @@ router.post("/year/:startYear", async (req, res): Promise<void> => {
   }
   upsertHistoricalYearData(startYear).catch((_err) => {});
   res.json({ message: `Sync histórico para ${startYear}-${startYear + 1} iniciado en segundo plano` });
+});
+
+// ─── POST /scouting-league/:leagueShortName ───────────────────────────────────
+
+router.post("/scouting-league/:leagueShortName", async (req, res): Promise<void> => {
+  const isDev = String(process.env["NODE_ENV"]) === "development";
+  if (!isDev && !req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+  const { leagueShortName } = req.params;
+  const selectedExtId = (req.query["selectedTeam"] as string) ?? "";
+  syncLeagueTeams(selectedExtId, leagueShortName).catch((_err) => {});
+  res.json({ message: `Scouting sync para ${leagueShortName} iniciado` });
+});
+
+// ─── POST /scouting-all ────────────────────────────────────────────────────────
+
+router.post("/scouting-all", async (req, res): Promise<void> => {
+  const isDev = String(process.env["NODE_ENV"]) === "development";
+  if (!isDev && !req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+  const leagueList = ["lf2", "lf-challenge", "liga-femenina-endesa", "primera-feb", "segunda-feb", "tercera-feb"];
+  const selectedByLeague: Record<string, string> = {
+    lf2: (req.query["lf2Team"] as string) ?? "",
+  };
+  Promise.all(
+    leagueList.map((l) => syncLeagueTeams(selectedByLeague[l] ?? "", l))
+  ).catch((_err) => {});
+  res.json({ message: "Scouting sync para todas las ligas iniciado" });
 });
 
 // ─── POST /:source ────────────────────────────────────────────────────────────
