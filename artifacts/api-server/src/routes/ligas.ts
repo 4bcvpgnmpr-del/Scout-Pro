@@ -46,23 +46,46 @@ router.get("/ligas", async (_req, res): Promise<void> => {
   res.json(result);
 });
 
-// GET /api/equipos/:ligaId — teams for a given league slug
+// GET /api/equipos/:ligaId — teams for a given league slug (current season only)
 router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
   const { ligaId } = req.params;
 
-  const teams = await db
-    .select({
+  // Primary: teams that appear in current-season standings (rank > 0)
+  const teamsFromStandings = await db
+    .selectDistinct({
       id:        syncTeams.externalId,
       nombre:    syncTeams.name,
       shortName: syncTeams.shortName,
       logoUrl:   syncTeams.logoUrl,
     })
     .from(syncTeams)
-    .innerJoin(leagues, eq(syncTeams.leagueId, leagues.id))
-    .where(eq(leagues.shortName, ligaId))
+    .innerJoin(leagues,   eq(syncTeams.leagueId, leagues.id))
+    .innerJoin(seasons,   eq(seasons.leagueId, leagues.id))
+    .innerJoin(standings, and(eq(standings.teamId, syncTeams.id), eq(standings.seasonId, seasons.id), sql`${standings.rank} > 0`))
+    .where(and(eq(leagues.shortName, ligaId), eq(seasons.isCurrent, true)))
     .orderBy(syncTeams.name);
 
-  res.json({ equipos: teams });
+  if (teamsFromStandings.length > 0) {
+    res.json({ equipos: teamsFromStandings });
+    return;
+  }
+
+  // Fallback: teams with player stats in current season (e.g. Tercera FEB with no standings)
+  const teamsFromStats = await db
+    .selectDistinct({
+      id:        syncTeams.externalId,
+      nombre:    syncTeams.name,
+      shortName: syncTeams.shortName,
+      logoUrl:   syncTeams.logoUrl,
+    })
+    .from(syncTeams)
+    .innerJoin(leagues,     eq(syncTeams.leagueId, leagues.id))
+    .innerJoin(seasons,     eq(seasons.leagueId, leagues.id))
+    .innerJoin(playerStats, and(eq(playerStats.teamId, syncTeams.id), eq(playerStats.seasonId, seasons.id)))
+    .where(and(eq(leagues.shortName, ligaId), eq(seasons.isCurrent, true)))
+    .orderBy(syncTeams.name);
+
+  res.json({ equipos: teamsFromStats });
 });
 
 // GET /api/liga-jugadores — stat_players with their current-season stats
@@ -146,24 +169,30 @@ router.get("/liga-jugadores/ligas", async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
-// GET /api/liga-jugadores/equipos?liga=X — all teams in a league (with optional player count)
+// GET /api/liga-jugadores/equipos?liga=X — teams active in current season (standings OR player stats)
 router.get("/liga-jugadores/equipos", async (req, res): Promise<void> => {
   const { liga } = req.query as Record<string, string | undefined>;
 
+  // Teams in current season: those that appear in standings (rank>0) OR have player_stats
   const rows = await db
     .select({
-      id:          syncTeams.id,
-      name:        syncTeams.name,
-      logoUrl:     syncTeams.logoUrl,
-      leagueName:  leagues.shortName,
+      id:             syncTeams.id,
+      name:           syncTeams.name,
+      logoUrl:        syncTeams.logoUrl,
+      leagueName:     leagues.shortName,
       leagueFullName: leagues.name,
-      gender:      leagues.gender,
-      playerCount: sql<number>`count(distinct ${playerStats.playerId})::int`,
+      gender:         leagues.gender,
+      playerCount:    sql<number>`count(distinct ${playerStats.playerId})::int`,
     })
     .from(syncTeams)
     .innerJoin(leagues,    eq(syncTeams.leagueId, leagues.id))
-    .leftJoin(playerStats, eq(playerStats.teamId, syncTeams.id))
-    .where(liga ? eq(leagues.shortName, liga) : undefined)
+    .innerJoin(seasons,    and(eq(seasons.leagueId, leagues.id), eq(seasons.isCurrent, true)))
+    .leftJoin(standings,   and(eq(standings.teamId, syncTeams.id), eq(standings.seasonId, seasons.id)))
+    .leftJoin(playerStats, and(eq(playerStats.teamId, syncTeams.id), eq(playerStats.seasonId, seasons.id)))
+    .where(and(
+      liga ? eq(leagues.shortName, liga) : undefined,
+      sql`(${standings.rank} > 0 OR ${playerStats.playerId} IS NOT NULL)`,
+    ))
     .groupBy(syncTeams.id, syncTeams.name, syncTeams.logoUrl, leagues.shortName, leagues.name, leagues.gender)
     .orderBy(leagues.shortName, syncTeams.name);
 
