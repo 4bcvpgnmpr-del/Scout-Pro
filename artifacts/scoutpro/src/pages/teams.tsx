@@ -2,7 +2,7 @@ import { useListTeams, useListPlayers, getListTeamsQueryKey } from "@workspace/a
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { Plus, Shield, Users } from "lucide-react";
+import { Plus, Shield, Users, ChevronRight } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Teams() {
@@ -11,7 +11,6 @@ export default function Teams() {
   const { workspaces, activeId } = useWorkspace();
   const activeWs = workspaces.find((w) => w.id === activeId);
 
-  // Parse active season start year from workspace seasonId ("2025-26" → 2025)
   const activeSeasonYear = activeWs
     ? parseInt(activeWs.seasonId.split("-")[0] ?? "0", 10) || null
     : null;
@@ -21,7 +20,6 @@ export default function Teams() {
       (p) => p.teamId === teamId && (activeSeasonYear == null || p.seasonYear === activeSeasonYear)
     ).length;
 
-  // Teams with at least one player in the active season (eliminates same-club old-season duplicates)
   const teamsWithSeasonPlayers = activeSeasonYear
     ? new Set(
         (players ?? [])
@@ -30,7 +28,6 @@ export default function Teams() {
       )
     : null;
 
-  // Filter: active workspace league + must have players in active season
   const visibleTeams = activeWs
     ? (teams ?? []).filter(
         (t) =>
@@ -44,6 +41,7 @@ export default function Teams() {
 
   return (
     <div className="space-y-8 max-w-[1400px]">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black uppercase italic tracking-tight">Equipos</h1>
@@ -71,12 +69,12 @@ export default function Teams() {
           ))}
         </div>
       ) : !teams || teams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-            <Shield className="h-8 w-8 text-muted-foreground/40" />
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+            <Shield className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-lg font-black">No hay equipos todavía</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
+          <h3 className="text-lg font-black text-gray-700">No hay equipos todavía</h3>
+          <p className="text-sm text-gray-400 mt-1 mb-4">
             Añade equipos para organizar tu base de jugadores.
           </p>
           <Link href="/teams/new">
@@ -102,9 +100,9 @@ export default function Teams() {
           {rivalTeams.length > 0 && (
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-px flex-1 bg-muted-foreground/20" />
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2">Equipos Rivales</span>
-                <div className="h-px flex-1 bg-muted-foreground/20" />
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Equipos Rivales</span>
+                <div className="h-px flex-1 bg-gray-200" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {rivalTeams.map((team) => (
@@ -132,20 +130,25 @@ function TeamCard({
 
   return (
     <Link href={`/teams/${team.id}`}>
-      <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-200 cursor-pointer hover:shadow-lg ${
+      <div className={`group relative overflow-hidden bg-white rounded-2xl border-2 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md ${
         isOwn
-          ? "bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:border-primary/50 hover:shadow-primary/10"
-          : "bg-card border-border hover:border-muted-foreground/30"
+          ? "border-primary/30 hover:border-primary/60 hover:shadow-primary/10"
+          : "border-gray-200 hover:border-gray-300"
       }`}>
-        <div className="p-5 flex items-center gap-4">
+        {/* Accent bar */}
+        {isOwn && (
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-2xl" />
+        )}
+
+        <div className="p-5 flex items-center gap-4 pl-6">
           {/* Logo */}
-          <div className={`h-16 w-16 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border-2 ${
-            isOwn ? "border-primary/30 bg-primary/10" : "border-border bg-muted/50"
+          <div className={`h-14 w-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border-2 ${
+            isOwn ? "border-primary/20 bg-primary/5" : "border-gray-100 bg-gray-50"
           }`}>
             {team.logoUrl ? (
               <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
             ) : (
-              <span className={`text-xl font-black ${isOwn ? "text-primary" : "text-muted-foreground"}`}>
+              <span className={`text-xl font-black ${isOwn ? "text-primary" : "text-gray-400"}`}>
                 {initials}
               </span>
             )}
@@ -156,27 +159,22 @@ function TeamCard({
             {isOwn && (
               <div className="text-[9px] font-black text-primary uppercase tracking-widest mb-0.5">Mi Equipo</div>
             )}
-            <div className={`font-black text-lg uppercase leading-tight truncate transition-colors ${
-              isOwn ? "text-foreground group-hover:text-primary" : "text-foreground group-hover:text-primary"
-            }`}>
+            <div className={`font-black text-base uppercase leading-tight truncate transition-colors text-gray-800 group-hover:text-primary`}>
               {team.name}
             </div>
             {(team.league || team.city) && (
-              <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              <div className="text-xs text-gray-400 mt-0.5 truncate">
                 {[team.league, team.city].filter(Boolean).join(" · ")}
               </div>
             )}
             <div className="flex items-center gap-1 mt-1.5">
-              <Users className="h-3 w-3 text-muted-foreground/60" />
-              <span className="text-xs text-muted-foreground">{playerCount} jugadores</span>
+              <Users className="h-3 w-3 text-gray-400" />
+              <span className="text-xs text-gray-400">{playerCount} jugadores</span>
             </div>
           </div>
-        </div>
 
-        {/* Accent bar */}
-        {isOwn && (
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-2xl" />
-        )}
+          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary transition-colors shrink-0" />
+        </div>
       </div>
     </Link>
   );

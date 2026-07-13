@@ -1,13 +1,11 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, Plus, Users, TrendingUp, ArrowRight, Search, Film, X } from "lucide-react";
+import { Star, Plus, Users, TrendingUp, Search, Film, X, ChevronRight } from "lucide-react";
 import { useListPlayers, useListTeams, useListReports, getListPlayersQueryKey, getListReportsQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface PlayerHL { id: string; url: string; title: string; addedAt: string }
@@ -21,7 +19,6 @@ function saveHLs(pid: number, hls: PlayerHL[]) {
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 
-// EU nationalities for basketball classification (Nacional / Comunitario / Extranjero)
 const EU_NATIONALITIES = new Set([
   "Alemania", "Austria", "Bélgica", "Bulgaria", "Chipre", "Croacia", "Dinamarca",
   "Eslovaquia", "Eslovenia", "Estonia", "Finlandia", "Francia", "Grecia", "Hungría",
@@ -45,7 +42,7 @@ function ValStars({ rating }: { rating: number | null | undefined }) {
   if (rating == null) {
     return (
       <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-3.5 w-3.5 text-muted-foreground/20" />)}
+        {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="h-3.5 w-3.5 text-gray-200" />)}
       </div>
     );
   }
@@ -53,7 +50,7 @@ function ValStars({ rating }: { rating: number | null | undefined }) {
   return (
     <div className="flex gap-0.5" title={`VAL ${rating}`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <Star key={i} className={`h-3.5 w-3.5 ${i <= stars ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+        <Star key={i} className={`h-3.5 w-3.5 ${i <= stars ? "fill-amber-400 text-amber-400" : "text-gray-200"}`} />
       ))}
     </div>
   );
@@ -64,6 +61,12 @@ const TIPO_LABELS: Record<string, string> = {
   nacional: "Nacional",
   comunitario: "Comunitario",
   extranjero: "Extranjero",
+};
+
+const TIPO_COLORS: Record<string, string> = {
+  nacional: "bg-green-50 text-green-700 border border-green-200",
+  comunitario: "bg-blue-50 text-blue-700 border border-blue-200",
+  extranjero: "bg-orange-50 text-orange-700 border border-orange-200",
 };
 
 export default function Fichajes() {
@@ -110,8 +113,6 @@ export default function Fichajes() {
     });
     return avgs;
   }, [reports]);
-
-  const freeAgents = useMemo(() => players?.filter((p) => p.teamId == null) ?? [], [players]);
 
   const hasFilters = !!(positionFilter || leagueFilter || nationalityFilter || tipoFilter !== "ALL" || search.trim());
 
@@ -177,215 +178,224 @@ export default function Fichajes() {
 
   return (
     <div className="space-y-6 max-w-[1400px]">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-4xl font-display tracking-wide">Fichajes</h1>
-          <p className="text-muted-foreground text-sm">Gestiona tu lista de prospectos a fichar.</p>
+          <h1 className="text-4xl font-black uppercase italic tracking-tight">Fichajes</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gestiona tu lista de prospectos a fichar.</p>
         </div>
         <Link href="/players/new">
-          <Button className="font-display tracking-wide uppercase">
+          <Button className="font-black tracking-wide uppercase text-xs px-5">
             <Plus className="mr-2 h-4 w-4" /> Añadir Prospecto
           </Button>
         </Link>
       </div>
 
+      {/* KPI cards — white */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">A fichar ★</p>
-                <p className="text-3xl font-display">{isLoading ? "—" : (players?.filter(p => p.watchlisted)?.length ?? 0)}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Star className="h-4 w-4 text-primary" />
-              </div>
+        {[
+          {
+            label: "A fichar ★",
+            value: isLoading ? "—" : String(players?.filter(p => p.watchlisted)?.length ?? 0),
+            icon: <Star className="h-5 w-5 text-primary" />,
+            accent: "bg-primary/5 text-primary",
+          },
+          {
+            label: "Total en base de datos",
+            value: isLoading ? "—" : String(players?.length ?? 0),
+            icon: <Users className="h-5 w-5 text-gray-500" />,
+            accent: "bg-gray-100 text-gray-500",
+          },
+          {
+            label: "Resultados filtrados",
+            value: isLoading ? "—" : String(filteredPlayers.length),
+            icon: <TrendingUp className="h-5 w-5 text-gray-500" />,
+            accent: "bg-gray-100 text-gray-500",
+          },
+        ].map((card) => (
+          <div key={card.label} className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 flex items-center gap-4">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${card.accent}`}>
+              {card.icon}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Total en base de datos</p>
-                <p className="text-3xl font-display">{isLoading ? "—" : (players?.length ?? 0)}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </div>
+            <div>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{card.label}</p>
+              <p className="text-3xl font-black text-gray-800 leading-none mt-1">{card.value}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Resultados</p>
-                <p className="text-3xl font-display">{isLoading ? "—" : filteredPlayers.length}</p>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar nombre..."
-            className="pl-9 bg-card h-9 w-44"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {/* Filter bar — white card */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Input
+              placeholder="Buscar nombre..."
+              className="pl-9 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 h-8 w-44 text-xs focus-visible:ring-primary/30"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Position pills */}
+          <div className="flex gap-1">
+            {["ALL", ...POSITIONS].map((pos) => (
+              <button
+                key={pos}
+                onClick={() => setPositionFilter(pos === "ALL" ? "" : pos)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  (pos === "ALL" && !positionFilter) || positionFilter === pos
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                {pos === "ALL" ? "Todos" : pos}
+              </button>
+            ))}
+          </div>
+
+          {/* Tipo */}
+          <select
+            value={tipoFilter}
+            onChange={(e) => setTipoFilter(e.target.value)}
+            className="h-8 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-semibold text-gray-600 px-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+          >
+            <option value="ALL">Todos los tipos</option>
+            <option value="nacional">🇪🇸 Nacional</option>
+            <option value="comunitario">🇪🇺 Comunitario</option>
+            <option value="extranjero">🌍 Extranjero</option>
+          </select>
+
+          {/* Nationality */}
+          <select
+            value={nationalityFilter || "ALL"}
+            onChange={(e) => setNationalityFilter(e.target.value === "ALL" ? "" : e.target.value)}
+            className="h-8 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-semibold text-gray-600 px-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+          >
+            <option value="ALL">Todas las naciones</option>
+            {allNationalities.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+
+          {/* League */}
+          <select
+            value={leagueFilter || "ALL"}
+            onChange={(e) => setLeagueFilter(e.target.value === "ALL" ? "" : e.target.value)}
+            className="h-8 rounded-lg border border-gray-200 bg-gray-50 text-[11px] font-semibold text-gray-600 px-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+          >
+            <option value="ALL">Todas las ligas</option>
+            {allLeagues.map((lg) => <option key={lg} value={lg}>{lg}</option>)}
+          </select>
+
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="h-8 px-3 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Limpiar
+            </button>
+          )}
         </div>
-
-        <Select value={positionFilter || "ALL"} onValueChange={(v) => setPositionFilter(v === "ALL" ? "" : v)}>
-          <SelectTrigger className="h-9 w-[150px] bg-card text-xs">
-            <SelectValue placeholder="Posición" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas posiciones</SelectItem>
-            {POSITIONS.map((pos) => <SelectItem key={pos} value={pos}>{pos}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={tipoFilter} onValueChange={setTipoFilter}>
-          <SelectTrigger className="h-9 w-[160px] bg-card text-xs">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos los tipos</SelectItem>
-            <SelectItem value="nacional">🇪🇸 Nacional</SelectItem>
-            <SelectItem value="comunitario">🇪🇺 Comunitario</SelectItem>
-            <SelectItem value="extranjero">🌍 Extranjero</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={nationalityFilter || "ALL"} onValueChange={(v) => setNationalityFilter(v === "ALL" ? "" : v)}>
-          <SelectTrigger className="h-9 w-[160px] bg-card text-xs">
-            <SelectValue placeholder="Nación" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas las naciones</SelectItem>
-            {allNationalities.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={leagueFilter || "ALL"} onValueChange={(v) => setLeagueFilter(v === "ALL" ? "" : v)}>
-          <SelectTrigger className="h-9 w-[160px] bg-card text-xs">
-            <SelectValue placeholder="Liga" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas las ligas</SelectItem>
-            {allLeagues.map((lg) => <SelectItem key={lg} value={lg}>{lg}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground h-9 text-xs">
-            Limpiar filtros
-          </Button>
-        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+      {/* Player list — white card */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Table header */}
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
             {hasFilters
               ? `Resultados — ${filteredPlayers.length} jugador${filteredPlayers.length !== 1 ? "es" : ""}`
               : `A Fichar ★ — ${filteredPlayers.length} jugador${filteredPlayers.length !== 1 ? "es" : ""}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 rounded" />)}</div>
-          ) : filteredPlayers.length === 0 ? (
-            <div className="py-12 text-center">
-              <Star className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">
-                {hasFilters ? "No hay jugadores que coincidan." : "Ningún jugador marcado con ★ todavía."}
+          </h2>
+        </div>
+
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+          </div>
+        ) : filteredPlayers.length === 0 ? (
+          <div className="py-16 text-center">
+            <Star className="h-10 w-10 mx-auto mb-3 text-gray-200" />
+            <p className="text-sm font-semibold text-gray-400">
+              {hasFilters ? "No hay jugadores que coincidan." : "Ningún jugador marcado con ★ todavía."}
+            </p>
+            {!hasFilters && (
+              <p className="text-xs text-gray-300 mt-1">
+                Marca jugadores con la estrella en Jugadores o en el Centro de Scouting.
               </p>
-              {!hasFilters && (
-                <p className="text-xs text-muted-foreground/60 mt-1">
-                  Marca jugadores con la estrella en Jugadores o en el Centro de Scouting.
-                </p>
-              )}
+            )}
+          </div>
+        ) : (
+          <div>
+            {/* Column headers */}
+            <div className="hidden sm:grid grid-cols-[auto_1fr_72px_72px_130px_100px_36px_auto] items-center gap-3 px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <div className="w-10" />
+              <div>Jugador</div>
+              <div>Pos</div>
+              <div>Edad</div>
+              <div>Nación / Tipo</div>
+              <div>VAL</div>
+              <div className="text-center">HL</div>
+              <div className="w-4" />
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="hidden sm:grid grid-cols-[auto_1fr_80px_80px_120px_100px_40px_auto] items-center gap-3 px-3 pb-1 text-[11px] text-muted-foreground uppercase tracking-wider border-b">
-                <div className="w-10" />
-                <div>Jugador</div>
-                <div>Pos</div>
-                <div>Edad</div>
-                <div>Nación / Tipo</div>
-                <div>VAL</div>
-                <div className="text-center w-10">HL</div>
-                <div className="w-5" />
-              </div>
-              {filteredPlayers.map((p) => {
-                const league = p.teamId ? teamLeagueMap[p.teamId] : null;
-                const val = playerAvgRating[p.id];
-                const tipo = playerTipo(p.nationality);
-                return (
-                  <Link key={p.id} href={`/players/${p.id}`}>
-                    <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_80px_80px_120px_100px_40px_auto] items-center gap-3 p-3 rounded-lg border hover:border-primary/50 cursor-pointer group transition-colors">
-                      <Avatar className="h-10 w-10">
-                        {p.photoUrl && <AvatarImage src={p.photoUrl} alt={p.name} className="object-cover" />}
-                        <AvatarFallback className="bg-primary/10 text-primary font-display text-sm">
-                          {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <div className="font-medium group-hover:text-primary transition-colors truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {p.teamName ?? "Agente libre"}{league ? ` · ${league}` : ""}
-                        </div>
+
+            {filteredPlayers.map((p, idx) => {
+              const league = p.teamId ? teamLeagueMap[p.teamId] : null;
+              const val = playerAvgRating[p.id];
+              const tipo = playerTipo(p.nationality);
+              return (
+                <Link key={p.id} href={`/players/${p.id}`}>
+                  <div className={`grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_72px_72px_130px_100px_36px_auto] items-center gap-3 px-4 py-3 cursor-pointer group transition-colors hover:bg-gray-50 ${
+                    idx !== filteredPlayers.length - 1 ? "border-b border-gray-100" : ""
+                  }`}>
+                    <Avatar className="h-9 w-9 border border-gray-100">
+                      {p.photoUrl && <AvatarImage src={p.photoUrl} alt={p.name} className="object-cover" />}
+                      <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+                        {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <div className="font-bold text-gray-800 group-hover:text-primary transition-colors truncate text-sm">{p.name}</div>
+                      <div className="text-xs text-gray-400 truncate">
+                        {p.teamName ?? "Agente libre"}{league ? ` · ${league}` : ""}
                       </div>
-                      <div className="hidden sm:block">
-                        <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">{p.position}</span>
-                      </div>
-                      <div className="hidden sm:block text-sm text-muted-foreground">
-                        {p.age != null ? `${p.age} años` : "—"}
-                      </div>
-                      <div className="hidden sm:flex flex-col gap-0.5">
-                        <span className="text-xs text-muted-foreground truncate">{p.nationality ?? "—"}</span>
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full w-fit ${
-                          tipo === "nacional" ? "bg-green-500/15 text-green-400" :
-                          tipo === "comunitario" ? "bg-blue-500/15 text-blue-400" :
-                          "bg-orange-500/15 text-orange-400"
-                        }`}>
-                          {TIPO_LABELS[tipo]}
-                        </span>
-                      </div>
-                      <div className="hidden sm:block">
-                        <ValStars rating={val} />
-                      </div>
-                      <button
-                        onClick={(e) => openHlDialog(e, p.id)}
-                        title="Highlights del jugador"
-                        className="hidden sm:flex items-center justify-center relative text-muted-foreground/40 hover:text-primary transition"
-                      >
-                        <Film className="h-4 w-4" />
-                        {(hlCountMap[p.id] ?? 0) > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-primary text-[9px] font-bold text-primary-foreground rounded-full flex items-center justify-center">
-                            {hlCountMap[p.id]}
-                          </span>
-                        )}
-                      </button>
-                      <ArrowRight className="hidden sm:block h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    <div className="hidden sm:block">
+                      <span className="text-[11px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{p.position}</span>
+                    </div>
+                    <div className="hidden sm:block text-sm font-medium text-gray-500">
+                      {p.age != null ? `${p.age}a` : "—"}
+                    </div>
+                    <div className="hidden sm:flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-500 truncate">{p.nationality ?? "—"}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full w-fit ${TIPO_COLORS[tipo]}`}>
+                        {TIPO_LABELS[tipo]}
+                      </span>
+                    </div>
+                    <div className="hidden sm:block">
+                      <ValStars rating={val} />
+                    </div>
+                    <button
+                      onClick={(e) => openHlDialog(e, p.id)}
+                      title="Highlights del jugador"
+                      className="hidden sm:flex items-center justify-center relative text-gray-300 hover:text-primary transition"
+                    >
+                      <Film className="h-4 w-4" />
+                      {(hlCountMap[p.id] ?? 0) > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-primary text-[9px] font-bold text-white rounded-full flex items-center justify-center">
+                          {hlCountMap[p.id]}
+                        </span>
+                      )}
+                    </button>
+                    <ChevronRight className="hidden sm:block h-4 w-4 text-gray-300 group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── Highlights dialog ── */}
       <Dialog open={hlPid !== null} onOpenChange={(open) => { if (!open) { setHlPid(null); setHlVersion((v) => v + 1); } }}>
@@ -397,20 +407,19 @@ export default function Fichajes() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Add form */}
-            <div className="bg-muted/30 rounded-lg p-3 space-y-2 border">
+            <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-200">
               <Input
                 value={hlTitle}
                 onChange={(e) => setHlTitle(e.target.value)}
                 placeholder="Título (opcional)"
-                className="text-sm"
+                className="text-sm bg-white border-gray-200"
               />
               <div className="flex gap-2">
                 <Input
                   value={hlUrl}
                   onChange={(e) => setHlUrl(e.target.value)}
                   placeholder="URL de YouTube, Vimeo o enlace directo…"
-                  className="text-sm flex-1"
+                  className="text-sm flex-1 bg-white border-gray-200"
                   onKeyDown={(e) => { if (e.key === "Enter") addHL(); }}
                 />
                 <Button size="sm" onClick={addHL} disabled={!hlUrl.trim()}>
@@ -418,23 +427,22 @@ export default function Fichajes() {
                 </Button>
               </div>
             </div>
-            {/* List */}
             {hlItems.length === 0 ? (
-              <div className="text-center py-6 text-sm text-muted-foreground">
+              <div className="text-center py-6 text-sm text-gray-400">
                 Sin highlights todavía. Añade un enlace arriba.
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {hlItems.map((h) => (
-                  <div key={h.id} className="flex items-center gap-2 p-2.5 border rounded-lg bg-card">
-                    <Film className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                  <div key={h.id} className="flex items-center gap-2 p-2.5 border border-gray-200 rounded-xl bg-white">
+                    <Film className="h-4 w-4 text-gray-300 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      {h.title && <div className="text-sm font-medium truncate">{h.title}</div>}
+                      {h.title && <div className="text-sm font-semibold text-gray-700 truncate">{h.title}</div>}
                       <a href={h.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block">
                         {h.url}
                       </a>
                     </div>
-                    <button onClick={() => deleteHL(h.id)} className="text-muted-foreground/40 hover:text-destructive transition shrink-0">
+                    <button onClick={() => deleteHL(h.id)} className="text-gray-300 hover:text-red-400 transition shrink-0">
                       <X className="h-4 w-4" />
                     </button>
                   </div>

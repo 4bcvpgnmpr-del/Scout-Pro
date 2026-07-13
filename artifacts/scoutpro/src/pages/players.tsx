@@ -1,22 +1,20 @@
 import { useState } from "react";
 import { useListPlayers, getListPlayersQueryKey } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { Search, Plus, Filter, ArrowRight, Users } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Plus, ChevronRight, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const POSITIONS = [
-  { value: "ALL", label: "Todas las posiciones" },
-  { value: "PG", label: "PG — Base" },
-  { value: "SG", label: "SG — Escolta" },
-  { value: "SF", label: "SF — Alero" },
-  { value: "PF", label: "PF — Ala-Pívot" },
-  { value: "C", label: "C — Pívot" },
+  { value: "ALL", label: "Todas" },
+  { value: "PG", label: "PG" },
+  { value: "SG", label: "SG" },
+  { value: "SF", label: "SF" },
+  { value: "PF", label: "PF" },
+  { value: "C", label: "C" },
 ];
 
 export default function Players() {
@@ -47,83 +45,85 @@ export default function Players() {
 
   return (
     <div className="space-y-6 max-w-[1400px]">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-4xl">Jugadores</h1>
-          <p className="text-muted-foreground">Base de datos de prospectos scouting.</p>
+          <h1 className="text-4xl font-black uppercase italic tracking-tight">Jugadores</h1>
+          <p className="text-muted-foreground text-sm mt-1">Base de datos de prospectos scouting.</p>
         </div>
         <Link href="/players/new">
-          <Button className="font-display tracking-wide uppercase">
+          <Button className="font-black tracking-wide uppercase text-xs px-5">
             <Plus className="mr-2 h-4 w-4" /> Añadir Jugador
           </Button>
         </Link>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filter bar — white card */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Buscar por nombre o equipo..."
-            className="pl-9 bg-card"
+            className="pl-9 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-primary/30 h-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={positionFilter} onValueChange={setPositionFilter}>
-          <SelectTrigger className="w-[200px] bg-card">
-            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder="Posición" />
-          </SelectTrigger>
-          <SelectContent>
-            {POSITIONS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Position pills */}
+        <div className="flex gap-1 flex-wrap">
+          {POSITIONS.map((pos) => (
+            <button
+              key={pos.value}
+              onClick={() => setPositionFilter(pos.value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                positionFilter === pos.value
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+              }`}
+            >
+              {pos.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Player grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       ) : filteredPlayers.length === 0 ? (
-        <Card className="border-dashed bg-card/50">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="bg-muted p-3 rounded-full mb-4">
-              <Users className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold">No se encontraron jugadores</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              Prueba con otros filtros de búsqueda.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col items-center justify-center py-16 text-center">
+          <div className="h-14 w-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+            <Users className="h-7 w-7 text-gray-400" />
+          </div>
+          <h3 className="text-base font-bold text-gray-700">No se encontraron jugadores</h3>
+          <p className="text-sm text-gray-400 max-w-sm mt-1">Prueba con otros filtros de búsqueda.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredPlayers.map((player) => (
             <Link key={player.id} href={`/players/${player.id}`}>
-              <Card className="hover:border-primary transition-all duration-200 cursor-pointer group hover-elevate">
-                <CardContent className="p-5 flex items-center gap-4">
-                  <Avatar className="h-14 w-14 border-2 border-background shadow-sm">
-                    <AvatarImage src={player.photoUrl || undefined} alt={player.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-display text-lg">
-                      {player.name.split(" ").map((n) => n[0]).join("").substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="font-semibold truncate group-hover:text-primary transition-colors">
-                      {player.name}
-                    </div>
-                    <div className="flex items-center text-xs text-muted-foreground mt-1 gap-2">
-                      <span className="font-mono bg-muted px-1.5 py-0.5 rounded font-bold text-foreground">
-                        {player.position}
-                      </span>
-                      <span className="truncate">{player.teamName || "Agente libre"}</span>
-                    </div>
+              <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group p-4 flex items-center gap-3">
+                <Avatar className="h-12 w-12 border-2 border-gray-100 shadow-sm shrink-0">
+                  <AvatarImage src={player.photoUrl || undefined} alt={player.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-black text-sm">
+                    {player.name.split(" ").map((n) => n[0]).join("").substring(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-gray-800 truncate group-hover:text-primary transition-colors text-sm">
+                    {player.name}
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                      {player.position}
+                    </span>
+                    <span className="text-[11px] text-gray-400 truncate">{player.teamName || "Agente libre"}</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary transition-colors shrink-0" />
+              </div>
             </Link>
           ))}
         </div>
