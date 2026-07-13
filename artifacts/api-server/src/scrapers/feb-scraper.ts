@@ -599,10 +599,15 @@ export async function scrapearEstadisticasBEV(year?: number): Promise<FebBEVStat
 export interface BEVPlayerStatsEntry {
   teamBevId:    string;
   teamName:     string;
+  teamLogoUrl:  string;
   playerBevId:  string;
   firstName:    string;
   lastName:     string;
   photoUrl:     string;
+  height:       number | null;
+  nationality:  string | null;
+  birthDate:    string | null;
+  jerseyNumber: number | null;
   gamesPlayed:  number;
   minutesTotal: number;  // minutos decimales
   points:       number;
@@ -669,19 +674,37 @@ async function scrapeBEVTeamIds(g: number, nm: string, año: number): Promise<st
 }
 
 /**
- * Extrae IDs de jugador únicos de la página de un equipo (Equipo.aspx?i=TEAM_ID).
+ * Extrae IDs de jugador únicos y logo de equipo de la página de un equipo (Equipo.aspx?i=TEAM_ID).
  * Los hrefs "Jugador.aspx?i=TEAM_ID&c=PLAYER_ID" aparecen en la tabla de plantilla.
  */
-async function scrapeBEVPlayerIds(teamBevId: string): Promise<string[]> {
+async function scrapeBEVTeamPage(teamBevId: string): Promise<{ playerIds: string[]; logoUrl: string }> {
   const url  = `https://baloncestoenvivo.feb.es/Equipo.aspx?i=${teamBevId}`;
   const html = await fetchHtml(url);
   const $    = load(html);
   const ids  = new Set<string>();
+
   $("a[href]").each((_, el) => {
     const m = ($(el).attr("href") ?? "").match(/Jugador\.aspx\?i=\d+&c=(\d+)/i);
     if (m) ids.add(m[1]!);
   });
-  return [...ids];
+
+  // Extract team logo — try multiple selectors used across different BEV pages
+  const logoSrc =
+    $(".escudo img").attr("src") ||
+    $(".box-equipo img").first().attr("src") ||
+    $("img.escudo").attr("src") ||
+    $("img[src*='escudo']").first().attr("src") ||
+    $("img[src*='/equipos/']").first().attr("src") ||
+    $("img[src*='logos']").first().attr("src") ||
+    "";
+
+  const logoUrl = logoSrc
+    ? logoSrc.startsWith("http")
+      ? logoSrc
+      : `https://baloncestoenvivo.feb.es/${logoSrc.replace(/^\//, "")}`
+    : "";
+
+  return { playerIds: [...ids], logoUrl };
 }
 
 /**
@@ -707,6 +730,72 @@ export async function scrapeBEVPlayerStats(
   const { firstName, lastName } = parseBEVName(rawName);
   const photoUrl  = $(".box-jugador .foto img").attr("src") ?? "";
   const teamName  = $(".box-jugador .equipo a").text().trim();
+
+  // ── Profile fields from .box-jugador ──────────────────────────────────────
+  // BEV pages use label:value pairs inside td/li/span elements.
+  // We scan all elements in .box-jugador looking for known Spanish label keywords
+  // and extract the adjacent value (next sibling td or text after colon).
+  const profileText = $(".box-jugador").text();
+
+  function extractLabelValue(labelPattern: RegExp): string {
+    const m = profileText.match(labelPattern);
+    return m?.[1]?.trim() ?? "";
+  }
+
+  // Try sibling-td approach first, then colon-split on full text
+  function findFieldBySiblingTd(labelKeyword: string): string {
+    let found = "";
+    $(".box-jugador td").each((_, el) => {
+      const cellText = $(el).text().trim().toLowerCase();
+      if (cellText.includes(labelKeyword.toLowerCase())) {
+        const next = $(el).next("td");
+        if (next.length) { found = next.text().trim(); return false as unknown as void; }
+      }
+    });
+    if (!found) {
+      $(".box-jugador li, .box-jugador span, .box-jugador div").each((_, el) => {
+        const t = $(el).text().trim();
+        if (t.toLowerCase().includes(labelKeyword.toLowerCase()) && t.includes(":")) {
+          found = t.slice(t.indexOf(":") + 1).trim().split("\n")[0]?.trim() ?? "";
+          return false as unknown as void;
+        }
+      });
+    }
+    return found;
+  }
+
+  // Dorsal / jersey number
+  const dorsalRaw   = findFieldBySiblingTd("dorsal") || extractLabelValue(/dorsal[:\s]+(\d+)/i);
+  const jerseyNumber = dorsalRaw ? (parseInt(dorsalRaw.replace(/\D/g, ""), 10) || null) : null;
+
+  // Altura / height (cm)
+  const alturaRaw   = findFieldBySiblingTd("altura") || extractLabelValue(/altura[:\s]+([\d,. ]+)/i);
+  const heightNum   = alturaRaw ? (parseInt(alturaRaw.replace(/[^\d]/g, ""), 10) || null) : null;
+  const height      = heightNum && heightNum > 50 ? heightNum : null; // sanity: > 50 cm
+
+  // Fecha de nacimiento
+  const fechaRaw = findFieldBySiblingTd("fecha nac") || findFieldBySiblingTd("nacimiento") ||
+    extractLabelValue(/fecha\s*nac[^:]*[:\s]+([\d/.-]+)/i);
+  // Convert DD/MM/YYYY or DD-MM-YYYY to ISO string
+  let birthDate: string | null = null;
+  if (fechaRaw) {
+    const parts = fechaRaw.split(/[/.-]/);
+    if (parts.length === 3) {
+      const [d, mo, yr] = parts;
+      const y = parseInt(yr ?? "", 10);
+      const m_ = parseInt(mo ?? "", 10);
+      const dd = parseInt(d ?? "", 10);
+      if (y > 1900 && m_ >= 1 && m_ <= 12 && dd >= 1 && dd <= 31) {
+        birthDate = new Date(y, m_ - 1, dd).toISOString();
+      }
+    }
+  }
+
+  // Nationality — "Nacido en" or "País" or "Nacion"
+  const natRaw = findFieldBySiblingTd("nacido en") || findFieldBySiblingTd("país") ||
+    findFieldBySiblingTd("nacion") ||
+    extractLabelValue(/nacido\s+en[:\s]+([^\n,]+)/i);
+  const nationality = natRaw.length > 1 && natRaw.length < 60 ? natRaw : null;
 
   // Tabla de TOTALES = normalmente la 3ª tabla (índice 2), pero en algunas páginas
   // (p.ej. jugadoras veteranas) el orden está invertido: totales en índice 1 y
@@ -818,12 +907,17 @@ export async function scrapeBEVPlayerStats(
 
   if (!hasData || acc.gamesPlayed === 0) return null;
 
-  return { teamBevId, teamName, playerBevId, firstName, lastName, photoUrl, ...acc };
+  return {
+    teamBevId, teamName, teamLogoUrl: "",
+    playerBevId, firstName, lastName, photoUrl,
+    height, nationality, birthDate, jerseyNumber,
+    ...acc,
+  };
 }
 
 /**
  * Extrae estadísticas de jugadores de una liga BEV completa.
- * Cadena: rankings.aspx → IDs de equipo → Equipo.aspx → IDs de jugador → jugador page.
+ * Cadena: rankings.aspx → IDs de equipo → Equipo.aspx (logo + player IDs) → jugador page.
  */
 export async function scrapeBEVLeaguePlayers(comp: {
   id: string; nombre: string; g: number; nm: string;
@@ -838,12 +932,15 @@ export async function scrapeBEVLeaguePlayers(comp: {
     for (const teamId of teamIds) {
       await new Promise((r) => setTimeout(r, 800));
       try {
-        const playerIds = await scrapeBEVPlayerIds(teamId);
+        const { playerIds, logoUrl: teamLogoUrl } = await scrapeBEVTeamPage(teamId);
         for (const playerId of playerIds) {
           await new Promise((r) => setTimeout(r, 500));
           try {
             const stats = await scrapeBEVPlayerStats(teamId, playerId, año);
-            if (stats) players.push(stats);
+            if (stats) {
+              stats.teamLogoUrl = teamLogoUrl;
+              players.push(stats);
+            }
           } catch (err) {
             logger.warn({ teamId, playerId, err }, "[BEV] error jugador — se omite");
           }

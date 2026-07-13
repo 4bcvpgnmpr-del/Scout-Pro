@@ -422,16 +422,30 @@ export async function normalizeEuroStats(stat: EuroPlayerStat): Promise<void> {
 
 /**
  * Busca o crea un jugador con identidad BEV (externalId = "bev-{playerBevId}").
- * Guarda firstName/lastName tal como vienen del scraper.
+ * Siempre actualiza photoUrl, height, nationality, birthDate y jerseyNumber si
+ * el scraper devuelve datos nuevos (sobreescribe campos existentes no nulos también,
+ * para que cada sync mantenga el perfil actualizado).
  */
 async function findOrCreateBEVPlayer(opts: {
-  playerBevId: string;
-  firstName:   string;
-  lastName:    string;
-  photoUrl:    string;
+  playerBevId:  string;
+  firstName:    string;
+  lastName:     string;
+  photoUrl:     string;
+  height:       number | null;
+  nationality:  string | null;
+  birthDate:    string | null;
+  jerseyNumber: number | null;
 }): Promise<string> {
   const externalId = `bev-${opts.playerBevId}`;
   if (_playerCache.has(externalId)) return _playerCache.get(externalId)!;
+
+  const profileUpdate = {
+    ...(opts.photoUrl     ? { photoUrl:     opts.photoUrl }              : {}),
+    ...(opts.height       ? { height:       opts.height }                : {}),
+    ...(opts.nationality  ? { nationality:  opts.nationality }           : {}),
+    ...(opts.birthDate    ? { birthDate:    new Date(opts.birthDate) }   : {}),
+    ...(opts.jerseyNumber ? { jerseyNumber: opts.jerseyNumber }          : {}),
+  };
 
   let row = await db.query.syncPlayers.findFirst({
     where: (p, { eq: eq_ }) => eq_(p.externalId, externalId),
@@ -442,19 +456,23 @@ async function findOrCreateBEVPlayer(opts: {
       .insert(syncPlayers)
       .values({
         externalId,
-        firstName: opts.firstName,
-        lastName:  opts.lastName,
-        photoUrl:  opts.photoUrl || null,
+        firstName:    opts.firstName,
+        lastName:     opts.lastName,
+        photoUrl:     opts.photoUrl || null,
+        height:       opts.height ?? null,
+        nationality:  opts.nationality ?? null,
+        birthDate:    opts.birthDate ? new Date(opts.birthDate) : null,
+        jerseyNumber: opts.jerseyNumber ?? null,
       })
       .onConflictDoNothing()
       .returning();
     row = inserted[0] ?? await db.query.syncPlayers.findFirst({
       where: (p, { eq: eq_ }) => eq_(p.externalId, externalId),
     });
-  } else if (opts.photoUrl && !row.photoUrl) {
+  } else if (Object.keys(profileUpdate).length > 0) {
     await db
       .update(syncPlayers)
-      .set({ photoUrl: opts.photoUrl, updatedAt: new Date() })
+      .set({ ...profileUpdate, updatedAt: new Date() })
       .where(eq(syncPlayers.id, row.id));
   }
 
@@ -567,11 +585,28 @@ export async function normalizeBEVPlayerStats(data: BEVLeaguePlayersData, startY
         p.teamName,
       );
 
+      // Actualizar logo del equipo si el scraper lo ha encontrado
+      if (p.teamLogoUrl) {
+        const teamRow = await db.query.syncTeams.findFirst({
+          where: (t, { eq: eq_ }) => eq_(t.id, teamId),
+        });
+        if (teamRow && !teamRow.logoUrl) {
+          await db
+            .update(syncTeams)
+            .set({ logoUrl: p.teamLogoUrl, updatedAt: new Date() })
+            .where(eq(syncTeams.id, teamId));
+        }
+      }
+
       const playerId = await findOrCreateBEVPlayer({
-        playerBevId: p.playerBevId,
-        firstName:   p.firstName,
-        lastName:    p.lastName,
-        photoUrl:    p.photoUrl,
+        playerBevId:  p.playerBevId,
+        firstName:    p.firstName,
+        lastName:     p.lastName,
+        photoUrl:     p.photoUrl,
+        height:       p.height,
+        nationality:  p.nationality,
+        birthDate:    p.birthDate,
+        jerseyNumber: p.jerseyNumber,
       });
 
       await upsertBEVPlayerStats({

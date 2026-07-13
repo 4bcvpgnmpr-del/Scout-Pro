@@ -361,6 +361,7 @@ export async function syncLeagueTeams(
         weight:               sp.weight ?? undefined,
         nationality:          sp.nationality ?? undefined,
         photoUrl:             sp.photoUrl ?? undefined,
+        jerseyNumber:         sp.jerseyNumber ?? undefined,
         statPlayerExternalId: statExtId,
       };
 

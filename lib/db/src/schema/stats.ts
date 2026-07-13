@@ -56,18 +56,19 @@ export const syncTeams = pgTable("stat_teams", {
 // ─── Stat Players (external league players, separate from scouting players) ──
 
 export const syncPlayers = pgTable("stat_players", {
-  id:          uuid("id").primaryKey().defaultRandom(),
-  externalId:  text("external_id"),
-  firstName:   text("first_name").notNull(),
-  lastName:    text("last_name").notNull(),
-  nationality: text("nationality"),
-  position:    text("position"),
-  birthDate:   timestamp("birth_date"),
-  height:      integer("height"),
-  weight:      integer("weight"),
-  photoUrl:    text("photo_url"),
-  createdAt:   timestamp("created_at").notNull().defaultNow(),
-  updatedAt:   timestamp("updated_at").notNull().defaultNow(),
+  id:           uuid("id").primaryKey().defaultRandom(),
+  externalId:   text("external_id"),
+  firstName:    text("first_name").notNull(),
+  lastName:     text("last_name").notNull(),
+  nationality:  text("nationality"),
+  position:     text("position"),
+  birthDate:    timestamp("birth_date"),
+  height:       integer("height"),
+  weight:       integer("weight"),
+  jerseyNumber: integer("jersey_number"),
+  photoUrl:     text("photo_url"),
+  createdAt:    timestamp("created_at").notNull().defaultNow(),
+  updatedAt:    timestamp("updated_at").notNull().defaultNow(),
 }, (t) => ({
   externalIdx: index("stat_players_external_idx").on(t.externalId),
 }));
