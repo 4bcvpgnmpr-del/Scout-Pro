@@ -364,11 +364,16 @@ function TabGeneral({ player, playerId, profile, onUpdate }: {
 
 // ─── Tab: Estadísticas ───────────────────────────────────────────────────────
 
-function TabStats({ profile, updateStats, updateAdvanced }: {
+function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
+  playerId: number;
   profile: ReturnType<typeof usePlayerProfile>["profile"];
   updateStats: ReturnType<typeof usePlayerProfile>["updateStats"];
   updateAdvanced: ReturnType<typeof usePlayerProfile>["updateAdvanced"];
 }) {
+  const { data: apiStats } = useGetPlayerStats(playerId, {
+    query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId) },
+  });
+
   const s = profile.seasonStats;
   const adv = computeAdvancedStats(s);
   const manual = profile.advancedStats;
@@ -390,6 +395,58 @@ function TabStats({ profile, updateStats, updateAdvanced }: {
 
   return (
     <div className="space-y-6">
+      {/* ── Stats FEB/Liga (read-only, from API) ── */}
+      {apiStats && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Estadísticas de temporada (FEB)
+              <Badge variant="secondary" className="ml-auto">{apiStats.gamesPlayed} PJ</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {[
+                { label: "PTS", value: Number(apiStats.avgPoints).toFixed(1) },
+                { label: "REB", value: Number(apiStats.avgRebounds).toFixed(1) },
+                { label: "AST", value: Number(apiStats.avgAssists).toFixed(1) },
+                { label: "ROB", value: Number(apiStats.avgSteals).toFixed(1) },
+                { label: "TAP", value: Number(apiStats.avgBlocks).toFixed(1) },
+                { label: "MIN", value: Number(apiStats.avgMinutes).toFixed(1) },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
+                  <div className="text-xl font-display text-primary">{value}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+            {(apiStats.avgFieldGoalPct != null || apiStats.avgThreePointPct != null || apiStats.avgFreeThrowPct != null) && (
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/10">
+                {apiStats.avgFieldGoalPct != null && (
+                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
+                    <div className="text-lg font-display">{(Number(apiStats.avgFieldGoalPct) * 100).toFixed(1)}%</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div>
+                  </div>
+                )}
+                {apiStats.avgThreePointPct != null && (
+                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
+                    <div className="text-lg font-display">{(Number(apiStats.avgThreePointPct) * 100).toFixed(1)}%</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div>
+                  </div>
+                )}
+                {apiStats.avgFreeThrowPct != null && (
+                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
+                    <div className="text-lg font-display">{(Number(apiStats.avgFreeThrowPct) * 100).toFixed(1)}%</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Valoración total PTS ── */}
       {hasValData && (
         <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 p-0.5 shadow-lg shadow-orange-200/40">
@@ -1198,7 +1255,7 @@ export default function PlayerDetail() {
           <TabGeneral player={player} playerId={playerId} profile={profile} onUpdate={update} />
         )}
         {activeTab === "stats" && (
-          <TabStats profile={profile} updateStats={updateStats} updateAdvanced={updateAdvanced} />
+          <TabStats playerId={playerId} profile={profile} updateStats={updateStats} updateAdvanced={updateAdvanced} />
         )}
         {activeTab === "scouting" && (
           <TabScouting profile={profile} onUpdate={update} />
