@@ -14,6 +14,7 @@
 - [BEV multi-competition gamesPlayed bug](bev-multi-comp-bug.md) — only accumulate cell(0)==="LR" rows; BEV player pages are NOT historical (no ?t=year support), only show latest season per team.
 - [BEV player scraper chain](bev-player-scraper.md) — combines tables 1+2, skips "%" rows (averages); fallback multiplies avg×games for averages-only pages (e.g. DOVILE MILIAUSKAITE bev-1869823).
 - [Scouting sync via API not executeSql](scouting-sync-pattern.md) — teams table can be wiped by drizzle-kit push; always repopulate via POST /api/admin/sync/scouting-all (dev-bypass); do NOT use executeSql inserts as they may not survive db:push.
+- [syncLeagueTeams stale teamId dedup](sync-stale-teamid.md) — must bulk-lookup players by statPlayerExternalId (not teamId) before upsert; stale teamIds cause duplicate inserts otherwise.
 - [Parallel scouting-all causes duplicate teams](sync-race-condition.md) — Promise.all on scouting-all races team insert+lookup; fixed by running leagues sequentially (for...of loop) in runAll().
 - [Duplicate stat_leagues for lf2](lf2-duplicate-league.md) — stat_leagues had two lf2 rows (external_id=9 with 0 teams vs real one with 42); findFirst returned wrong one; fixed by deleting the empty duplicate.
 - [Admin sync dev-bypass pattern](admin-sync-dev-bypass.md) — check process.env["NODE_ENV"] INSIDE the async handler body (not as middleware); esbuild preserves runtime env reads; middleware-level ternary evaluated at module load time may not behave as expected.

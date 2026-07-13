@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useListPlayers, getListPlayersQueryKey } from "@workspace/api-client-react";
+import { useListPlayers, getListPlayersQueryKey, useListTeams } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { Search, Plus, ChevronRight, Users } from "lucide-react";
+import { Search, Plus, ChevronRight, Users, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const POSITIONS = [
@@ -20,11 +20,15 @@ const POSITIONS = [
 export default function Players() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("ALL");
+  const [teamFilter, setTeamFilter] = useState<number | "ALL">("ALL");
   const { selectedSeason, isLoading: seasonLoading } = useSeason();
+
+  const { data: teams = [] } = useListTeams();
 
   // Always send seasonYear — never fetch without it to avoid cross-season duplicates
   const params = {
     ...(positionFilter !== "ALL" ? { position: positionFilter } : {}),
+    ...(teamFilter !== "ALL" ? { teamId: teamFilter } : {}),
     ...(selectedSeason?.startYear ? { seasonYear: selectedSeason.startYear } : {}),
   };
 
@@ -57,6 +61,9 @@ export default function Players() {
         p.teamName?.toLowerCase().includes(search.toLowerCase())),
   );
 
+  // Sort teams alphabetically for the dropdown
+  const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div className="space-y-6 max-w-[1400px]">
       {/* Header */}
@@ -73,17 +80,39 @@ export default function Players() {
       </div>
 
       {/* Filter bar — white card */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar por nombre o equipo..."
-            className="pl-9 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-primary/30 h-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 flex flex-col gap-3">
+        {/* Row 1: search + team select */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nombre..."
+              className="pl-9 bg-gray-50 border-gray-200 text-gray-800 placeholder:text-gray-400 focus-visible:ring-primary/30 h-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {/* Team select */}
+          <div className="relative sm:w-56">
+            <select
+              value={teamFilter === "ALL" ? "ALL" : String(teamFilter)}
+              onChange={(e) =>
+                setTeamFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
+              }
+              className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 pr-8 text-xs font-semibold text-gray-700 h-9 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+            >
+              <option value="ALL">Todos los equipos</option>
+              {sortedTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          </div>
         </div>
-        {/* Position pills */}
+
+        {/* Row 2: position pills */}
         <div className="flex gap-1 flex-wrap">
           {POSITIONS.map((pos) => (
             <button
@@ -98,8 +127,24 @@ export default function Players() {
               {pos.label}
             </button>
           ))}
+          {/* Active filters summary */}
+          {(teamFilter !== "ALL" || positionFilter !== "ALL") && (
+            <button
+              onClick={() => { setTeamFilter("ALL"); setPositionFilter("ALL"); }}
+              className="ml-auto px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50 transition-all"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Result count */}
+      {!isLoading && (
+        <p className="text-xs text-gray-400 -mt-3 px-1">
+          {filteredPlayers.length} jugador{filteredPlayers.length !== 1 ? "es" : ""} encontrado{filteredPlayers.length !== 1 ? "s" : ""}
+        </p>
+      )}
 
       {/* Player grid */}
       {isLoading ? (
@@ -133,6 +178,14 @@ export default function Players() {
                     <span className="text-[11px] font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
                       {player.position}
                     </span>
+                    {player.teamLogoUrl ? (
+                      <img
+                        src={player.teamLogoUrl}
+                        alt={player.teamName ?? ""}
+                        className="h-4 w-4 object-contain shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : null}
                     <span className="text-[11px] text-gray-400 truncate">{player.teamName || "Agente libre"}</span>
                   </div>
                 </div>
