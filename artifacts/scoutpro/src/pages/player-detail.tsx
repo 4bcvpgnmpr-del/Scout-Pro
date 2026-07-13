@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   useGetPlayer, useGetPlayerStats, useListReports, useDeletePlayer,
   useUpdatePlayer, useListPlayers,
@@ -365,18 +365,31 @@ function TabGeneral({ player, playerId, profile, onUpdate }: {
 
 // ─── Tab: Estadísticas ───────────────────────────────────────────────────────
 
+type SeasonRow = {
+  startYear: number;
+  seasonName: string;
+  leagueName: string;
+  leagueShortName: string;
+  teamName: string;
+  gamesPlayed: number;
+  pts: number; reb: number; ast: number; stl: number; blk: number; min: number;
+  fgPct: number | null; fg3Pct: number | null; ftPct: number | null;
+};
+
 function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
   playerId: number;
   profile: ReturnType<typeof usePlayerProfile>["profile"];
   updateStats: ReturnType<typeof usePlayerProfile>["updateStats"];
   updateAdvanced: ReturnType<typeof usePlayerProfile>["updateAdvanced"];
 }) {
-  const { workspaces, activeId } = useWorkspace();
-  const activeWs = useMemo(() => workspaces.find((w) => w.id === activeId), [workspaces, activeId]);
-  const seasonYear = activeWs?.seasonId ? parseInt(activeWs.seasonId) : undefined;
-  const statsParams = seasonYear ? { seasonYear } : undefined;
-  const { data: apiStats } = useGetPlayerStats(playerId, statsParams, {
-    query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId, statsParams) },
+  const { data: seasonRows } = useQuery<SeasonRow[]>({
+    queryKey: ["player-stats-seasons", playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/players/${playerId}/stats/seasons`);
+      if (!res.ok) return [];
+      return res.json() as Promise<SeasonRow[]>;
+    },
+    enabled: !!playerId,
   });
 
   const s = profile.seasonStats;
@@ -400,54 +413,68 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
 
   return (
     <div className="space-y-6">
-      {/* ── Stats FEB/Liga (read-only, from API) ── */}
-      {apiStats && (
+      {/* ── Historial de estadísticas por temporada (FEB/Liga) ── */}
+      {seasonRows && seasonRows.length > 0 && (
         <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Activity className="h-4 w-4 text-primary" />
-              Estadísticas de temporada (FEB)
-              <Badge variant="secondary" className="ml-auto">{apiStats.gamesPlayed} PJ</Badge>
+              Estadísticas por temporada (FEB)
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {[
-                { label: "PTS", value: Number(apiStats.avgPoints).toFixed(1) },
-                { label: "REB", value: Number(apiStats.avgRebounds).toFixed(1) },
-                { label: "AST", value: Number(apiStats.avgAssists).toFixed(1) },
-                { label: "ROB", value: Number(apiStats.avgSteals).toFixed(1) },
-                { label: "TAP", value: Number(apiStats.avgBlocks).toFixed(1) },
-                { label: "MIN", value: Number(apiStats.avgMinutes).toFixed(1) },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
-                  <div className="text-xl font-display text-primary">{value}</div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
-                </div>
-              ))}
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-primary/10 bg-primary/5">
+                    <th className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">Temporada</th>
+                    <th className="text-left px-2 py-2 font-semibold text-muted-foreground whitespace-nowrap">Liga</th>
+                    <th className="text-left px-2 py-2 font-semibold text-muted-foreground whitespace-nowrap hidden sm:table-cell">Equipo</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">PJ</th>
+                    <th className="text-center px-2 py-2 font-semibold text-primary">PTS</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">REB</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">AST</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">ROB</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">TAP</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">MIN</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">TC%</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">T3%</th>
+                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">TL%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seasonRows.map((row, i) => (
+                    <tr
+                      key={row.startYear}
+                      className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${i === 0 ? "font-semibold" : ""}`}
+                    >
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="font-medium">{row.seasonName}</span>
+                        {i === 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">Actual</Badge>}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
+                      <td className="px-2 py-2 hidden sm:table-cell text-muted-foreground max-w-[140px] truncate">{row.teamName}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{row.gamesPlayed}</td>
+                      <td className="px-2 py-2 text-center tabular-nums text-primary font-semibold">{row.pts.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{row.reb.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{row.ast.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
+                        {row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
+                        {row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
+                        {row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {(apiStats.avgFieldGoalPct != null || apiStats.avgThreePointPct != null || apiStats.avgFreeThrowPct != null) && (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/10">
-                {apiStats.avgFieldGoalPct != null && (
-                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
-                    <div className="text-lg font-display">{(Number(apiStats.avgFieldGoalPct) * 100).toFixed(1)}%</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TC%</div>
-                  </div>
-                )}
-                {apiStats.avgThreePointPct != null && (
-                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
-                    <div className="text-lg font-display">{(Number(apiStats.avgThreePointPct) * 100).toFixed(1)}%</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">T3%</div>
-                  </div>
-                )}
-                {apiStats.avgFreeThrowPct != null && (
-                  <div className="bg-white/80 dark:bg-card border border-primary/15 rounded-xl p-2.5 text-center">
-                    <div className="text-lg font-display">{(Number(apiStats.avgFreeThrowPct) * 100).toFixed(1)}%</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">TL%</div>
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

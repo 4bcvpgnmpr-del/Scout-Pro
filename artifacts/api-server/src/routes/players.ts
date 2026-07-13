@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, and, desc } from "drizzle-orm";
-import { db, playersTable, teamsTable, reportsTable, playerStats, syncPlayers, seasons } from "@workspace/db";
+import { db, playersTable, teamsTable, reportsTable, playerStats, syncPlayers, seasons, leagues, syncTeams } from "@workspace/db";
 import {
   CreatePlayerBody,
   UpdatePlayerBody,
@@ -130,6 +130,79 @@ router.post("/players", async (req, res): Promise<void> => {
   res.status(201).json(withTeam);
 });
 
+// ─── GET /players/:id/stats/seasons ─────────────────────────────────────────
+router.get("/players/:id/stats/seasons", async (req, res): Promise<void> => {
+  const params = GetPlayerStatsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [player] = await db
+    .select({ statPlayerExternalId: playersTable.statPlayerExternalId })
+    .from(playersTable)
+    .where(eq(playersTable.id, params.data.id));
+
+  if (!player?.statPlayerExternalId) {
+    res.json([]);
+    return;
+  }
+
+  const rows = await db
+    .select({
+      startYear:      seasons.startYear,
+      leagueName:     leagues.name,
+      leagueShortName: leagues.shortName,
+      teamName:       syncTeams.name,
+      gamesPlayed:    playerStats.gamesPlayed,
+      minutesAvg:     playerStats.minutesAvg,
+      points:         playerStats.points,
+      rebounds:       playerStats.rebounds,
+      assists:        playerStats.assists,
+      steals:         playerStats.steals,
+      blocks:         playerStats.blocks,
+      fg2Made:        playerStats.fg2Made,
+      fg2Att:         playerStats.fg2Att,
+      fg3Made:        playerStats.fg3Made,
+      fg3Att:         playerStats.fg3Att,
+      ftMade:         playerStats.ftMade,
+      ftAtt:          playerStats.ftAtt,
+    })
+    .from(playerStats)
+    .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
+    .innerJoin(seasons,     eq(seasons.id, playerStats.seasonId))
+    .innerJoin(leagues,     eq(leagues.id, seasons.leagueId))
+    .innerJoin(syncTeams,   eq(syncTeams.id, playerStats.teamId))
+    .where(eq(syncPlayers.externalId, player.statPlayerExternalId))
+    .orderBy(desc(seasons.startYear));
+
+  const result = rows.map((r) => {
+    const gp     = r.gamesPlayed ?? 0;
+    const fgAtt  = (r.fg2Att ?? 0) + (r.fg3Att ?? 0);
+    const fgMade = (r.fg2Made ?? 0) + (r.fg3Made ?? 0);
+    return {
+      startYear:       r.startYear,
+      seasonName:      `${r.startYear}/${String(r.startYear + 1).slice(2)}`,
+      leagueName:      r.leagueName,
+      leagueShortName: r.leagueShortName,
+      teamName:        r.teamName,
+      gamesPlayed:     gp,
+      pts: gp > 0 ? (r.points   ?? 0) / gp : 0,
+      reb: gp > 0 ? (r.rebounds ?? 0) / gp : 0,
+      ast: gp > 0 ? (r.assists  ?? 0) / gp : 0,
+      stl: gp > 0 ? (r.steals   ?? 0) / gp : 0,
+      blk: gp > 0 ? (r.blocks   ?? 0) / gp : 0,
+      min: r.minutesAvg ?? 0,
+      fgPct:  fgAtt             > 0 ? fgMade          / fgAtt             : null,
+      fg3Pct: (r.fg3Att ?? 0)   > 0 ? (r.fg3Made ?? 0) / (r.fg3Att ?? 0) : null,
+      ftPct:  (r.ftAtt  ?? 0)   > 0 ? (r.ftMade  ?? 0) / (r.ftAtt  ?? 0) : null,
+    };
+  });
+
+  res.json(result);
+});
+
+// ─── GET /players/:id/stats ──────────────────────────────────────────────────
 router.get("/players/:id/stats", async (req, res): Promise<void> => {
   const params = GetPlayerStatsParams.safeParse(req.params);
   if (!params.success) {
