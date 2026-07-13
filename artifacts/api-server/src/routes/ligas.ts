@@ -46,11 +46,17 @@ router.get("/ligas", async (_req, res): Promise<void> => {
   res.json(result);
 });
 
-// GET /api/equipos/:ligaId — teams for a given league slug (current season only)
+// GET /api/equipos/:ligaId — teams for a given league slug
+// Query params: ?year=2025 (startYear); defaults to current season
 router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
   const { ligaId } = req.params;
+  const yearParam = req.query.year ? parseInt(req.query.year as string, 10) : null;
 
-  // Primary: teams that appear in current-season standings (rank > 0)
+  const seasonFilter = yearParam !== null
+    ? eq(seasons.startYear, yearParam)
+    : eq(seasons.isCurrent, true);
+
+  // Primary: teams that appear in standings (rank > 0)
   const teamsFromStandings = await db
     .selectDistinct({
       id:        syncTeams.externalId,
@@ -62,7 +68,7 @@ router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
     .innerJoin(leagues,   eq(syncTeams.leagueId, leagues.id))
     .innerJoin(seasons,   eq(seasons.leagueId, leagues.id))
     .innerJoin(standings, and(eq(standings.teamId, syncTeams.id), eq(standings.seasonId, seasons.id), sql`${standings.rank} > 0`))
-    .where(and(eq(leagues.shortName, ligaId), eq(seasons.isCurrent, true)))
+    .where(and(eq(leagues.shortName, ligaId), seasonFilter))
     .orderBy(syncTeams.name);
 
   if (teamsFromStandings.length > 0) {
@@ -70,7 +76,7 @@ router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fallback: teams with player stats in current season (e.g. Tercera FEB with no standings)
+  // Fallback: teams with player stats in that season (e.g. Tercera FEB with no standings)
   const teamsFromStats = await db
     .selectDistinct({
       id:        syncTeams.externalId,
@@ -82,7 +88,7 @@ router.get("/equipos/:ligaId", async (req, res): Promise<void> => {
     .innerJoin(leagues,     eq(syncTeams.leagueId, leagues.id))
     .innerJoin(seasons,     eq(seasons.leagueId, leagues.id))
     .innerJoin(playerStats, and(eq(playerStats.teamId, syncTeams.id), eq(playerStats.seasonId, seasons.id)))
-    .where(and(eq(leagues.shortName, ligaId), eq(seasons.isCurrent, true)))
+    .where(and(eq(leagues.shortName, ligaId), seasonFilter))
     .orderBy(syncTeams.name);
 
   res.json({ equipos: teamsFromStats });

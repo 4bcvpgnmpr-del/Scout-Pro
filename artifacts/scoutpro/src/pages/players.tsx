@@ -24,14 +24,16 @@ export default function Players() {
   const [positionFilter, setPositionFilter] = useState("ALL");
   const { selectedSeason } = useSeason();
 
+  const params = {
+    ...(positionFilter !== "ALL" ? { position: positionFilter } : {}),
+    ...(selectedSeason?.startYear ? { seasonYear: selectedSeason.startYear } : {}),
+  };
+
   const { data: players, isLoading } = useListPlayers(
-    positionFilter !== "ALL" ? { position: positionFilter } : undefined,
+    Object.keys(params).length > 0 ? params : undefined,
     {
       query: {
-        queryKey: [
-          ...getListPlayersQueryKey(positionFilter !== "ALL" ? { position: positionFilter } : undefined),
-          selectedSeason?.id,
-        ],
+        queryKey: [...getListPlayersQueryKey(Object.keys(params).length > 0 ? params : undefined), selectedSeason?.id],
       },
     },
   );

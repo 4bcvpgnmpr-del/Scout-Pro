@@ -620,7 +620,7 @@ export function PlantillaSection({ teamId, teamName, showAddButton }: { teamId: 
 
   const filtered = useMemo(() => {
     let list = (rawPlayers ?? []).filter((p) =>
-      selectedYear == null || p.seasonYear === selectedYear || !p.seasonYear
+      selectedYear == null || p.seasonYear === selectedYear
     );
     if (posFilter !== "Todos") list = list.filter(p => p.position === posFilter);
     if (search.trim()) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
