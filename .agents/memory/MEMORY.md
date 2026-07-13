@@ -11,6 +11,7 @@
 - [Orval mutation body wrapper](orval-mutation-body.md) — Orval-generated mutation hooks wrap body as { data: payload }; always call mutate({ data: { ...fields } }) not mutate({ ...fields }).
 - [Season selector architecture](season-selector-arch.md) — SeasonContext wraps Router in App.tsx; SeasonBar in sidebar; pages use queryFn override to pass ?season= without spec changes to existing endpoints.
 - [BEV scraper conventions](bev-scraper.md) — baloncestoenvivo.feb.es has TEAM stats only (no player stats); uses t=startYear; cells have values on 2nd non-empty line.
+- [BEV multi-competition gamesPlayed bug](bev-multi-comp-bug.md) — BEV shows multiple "Temp: YY/YY" sections (one per competition) on same page; exit-first logic required to avoid double-counting.
 - [BEV player scraper chain](bev-player-scraper.md) — rankings.aspx → Equipo.aspx team IDs → Equipo.aspx roster → jugador/TEAM/PLAYER stats; cells are plain text; table index 2 = totals; season label row contains "Temp: YY/YY".
 - [Scouting sync via API not executeSql](scouting-sync-pattern.md) — teams table can be wiped by drizzle-kit push; always repopulate via POST /api/admin/sync/scouting-all (dev-bypass); do NOT use executeSql inserts as they may not survive db:push.
 - [Duplicate stat_leagues for lf2](lf2-duplicate-league.md) — stat_leagues had two lf2 rows (external_id=9 with 0 teams vs real one with 42); findFirst returned wrong one; fixed by deleting the empty duplicate.

@@ -644,8 +644,9 @@ export async function scrapeBEVPlayerStats(
   // Tabla de TOTALES = 3ª tabla de la página (índice 2)
   const rows = $("table").eq(2).find("tr").toArray();
 
-  let inTarget = false;
-  let hasData  = false;
+  let inTarget      = false;
+  let doneTarget    = false;   // true once we've left the first matching section
+  let hasData       = false;
   const acc = {
     gamesPlayed: 0, minutesTotal: 0, points: 0,
     fg2Made: 0, fg2Att: 0, fg3Made: 0, fg3Att: 0,
@@ -660,7 +661,14 @@ export async function scrapeBEVPlayerStats(
 
     // Fila de etiqueta de temporada (colspan, contiene "Temp:")
     if (rowText.includes("Temp:")) {
-      inTarget = rowText.includes(label);
+      if (inTarget) {
+        // Salir de la sección que estábamos acumulando — no entrar en ninguna más
+        doneTarget = true;
+        inTarget   = false;
+      } else if (rowText.includes(label) && !doneTarget) {
+        // Entrar en la primera sección que coincide con la temporada objetivo
+        inTarget = true;
+      }
       continue;
     }
 
@@ -742,12 +750,15 @@ export async function scrapeBEVLeaguePlayers(comp: {
  * Extrae estadísticas de jugadores de todas las ligas BEV.
  * Proceso lento (~500 requests) — pensado para ejecutarse una vez al día.
  */
-export async function scrapeBEVAllLeaguePlayers(year?: number): Promise<BEVLeaguePlayersData[]> {
+export async function scrapeBEVAllLeaguePlayers(year?: number, leagueId?: string): Promise<BEVLeaguePlayersData[]> {
+  const comps = leagueId
+    ? BEV_COMPETICIONES.filter((c) => c.id === leagueId)
+    : [...BEV_COMPETICIONES];
   const results: BEVLeaguePlayersData[] = [];
-  for (const comp of BEV_COMPETICIONES) {
+  for (const comp of comps) {
     const data = await scrapeBEVLeaguePlayers(comp, year);
     results.push(data);
-    await new Promise((r) => setTimeout(r, 1500)); // pausa entre ligas
+    if (comps.length > 1) await new Promise((r) => setTimeout(r, 1500)); // pausa entre ligas
   }
   return results;
 }

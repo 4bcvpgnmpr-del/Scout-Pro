@@ -5,6 +5,8 @@ import { desc, gte, eq } from "drizzle-orm";
 import { syncHandlers, upsertHistoricalYearData } from "../jobs/sync.job.js";
 import { requireAuth, requirePro } from "../lib/auth.middleware.js";
 import { syncLeagueTeams } from "./auth.routes.js";
+import { scrapeBEVAllLeaguePlayers } from "../scrapers/feb-scraper.js";
+import { normalizeBEVPlayerStats } from "../db/normalizer.js";
 
 const router = Router();
 
@@ -145,6 +147,32 @@ router.post("/year/:startYear", async (req, res): Promise<void> => {
   }
   upsertHistoricalYearData(startYear).catch((_err) => {});
   res.json({ message: `Sync histórico para ${startYear}-${startYear + 1} iniciado en segundo plano` });
+});
+
+// ─── POST /player-stats/:leagueId ─────────────────────────────────────────────
+// Re-sync player stats for a single BEV league (e.g. "lf2"). Dev-only open.
+
+router.post("/player-stats/:leagueId", async (req, res): Promise<void> => {
+  const isDev = String(process.env["NODE_ENV"]) === "development";
+  if (!isDev && !req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+  const { leagueId } = req.params;
+  const startYearParam = req.query["year"] as string | undefined;
+  const startYear = startYearParam ? parseInt(startYearParam, 10) : undefined;
+
+  const run = async () => {
+    const allData = await scrapeBEVAllLeaguePlayers(startYear, leagueId);
+    let total = 0;
+    for (const data of allData) {
+      total += await normalizeBEVPlayerStats(data, startYear);
+    }
+    req.log?.info({ leagueId, startYear, total }, "[player-stats sync] completed");
+  };
+
+  run().catch((err) => req.log?.error({ err, leagueId }, "[player-stats sync] failed"));
+  res.json({ message: `Player stats sync para ${leagueId} iniciado en segundo plano` });
 });
 
 // ─── POST /scouting-league/:leagueShortName ───────────────────────────────────
