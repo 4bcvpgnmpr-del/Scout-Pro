@@ -22,7 +22,7 @@ import {
   Users, Video, ClipboardList, Library,
   Trash2, Loader2, Upload, Link2,
   Pencil, Check, Plus, Camera,
-  BarChart2, Activity, Search, Star,
+  BarChart2, Activity, Search, Star, Trophy,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -810,13 +810,161 @@ function TeamLogoHeader({ team }: { team: { id: number; name: string; logoUrl?: 
 }
 
 
+// ── Clasificación section (league standings table) ────────────────────────────
+
+interface StandingRow {
+  rank: number;
+  group: string | null;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  winPct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  teamExternalId: string | null;
+  teamName: string;
+}
+
+interface StandingsResponse {
+  standings: StandingRow[];
+  leagueShortName: string;
+  leagueName: string;
+  seasonName: string;
+  currentTeamExternalId: string;
+}
+
+export function ClasificacionSection({ statTeamExternalId }: { statTeamExternalId?: string | null }) {
+  const { data, isLoading, error } = useQuery<StandingsResponse>({
+    queryKey: ["standings-by-team", statTeamExternalId],
+    queryFn: async () => {
+      const res = await fetch(`/api/standings/by-team/${encodeURIComponent(statTeamExternalId!)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("standings-error");
+      return res.json() as Promise<StandingsResponse>;
+    },
+    enabled: !!statTeamExternalId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (!statTeamExternalId) {
+    return (
+      <div className="text-center py-16 text-gray-400 text-sm">
+        <Trophy className="h-10 w-10 mx-auto mb-3 text-gray-700" />
+        <p>Sin datos de clasificación.<br />Selecciona tu equipo desde una liga con datos automáticos.</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>;
+  }
+
+  if (error || !data) {
+    return <div className="text-center py-16 text-gray-400 text-sm">No hay datos de clasificación disponibles.</div>;
+  }
+
+  const { standings: rows, leagueName, seasonName, currentTeamExternalId } = data;
+
+  if (rows.length === 0) {
+    return <div className="text-center py-16 text-gray-400 text-sm">La clasificación aún no tiene datos para esta temporada.</div>;
+  }
+
+  const myRow = rows.find((r) => r.teamExternalId === currentTeamExternalId);
+
+  return (
+    <div className="space-y-4">
+      {/* League header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs font-black text-gray-400 uppercase tracking-widest">{leagueName}</div>
+          <div className="text-sm text-gray-600">{seasonName}</div>
+        </div>
+        {myRow && (
+          <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2">
+            <Trophy className="h-4 w-4 text-orange-500" />
+            <div className="text-right">
+              <div className="text-[10px] text-orange-500 font-black uppercase tracking-widest">Tu posición</div>
+              <div className="text-lg font-black text-orange-600">#{myRow.rank}</div>
+            </div>
+            <div className="border-l border-orange-200 pl-3 text-right">
+              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Balance</div>
+              <div className="text-sm font-black text-gray-800">{myRow.wins}V – {myRow.losses}D</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 pl-4 pr-2 w-10">#</th>
+                <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 px-2">Equipo</th>
+                <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 px-2">PJ</th>
+                <th className="text-center text-[10px] font-black text-emerald-500 uppercase tracking-widest py-3 px-2">V</th>
+                <th className="text-center text-[10px] font-black text-red-400 uppercase tracking-widest py-3 px-2">D</th>
+                <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 px-2">%V</th>
+                <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 px-2 hidden sm:table-cell">PF</th>
+                <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 px-2 hidden sm:table-cell">PC</th>
+                <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest py-3 pr-4 pl-2 hidden sm:table-cell">Dif</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const isCurrent = row.teamExternalId === currentTeamExternalId;
+                return (
+                  <tr
+                    key={row.rank}
+                    className={`border-b border-gray-50 last:border-0 transition ${
+                      isCurrent
+                        ? "bg-orange-50 font-bold"
+                        : "hover:bg-gray-50/60"
+                    }`}
+                  >
+                    <td className="py-3 pl-4 pr-2 text-center">
+                      <span className={`text-sm font-black ${isCurrent ? "text-orange-500" : "text-gray-400"}`}>
+                        {row.rank}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`text-sm truncate max-w-[160px] block ${isCurrent ? "text-orange-700 font-black" : "text-gray-800"}`}>
+                        {row.teamName}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-center text-sm text-gray-600">{row.gamesPlayed}</td>
+                    <td className="py-3 px-2 text-center text-sm font-bold text-emerald-600">{row.wins}</td>
+                    <td className="py-3 px-2 text-center text-sm font-bold text-red-400">{row.losses}</td>
+                    <td className="py-3 px-2 text-center text-sm text-gray-600">
+                      {row.gamesPlayed > 0 ? `${(row.winPct * 100).toFixed(0)}%` : "—"}
+                    </td>
+                    <td className="py-3 px-2 text-center text-sm text-gray-500 hidden sm:table-cell">{row.pointsFor}</td>
+                    <td className="py-3 px-2 text-center text-sm text-gray-500 hidden sm:table-cell">{row.pointsAgainst}</td>
+                    <td className={`py-3 pr-4 pl-2 text-center text-sm font-bold hidden sm:table-cell ${
+                      row.pointDiff > 0 ? "text-emerald-500" : row.pointDiff < 0 ? "text-red-400" : "text-gray-400"
+                    }`}>
+                      {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TeamScoutingView (main surface) ───────────────────────────────────────────
 export function TeamScoutingView({
-  team, section, onSectionChange,
+  team, section, onSectionChange, statTeamExternalId,
 }: {
   team: { id: number; name: string; logoUrl?: string | null; teamType?: string | null };
   section: TeamSection;
   onSectionChange: (s: TeamSection) => void;
+  statTeamExternalId?: string | null;
 }) {
   const category = SECTION_TO_CATEGORY[section] ?? null;
 
@@ -857,6 +1005,9 @@ export function TeamScoutingView({
         )}
         {section === "estadisticas" && (
           <EstadisticasSection teamId={team.id} />
+        )}
+        {section === "clasificacion" && (
+          <ClasificacionSection statTeamExternalId={statTeamExternalId} />
         )}
         {category && (
           <TeamMediaSection key={category} teamId={team.id} category={category} />

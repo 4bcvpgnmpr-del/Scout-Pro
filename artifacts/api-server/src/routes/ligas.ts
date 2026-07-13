@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, ilike, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { leagues, syncTeams, syncPlayers, playerStats, seasons } from "@workspace/db";
+import { leagues, syncTeams, syncPlayers, playerStats, seasons, standings } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -146,12 +146,9 @@ router.get("/liga-jugadores/ligas", async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
-// GET /api/liga-jugadores/equipos?liga=X — teams that have player stats
+// GET /api/liga-jugadores/equipos?liga=X — all teams in a league (with optional player count)
 router.get("/liga-jugadores/equipos", async (req, res): Promise<void> => {
   const { liga } = req.query as Record<string, string | undefined>;
-
-  const conditions = [sql`${playerStats.id} IS NOT NULL`];
-  if (liga) conditions.push(eq(leagues.shortName, liga));
 
   const rows = await db
     .select({
@@ -164,13 +161,64 @@ router.get("/liga-jugadores/equipos", async (req, res): Promise<void> => {
       playerCount: sql<number>`count(distinct ${playerStats.playerId})::int`,
     })
     .from(syncTeams)
-    .innerJoin(leagues,     eq(syncTeams.leagueId, leagues.id))
-    .innerJoin(playerStats, eq(playerStats.teamId, syncTeams.id))
+    .innerJoin(leagues,    eq(syncTeams.leagueId, leagues.id))
+    .leftJoin(playerStats, eq(playerStats.teamId, syncTeams.id))
     .where(liga ? eq(leagues.shortName, liga) : undefined)
     .groupBy(syncTeams.id, syncTeams.name, syncTeams.logoUrl, leagues.shortName, leagues.name, leagues.gender)
     .orderBy(leagues.shortName, syncTeams.name);
 
   res.json(rows);
+});
+
+// GET /api/standings/by-team/:externalId — full standings for the league of this team
+router.get("/standings/by-team/:externalId", async (req, res): Promise<void> => {
+  const { externalId } = req.params;
+
+  const team = await db.query.syncTeams.findFirst({
+    where: eq(syncTeams.externalId, externalId),
+    with: { league: true },
+  });
+
+  if (!team) {
+    res.status(404).json({ error: "Equipo no encontrado" });
+    return;
+  }
+
+  const season = await db.query.seasons.findFirst({
+    where: and(eq(seasons.leagueId, team.leagueId), eq(seasons.isCurrent, true)),
+  });
+
+  if (!season) {
+    res.json({ standings: [], leagueShortName: team.league.shortName, leagueName: team.league.name, currentTeamExternalId: externalId });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      rank:          standings.rank,
+      group:         standings.group,
+      gamesPlayed:   standings.gamesPlayed,
+      wins:          standings.wins,
+      losses:        standings.losses,
+      winPct:        standings.winPct,
+      pointsFor:     standings.pointsFor,
+      pointsAgainst: standings.pointsAgainst,
+      pointDiff:     standings.pointDiff,
+      teamExternalId: syncTeams.externalId,
+      teamName:       syncTeams.name,
+    })
+    .from(standings)
+    .innerJoin(syncTeams, eq(standings.teamId, syncTeams.id))
+    .where(and(eq(standings.seasonId, season.id), sql`${standings.rank} > 0`))
+    .orderBy(standings.rank);
+
+  res.json({
+    standings: rows,
+    leagueShortName: team.league.shortName,
+    leagueName: team.league.name,
+    seasonName: season.name,
+    currentTeamExternalId: externalId,
+  });
 });
 
 export default router;

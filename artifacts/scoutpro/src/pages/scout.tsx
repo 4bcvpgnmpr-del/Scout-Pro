@@ -1435,6 +1435,7 @@ export default function Scout() {
           team={activeTeam!}
           section={teamMediaSection!}
           onSectionChange={(s) => { setView({ kind: teamKind, teamId: activeTeam!.id, section: s }); setSelectedPlayerId(null); setComparePlayerId(null); }}
+          statTeamExternalId={activeTeam!.statTeamExternalId ?? undefined}
         />
       ) : view.kind === "mapa-tiros" ? (
         <div className="flex-1 overflow-hidden">
