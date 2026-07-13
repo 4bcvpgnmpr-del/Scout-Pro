@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { eq, isNotNull, and } from "drizzle-orm";
+import { eq, isNotNull, and, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable, teamsTable, leagues, syncTeams,
@@ -271,9 +271,9 @@ export async function syncLeagueTeams(
   }
 
   // ── Sync stat_players → players for every team in this league ────────────
+  // One row per unique player (keyed on stat_player_external_id).
+  // We only copy the LATEST season so historical re-syncs don't create duplicates.
 
-  // Get the latest season for this league
-  // All seasons for this league, sorted newest first
   const leagueSeasons = await db
     .select()
     .from(seasons)
@@ -281,6 +281,9 @@ export async function syncLeagueTeams(
     .orderBy(seasons.startYear);
 
   if (leagueSeasons.length === 0) return;
+
+  // Only the newest season drives the scouting players table
+  const latestSeason = leagueSeasons[leagueSeasons.length - 1]!;
 
   // Load the scouting teams we just upserted for this league
   const scoutingTeams = await db
@@ -295,62 +298,69 @@ export async function syncLeagueTeams(
       .map((t) => [t.statExtId!, t.id]),
   );
 
-  // For each team × season, upsert players into the scouting players table
+  // Load ALL existing stat-linked players in this league so we can upsert by
+  // stat_player_external_id regardless of which team/season they were in before.
+  const allLeagueTeamIds = scoutingTeams.map((t) => t.id);
+  const existingStatPlayers = allLeagueTeamIds.length
+    ? await db
+        .select({ id: playersTable.id, statExtId: playersTable.statPlayerExternalId })
+        .from(playersTable)
+        .where(
+          and(
+            inArray(playersTable.teamId, allLeagueTeamIds),
+            isNotNull(playersTable.statPlayerExternalId),
+          ),
+        )
+    : [];
+
+  // Map: stat_player_external_id → scouting player id (first occurrence wins)
+  const existingExtMap = new Map<string, number>();
+  for (const p of existingStatPlayers) {
+    if (p.statExtId && !existingExtMap.has(p.statExtId)) {
+      existingExtMap.set(p.statExtId, p.id);
+    }
+  }
+
+  // For each team, upsert players from the latest season only
   for (const st of statTeamRows) {
     const extId       = st.externalId ?? st.name;
     const scoutTeamId = extToScoutId.get(extId);
     if (!scoutTeamId) continue;
 
-    for (const season of leagueSeasons) {
-      // Players with stats for this team in this specific season
-      const rows = await db
-        .select({ sp: syncPlayers })
-        .from(playerStats)
-        .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
-        .where(and(eq(playerStats.teamId, st.id), eq(playerStats.seasonId, season.id)));
+    const rows = await db
+      .select({ sp: syncPlayers })
+      .from(playerStats)
+      .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
+      .where(and(eq(playerStats.teamId, st.id), eq(playerStats.seasonId, latestSeason.id)));
 
-      if (rows.length === 0) continue;
+    if (rows.length === 0) continue;
 
-      // Load existing players for this team+season to handle upserts
-      const existingRows = await db
-        .select({ id: playersTable.id, statExtId: playersTable.statPlayerExternalId })
-        .from(playersTable)
-        .where(and(
-          eq(playersTable.teamId, scoutTeamId),
-          eq(playersTable.seasonYear, season.startYear),
-        ));
+    for (const { sp } of rows) {
+      const statExtId = sp.externalId ?? sp.id;
+      const fullName  = `${sp.firstName} ${sp.lastName}`.trim();
+      const birthYear = sp.birthDate ? new Date(sp.birthDate).getFullYear() : null;
+      const age       = birthYear ? new Date().getFullYear() - birthYear : null;
 
-      const existingExtMap = new Map(
-        existingRows
-          .filter((p) => p.statExtId != null)
-          .map((p) => [p.statExtId!, p.id]),
-      );
+      const payload = {
+        name:                 fullName,
+        position:             sp.position ?? "—",
+        teamId:               scoutTeamId,
+        seasonYear:           latestSeason.startYear,
+        age:                  age ?? undefined,
+        height:               sp.height ? String(sp.height) : undefined,
+        weight:               sp.weight ?? undefined,
+        nationality:          sp.nationality ?? undefined,
+        photoUrl:             sp.photoUrl ?? undefined,
+        statPlayerExternalId: statExtId,
+      };
 
-      for (const { sp } of rows) {
-        const statExtId = sp.externalId ?? sp.id;
-        const fullName  = `${sp.firstName} ${sp.lastName}`.trim();
-        const birthYear = sp.birthDate ? new Date(sp.birthDate).getFullYear() : null;
-        const age       = birthYear ? new Date().getFullYear() - birthYear : null;
-
-        const payload = {
-          name:                 fullName,
-          position:             sp.position ?? "—",
-          teamId:               scoutTeamId,
-          seasonYear:           season.startYear,
-          age:                  age ?? undefined,
-          height:               sp.height ? String(sp.height) : undefined,
-          weight:               sp.weight ?? undefined,
-          nationality:          sp.nationality ?? undefined,
-          photoUrl:             sp.photoUrl ?? undefined,
-          statPlayerExternalId: statExtId,
-        };
-
-        const existingId = existingExtMap.get(statExtId);
-        if (existingId) {
-          await db.update(playersTable).set(payload).where(eq(playersTable.id, existingId));
-        } else {
-          await db.insert(playersTable).values(payload);
-        }
+      const existingId = existingExtMap.get(statExtId);
+      if (existingId) {
+        await db.update(playersTable).set(payload).where(eq(playersTable.id, existingId));
+      } else {
+        await db.insert(playersTable).values(payload);
+        // Don't add to map — prevent re-inserting same player from parallel teams
+        existingExtMap.set(statExtId, -1);
       }
     }
   }
