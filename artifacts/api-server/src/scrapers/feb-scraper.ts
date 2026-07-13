@@ -672,9 +672,14 @@ export async function scrapeBEVPlayerStats(
     const cell = (i: number) => tds.eq(i).text().trim();
     if (cell(0) === "FASE") continue;               // fila de cabecera de columnas
 
-    // Acumular Liga Regular (LR) + Playoffs (PO). Saltar Copa/Grupo (GR, FF)
-    // y fila total (cell(0) vacío).
-    if (cell(0) !== "LR" && cell(0) !== "PO") continue;
+    // Acumular partidos de competición oficial:
+    //   LR = Liga Regular (todas las ligas)
+    //   PO = Playoff (Primera FEB, Segunda FEB, LFE, LFC)
+    //   EL = Eliminatorias/Playoff (LF2)
+    //   FF = Fase Final (usado en algunas ligas femeninas)
+    // Excluir: GR (Copa/Grupo Regular), "" (fila de totales).
+    const INCLUDE_PHASES = new Set(["LR", "PO", "EL", "FF"]);
+    if (!INCLUDE_PHASES.has(cell(0))) continue;
 
     acc.gamesPlayed  += parseInt(cell(1), 10)  || 0;
     acc.minutesTotal += parseMinutesBEV(cell(2));

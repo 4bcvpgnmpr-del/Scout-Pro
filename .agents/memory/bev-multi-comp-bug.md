@@ -1,34 +1,31 @@
 ---
 name: BEV multi-competition gamesPlayed bug
-description: BEV player pages show stats per competition phase under individual Temp rows; correct fix is to filter by cell(0)==="LR" only.
+description: BEV player pages show stats per competition phase under individual Temp rows; filter by INCLUDE_PHASES set to avoid double-counting.
 ---
 
 ## The Rule
 
-Only accumulate rows where `cell(0) === "LR"` (Liga Regular). Use a simple `inTargetYear` boolean (no exit/doneTarget logic).
+Accumulate only rows whose `cell(0)` is in `INCLUDE_PHASES = new Set(["LR","PO","EL","FF"])`.
+Skip `GR` (Copa/Grupo Regular) and `""` (grand total row).
 
-**Why:** BEV player stats pages (table index 2) contain one row per competition phase per season, each preceded by its own `"Temp: YY/YY. Equipo:"` header row. Phase codes:
-- `LR` = Liga Regular (main competition — ONLY this should be accumulated)
-- `GR` = Copa FEB / Grupo Regular (cup or pre-season group phase)
-- `PO` = Playoff (post-season)
-- `""` (empty cell(0)) = totals/summary row that sums ALL phases
+**Why:** BEV player stats pages (table index 2) contain one row per competition phase per season, each preceded by its own `"Temp: YY/YY. Equipo:"` header row.
+Phase codes vary by league:
 
-**Page structure confirmed (Primera FEB player 1394852/team 951078):**
+| Code | Meaning | Leagues |
+|------|---------|---------|
+| `LR` | Liga Regular | All leagues ✓ include |
+| `PO` | Playoff | Primera FEB, Segunda FEB, LFE, LF Challenge ✓ include |
+| `EL` | Eliminatorias (Playoff) | **LF2** ✓ include |
+| `FF` | Fase Final | Some leagues ✓ include |
+| `GR` | Copa / Grupo Regular | All leagues ✗ exclude |
+| `""` | Grand total (sum of all phases) | All leagues ✗ exclude |
+
+LF2 confirmed structure (25/26, jugador/981128/2325680):
 ```
-Row: Temp: 24/25 Equipo:  → GR section
-Row: GR  |  4  | ...      (Copa/Grupo Regular, 4 games)
-Row: Temp: 24/25 Equipo:  → LR section
-Row: LR  | 32  | ...      (Liga Regular, 32 games — CORRECT)
-Row: Temp: 24/25 Equipo:  → PO section
-Row: PO  |  3  | ...      (Playoff round 1)
-Row: Temp: 24/25 Equipo:  → PO section
-Row: PO  |  5  | ...      (Playoff final)
-Row:     | 44  | ...      (Total row, cell(0)="" — sums everything)
+Temp: 25/26 → LR | 26 games (Liga Regular)
+Temp: 25/26 → EL |  4 games (Eliminatorias/Playoff)
+             ""  | 30 games (total — excluded)
 ```
-
-Without filtering: code sums 4+32+3+5+44=88 or 4+32+3+5=44 (still wrong).
-Previous `doneTarget` fix: only entered first Temp section (GR=4 games) and exited. Result: 4 games — wrong.
-Correct fix: scan all Temp sections, only accumulate where cell(0)==="LR".
 
 ## How to Apply
 
@@ -42,10 +39,15 @@ if (rowText.includes("Temp:")) {
 if (!inTargetYear) continue;
 if (tds.length < 20) continue;
 const cell = (i) => tds.eq(i).text().trim();
-if (cell(0) === "FASE") continue;  // column header rows
-if (cell(0) !== "LR" && cell(0) !== "PO") continue;  // skip GR/FF (copa) and "" (totals); include LR+PO
+if (cell(0) === "FASE") continue;                        // column header rows
+const INCLUDE_PHASES = new Set(["LR", "PO", "EL", "FF"]);
+if (!INCLUDE_PHASES.has(cell(0))) continue;              // skip GR, "", unknown
 // accumulate stats...
 ```
+
+## BEV player pages are NOT historical
+Player pages (`jugador/TEAM/PLAYER`) only show the **latest season** for that team.
+The `?t=year` URL parameter is silently ignored. Cannot re-scrape historical seasons.
 
 ## Re-sync after scraper fix
 Use `POST /api/admin/sync/player-stats/:leagueId?year=YYYY` (dev-bypass) to re-scrape a single league.
