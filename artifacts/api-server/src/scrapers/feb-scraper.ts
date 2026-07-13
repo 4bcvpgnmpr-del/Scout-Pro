@@ -641,8 +641,14 @@ export async function scrapeBEVPlayerStats(
   const photoUrl  = $(".box-jugador .foto img").attr("src") ?? "";
   const teamName  = $(".box-jugador .equipo a").text().trim();
 
-  // Tabla de TOTALES = 3ª tabla de la página (índice 2)
-  const rows = $("table").eq(2).find("tr").toArray();
+  // Tabla de TOTALES = normalmente la 3ª tabla (índice 2), pero en algunas páginas
+  // (p.ej. jugadoras veteranas) el orden está invertido: totales en índice 1 y
+  // promedios en índice 2. Combinamos ambas tablas y descartamos las filas de
+  // promedios (cell(4) contiene "%" en vez de la fracción "made/att").
+  const rows = [
+    ...$("table").eq(1).find("tr").toArray(),
+    ...$("table").eq(2).find("tr").toArray(),
+  ];
 
   // BEV structure: each "Temp: YY/YY. Equipo:" row precedes exactly ONE data row
   // for that competition phase. Phase codes: LR = Liga Regular, GR = Copa/Grupo,
@@ -671,6 +677,9 @@ export async function scrapeBEVPlayerStats(
     if (tds.length < 20) continue;                  // cabeceras o filas incompletas
     const cell = (i: number) => tds.eq(i).text().trim();
     if (cell(0) === "FASE") continue;               // fila de cabecera de columnas
+    // Descartar filas de promedios (cell(4) = "33,3%" en vez de fracción "56/154").
+    // Algunas páginas tienen el orden de tablas invertido (promedios antes que totales).
+    if (cell(4).includes("%")) continue;
 
     // Acumular partidos de competición oficial:
     //   LR = Liga Regular (todas las ligas)
@@ -704,6 +713,40 @@ export async function scrapeBEVPlayerStats(
     acc.fouls       += parseInt(cell(17), 10) || 0; // FC (faltas cometidas)
     acc.pir         += parseInt(cell(19), 10) || 0; // VA (valoración)
     hasData = true;
+  }
+
+  // Fallback: si la página sólo tiene tabla de promedios (sin totales), calcular
+  // totales aproximados multiplicando el promedio por partidos. Los porcentajes de
+  // tiro (fg2/fg3/ft) no son recuperables, se dejan a 0.
+  if (!hasData) {
+    const parseAvg = (s: string) => parseFloat(s.replace(",", ".")) || 0;
+    let avgInTargetYear = false;
+    const INCLUDE_PHASES_AVG = new Set(["LR", "PO", "EL", "FF"]);
+    for (const tr of rows) {
+      const tds     = $(tr).find("td");
+      const rowText = $(tr).text().replace(/\s+/g, " ").trim();
+      if (rowText.includes("Temp:")) { avgInTargetYear = rowText.includes(label); continue; }
+      if (!avgInTargetYear) continue;
+      if (tds.length < 20) continue;
+      const cell = (i: number) => tds.eq(i).text().trim();
+      if (cell(0) === "FASE") continue;
+      if (!INCLUDE_PHASES_AVG.has(cell(0))) continue;
+      if (!cell(4).includes("%")) continue; // sólo filas de promedios
+      const g = parseInt(cell(1), 10) || 0;
+      acc.gamesPlayed  += g;
+      acc.minutesTotal += parseMinutesBEV(cell(2)) * g;
+      acc.points       += Math.round(parseAvg(cell(3))  * g);
+      acc.offRebounds  += Math.round(parseAvg(cell(8))  * g);
+      acc.defRebounds  += Math.round(parseAvg(cell(9))  * g);
+      acc.rebounds     += Math.round(parseAvg(cell(10)) * g);
+      acc.assists      += Math.round(parseAvg(cell(11)) * g);
+      acc.steals       += Math.round(parseAvg(cell(12)) * g);
+      acc.turnovers    += Math.round(parseAvg(cell(13)) * g);
+      acc.blocks       += Math.round(parseAvg(cell(16)) * g);
+      acc.fouls        += Math.round(parseAvg(cell(17)) * g);
+      acc.pir          += Math.round(parseAvg(cell(19)) * g);
+      hasData = true;
+    }
   }
 
   if (!hasData || acc.gamesPlayed === 0) return null;

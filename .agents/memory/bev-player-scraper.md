@@ -21,8 +21,9 @@ Functions in `artifacts/api-server/src/scrapers/feb-scraper.ts`:
 - Player name: `$(".box-jugador .nombre").text()` → **"APELLIDOS, NOMBRE"** format (comma-separated, all caps)
 - Team name: `$(".box-jugador .equipo a").text()`
 - Photo URL: `$(".box-jugador .foto img").attr("src")` → `https://imagenes.feb.es/Foto.aspx?c=PLAYER_ID`
-- **Table index 2** (3rd table, 0-indexed) = totals stats (NOT averages)
-- Table index 1 = averages; Table index 0 = career history (trayectoria)
+- **Standard pages**: Table 0 = career history, Table 1 = averages, **Table 2 = totals**
+- **Averages-only pages** (some veteran/foreign players): Table 2 = averages, NO separate totals table
+- The scraper now combines rows from BOTH tables 1 and 2 to handle both layouts
 
 ## Totals table structure
 

@@ -12,7 +12,7 @@
 - [Season selector architecture](season-selector-arch.md) — SeasonContext wraps Router in App.tsx; SeasonBar in sidebar; pages use queryFn override to pass ?season= without spec changes to existing endpoints.
 - [BEV scraper conventions](bev-scraper.md) — baloncestoenvivo.feb.es has TEAM stats only (no player stats); uses t=startYear; cells have values on 2nd non-empty line.
 - [BEV multi-competition gamesPlayed bug](bev-multi-comp-bug.md) — only accumulate cell(0)==="LR" rows; BEV player pages are NOT historical (no ?t=year support), only show latest season per team.
-- [BEV player scraper chain](bev-player-scraper.md) — rankings.aspx → Equipo.aspx team IDs → Equipo.aspx roster → jugador/TEAM/PLAYER stats; cells are plain text; table index 2 = totals; season label row contains "Temp: YY/YY".
+- [BEV player scraper chain](bev-player-scraper.md) — combines tables 1+2, skips "%" rows (averages); fallback multiplies avg×games for averages-only pages (e.g. DOVILE MILIAUSKAITE bev-1869823).
 - [Scouting sync via API not executeSql](scouting-sync-pattern.md) — teams table can be wiped by drizzle-kit push; always repopulate via POST /api/admin/sync/scouting-all (dev-bypass); do NOT use executeSql inserts as they may not survive db:push.
 - [Parallel scouting-all causes duplicate teams](sync-race-condition.md) — Promise.all on scouting-all races team insert+lookup; fixed by running leagues sequentially (for...of loop) in runAll().
 - [Duplicate stat_leagues for lf2](lf2-duplicate-league.md) — stat_leagues had two lf2 rows (external_id=9 with 0 teams vs real one with 42); findFirst returned wrong one; fixed by deleting the empty duplicate.
