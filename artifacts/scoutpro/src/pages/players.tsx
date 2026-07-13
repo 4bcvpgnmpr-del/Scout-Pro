@@ -20,23 +20,37 @@ const POSITIONS = [
 export default function Players() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("ALL");
-  const { selectedSeason } = useSeason();
+  const { selectedSeason, isLoading: seasonLoading } = useSeason();
 
+  // Always send seasonYear — never fetch without it to avoid cross-season duplicates
   const params = {
     ...(positionFilter !== "ALL" ? { position: positionFilter } : {}),
     ...(selectedSeason?.startYear ? { seasonYear: selectedSeason.startYear } : {}),
   };
 
-  const { data: players, isLoading } = useListPlayers(
-    Object.keys(params).length > 0 ? params : undefined,
+  const { data: players, isLoading: playersLoading } = useListPlayers(
+    params,
     {
       query: {
-        queryKey: [...getListPlayersQueryKey(Object.keys(params).length > 0 ? params : undefined), selectedSeason?.id],
+        queryKey: [...getListPlayersQueryKey(params), selectedSeason?.id ?? "none"],
+        // Block the query until season is known — prevents unfiltered multi-season fetch
+        enabled: !seasonLoading && !!selectedSeason,
       },
     },
   );
 
-  const filteredPlayers = (players ?? []).filter(
+  const isLoading = seasonLoading || playersLoading;
+
+  // Deduplicate by statPlayerExternalId as a safety net (same player, multiple seasons)
+  const seen = new Set<string>();
+  const deduped = (players ?? []).filter((p) => {
+    const key = p.statPlayerExternalId ?? String(p.id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const filteredPlayers = deduped.filter(
     (p) =>
       (!search.trim() ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
