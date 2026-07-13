@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
-import { eq, isNotNull, and, inArray } from "drizzle-orm";
+import { eq, isNotNull, and, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   usersTable, teamsTable, leagues, syncTeams,
@@ -282,8 +282,18 @@ export async function syncLeagueTeams(
 
   if (leagueSeasons.length === 0) return;
 
-  // Only the newest season drives the scouting players table
-  const latestSeason = leagueSeasons[leagueSeasons.length - 1]!;
+  // Pick the most recent season that actually has player_stats data.
+  // A newly-created empty season (e.g. 2026-27 before scraping) must be skipped.
+  let latestSeason = leagueSeasons[leagueSeasons.length - 1]!;
+  for (let i = leagueSeasons.length - 1; i >= 0; i--) {
+    const s = leagueSeasons[i]!;
+    const count = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(playerStats)
+      .where(eq(playerStats.seasonId, s.id))
+      .then((r) => r[0]?.n ?? 0);
+    if (count > 0) { latestSeason = s; break; }
+  }
 
   // Load the scouting teams we just upserted for this league
   const scoutingTeams = await db

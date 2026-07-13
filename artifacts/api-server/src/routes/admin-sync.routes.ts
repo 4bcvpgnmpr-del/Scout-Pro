@@ -201,9 +201,13 @@ router.post("/scouting-all", async (req, res): Promise<void> => {
   const selectedByLeague: Record<string, string> = {
     lf2: (req.query["lf2Team"] as string) ?? "",
   };
-  Promise.all(
-    leagueList.map((l) => syncLeagueTeams(selectedByLeague[l] ?? "", l))
-  ).catch((_err) => {});
+  // Run leagues sequentially to avoid race conditions creating duplicate teams
+  const runAll = async () => {
+    for (const l of leagueList) {
+      await syncLeagueTeams(selectedByLeague[l] ?? "", l);
+    }
+  };
+  runAll().catch((_err) => {});
   res.json({ message: "Scouting sync para todas las ligas iniciado" });
 });
 
