@@ -1,27 +1,52 @@
 ---
 name: BEV multi-competition gamesPlayed bug
-description: BEV player pages show stats per competition (LF2 + Copa LF etc.) each under the same "Temp: YY/YY" label, causing double-counting if not handled.
+description: BEV player pages show stats per competition phase under individual Temp rows; correct fix is to filter by cell(0)==="LR" only.
 ---
 
-## Rule
-In `scrapeBEVPlayerStats`, when iterating table rows, any new "Temp:" row must EXIT the current section BEFORE evaluating whether to enter a new one.
+## The Rule
 
-**Why:** BEV renders one stats block per competition (e.g. LF2 Liga + Copa LF) all under the same "Temp: 25/26" label. The first fix attempt used `if (matches && !doneTarget)` — but when the Copa section started, `inTarget=true` and `!doneTarget=true` both held, so the code re-entered instead of exiting. Result: gamesPlayed tripled (e.g. 60 instead of 20).
+Only accumulate rows where `cell(0) === "LR"` (Liga Regular). Use a simple `inTargetYear` boolean (no exit/doneTarget logic).
 
-**How to apply:**
+**Why:** BEV player stats pages (table index 2) contain one row per competition phase per season, each preceded by its own `"Temp: YY/YY. Equipo:"` header row. Phase codes:
+- `LR` = Liga Regular (main competition — ONLY this should be accumulated)
+- `GR` = Copa FEB / Grupo Regular (cup or pre-season group phase)
+- `PO` = Playoff (post-season)
+- `""` (empty cell(0)) = totals/summary row that sums ALL phases
+
+**Page structure confirmed (Primera FEB player 1394852/team 951078):**
+```
+Row: Temp: 24/25 Equipo:  → GR section
+Row: GR  |  4  | ...      (Copa/Grupo Regular, 4 games)
+Row: Temp: 24/25 Equipo:  → LR section
+Row: LR  | 32  | ...      (Liga Regular, 32 games — CORRECT)
+Row: Temp: 24/25 Equipo:  → PO section
+Row: PO  |  3  | ...      (Playoff round 1)
+Row: Temp: 24/25 Equipo:  → PO section
+Row: PO  |  5  | ...      (Playoff final)
+Row:     | 44  | ...      (Total row, cell(0)="" — sums everything)
+```
+
+Without filtering: code sums 4+32+3+5+44=88 or 4+32+3+5=44 (still wrong).
+Previous `doneTarget` fix: only entered first Temp section (GR=4 games) and exited. Result: 4 games — wrong.
+Correct fix: scan all Temp sections, only accumulate where cell(0)==="LR".
+
+## How to Apply
+
 ```typescript
+let inTargetYear = false;
+// in loop:
 if (rowText.includes("Temp:")) {
-  if (inTarget) {
-    // Exit the section we were accumulating — never re-enter
-    doneTarget = true;
-    inTarget   = false;
-  } else if (rowText.includes(label) && !doneTarget) {
-    inTarget = true;
-  }
+  inTargetYear = rowText.includes(label);
   continue;
 }
+if (!inTargetYear) continue;
+if (tds.length < 20) continue;
+const cell = (i) => tds.eq(i).text().trim();
+if (cell(0) === "FASE") continue;  // column header rows
+if (cell(0) !== "LR") continue;    // skip GR (copa), PO (playoffs), "" (totals)
+// accumulate stats...
 ```
-Priority: exit-if-inside FIRST, then check whether to enter. Never check entry condition while already inside a section.
 
 ## Re-sync after scraper fix
-Use `POST /api/admin/sync/player-stats/:leagueId?year=2025` (dev-bypass, added to admin-sync.routes.ts) to re-scrape a single league without running the full 500-request historical sync. Takes ~3 minutes for LF2 (~270 players).
+Use `POST /api/admin/sync/player-stats/:leagueId?year=YYYY` (dev-bypass) to re-scrape a single league.
+Trigger all 6 leagues after any scraper change.

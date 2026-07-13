@@ -644,8 +644,10 @@ export async function scrapeBEVPlayerStats(
   // Tabla de TOTALES = 3ª tabla de la página (índice 2)
   const rows = $("table").eq(2).find("tr").toArray();
 
-  let inTarget      = false;
-  let doneTarget    = false;   // true once we've left the first matching section
+  // BEV structure: each "Temp: YY/YY. Equipo:" row precedes exactly ONE data row
+  // for that competition phase. Phase codes: LR = Liga Regular, GR = Copa/Grupo,
+  // PO = Playoff. We only want the LR (Liga Regular) rows for the target season.
+  let inTargetYear  = false;
   let hasData       = false;
   const acc = {
     gamesPlayed: 0, minutesTotal: 0, points: 0,
@@ -659,23 +661,20 @@ export async function scrapeBEVPlayerStats(
     const tds     = $(tr).find("td");
     const rowText = $(tr).text().replace(/\s+/g, " ").trim();
 
-    // Fila de etiqueta de temporada (colspan, contiene "Temp:")
+    // Fila de etiqueta de temporada — actualiza si estamos en el año objetivo
     if (rowText.includes("Temp:")) {
-      if (inTarget) {
-        // Salir de la sección que estábamos acumulando — no entrar en ninguna más
-        doneTarget = true;
-        inTarget   = false;
-      } else if (rowText.includes(label) && !doneTarget) {
-        // Entrar en la primera sección que coincide con la temporada objetivo
-        inTarget = true;
-      }
+      inTargetYear = rowText.includes(label);
       continue;
     }
 
-    if (!inTarget) continue;
+    if (!inTargetYear) continue;
     if (tds.length < 20) continue;                  // cabeceras o filas incompletas
     const cell = (i: number) => tds.eq(i).text().trim();
     if (cell(0) === "FASE") continue;               // fila de cabecera de columnas
+
+    // Solo acumular filas de Liga Regular (LR). Saltar Copa/Grupo (GR),
+    // Playoffs (PO) y fila total (cell(0) vacío).
+    if (cell(0) !== "LR") continue;
 
     acc.gamesPlayed  += parseInt(cell(1), 10)  || 0;
     acc.minutesTotal += parseMinutesBEV(cell(2));
