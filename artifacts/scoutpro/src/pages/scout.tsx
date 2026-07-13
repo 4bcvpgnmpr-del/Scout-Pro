@@ -1292,14 +1292,21 @@ export default function Scout() {
                 return (
                   <div key={team.id}>
                     <button
-                      onClick={() => toggleTeam(team.id)}
+                      onClick={() => {
+                        setView({ kind: "own", teamId: team.id, section: "roster" });
+                        setSelectedPlayerId(null);
+                        setComparePlayerId(null);
+                        if (!isExpanded) toggleTeam(team.id);
+                      }}
                       className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
                         isActiveTeam ? "text-blue-300 bg-blue-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                       }`}
                     >
                       <div className="w-2 h-2 rounded-sm bg-blue-500/60 shrink-0" />
                       <span className="flex-1 truncate text-left">{team.name}</span>
-                      {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      <span onClick={(e) => { e.stopPropagation(); toggleTeam(team.id); }} className="p-0.5 rounded hover:bg-white/10">
+                        {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      </span>
                     </button>
                     {isExpanded && (
                       <div className="mt-0.5 mb-1 ml-2 pl-3 border-l border-white/5 space-y-0.5">
@@ -1351,14 +1358,22 @@ export default function Scout() {
                 return (
                   <div key={team.id}>
                     <button
-                      onClick={() => toggleTeam(team.id)}
+                      onClick={() => {
+                        setView({ kind: "rival", teamId: team.id, section: "roster" });
+                        setSelectedPlayerId(null);
+                        setComparePlayerId(null);
+                        setFilterTeamId(null);
+                        if (!isExpanded) toggleTeam(team.id);
+                      }}
                       className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 transition-all text-sm font-medium ${
                         isActiveTeam ? "text-orange-300 bg-orange-500/10" : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                       }`}
                     >
                       <div className="w-2 h-2 rounded-sm bg-red-500/50 shrink-0" />
                       <span className="flex-1 truncate text-left">{team.name}</span>
-                      {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      <span onClick={(e) => { e.stopPropagation(); toggleTeam(team.id); }} className="p-0.5 rounded hover:bg-white/10">
+                        {isExpanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      </span>
                     </button>
                     {isExpanded && (
                       <div className="mt-0.5 mb-1 ml-2 pl-3 border-l border-white/5 space-y-0.5">
