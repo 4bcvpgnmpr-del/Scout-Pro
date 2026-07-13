@@ -672,9 +672,9 @@ export async function scrapeBEVPlayerStats(
     const cell = (i: number) => tds.eq(i).text().trim();
     if (cell(0) === "FASE") continue;               // fila de cabecera de columnas
 
-    // Solo acumular filas de Liga Regular (LR). Saltar Copa/Grupo (GR),
-    // Playoffs (PO) y fila total (cell(0) vacío).
-    if (cell(0) !== "LR") continue;
+    // Acumular Liga Regular (LR) + Playoffs (PO). Saltar Copa/Grupo (GR, FF)
+    // y fila total (cell(0) vacío).
+    if (cell(0) !== "LR" && cell(0) !== "PO") continue;
 
     acc.gamesPlayed  += parseInt(cell(1), 10)  || 0;
     acc.minutesTotal += parseMinutesBEV(cell(2));

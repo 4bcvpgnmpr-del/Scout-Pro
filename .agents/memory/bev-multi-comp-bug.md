@@ -43,7 +43,7 @@ if (!inTargetYear) continue;
 if (tds.length < 20) continue;
 const cell = (i) => tds.eq(i).text().trim();
 if (cell(0) === "FASE") continue;  // column header rows
-if (cell(0) !== "LR") continue;    // skip GR (copa), PO (playoffs), "" (totals)
+if (cell(0) !== "LR" && cell(0) !== "PO") continue;  // skip GR/FF (copa) and "" (totals); include LR+PO
 // accumulate stats...
 ```
 
