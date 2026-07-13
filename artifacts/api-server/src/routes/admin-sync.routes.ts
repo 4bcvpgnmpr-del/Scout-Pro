@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { syncLog, leagues } from "@workspace/db";
 import { desc, gte, eq } from "drizzle-orm";
-import { syncHandlers } from "../jobs/sync.job.js";
+import { syncHandlers, upsertHistoricalYearData } from "../jobs/sync.job.js";
 import { requireAuth, requirePro } from "../lib/auth.middleware.js";
 
 const router = Router();
@@ -126,6 +126,24 @@ router.post("/all", requireAuth, async (_req, res) => {
   } catch (_err) {
     res.status(500).json({ error: "Error starting full sync" });
   }
+});
+
+// ─── POST /year/:startYear ─────────────────────────────────────────────────────
+
+router.post("/year/:startYear", async (req, res): Promise<void> => {
+  // Dev-only open access (evaluated at request time, not at module load)
+  const isDev = String(process.env["NODE_ENV"]) === "development";
+  if (!isDev && !req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+  const startYear = parseInt(req.params.startYear, 10);
+  if (isNaN(startYear) || startYear < 2015 || startYear > new Date().getFullYear()) {
+    res.status(400).json({ error: `Año inválido: ${req.params.startYear}` });
+    return;
+  }
+  upsertHistoricalYearData(startYear).catch((_err) => {});
+  res.json({ message: `Sync histórico para ${startYear}-${startYear + 1} iniciado en segundo plano` });
 });
 
 // ─── POST /:source ────────────────────────────────────────────────────────────

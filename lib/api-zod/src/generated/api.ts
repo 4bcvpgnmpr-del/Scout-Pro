@@ -349,6 +349,10 @@ export const GetPlayerStatsParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const GetPlayerStatsQueryParams = zod.object({
+  "seasonYear": zod.coerce.number().optional().describe('Start year of the season (e.g. 2025 for 2025-26). Filters BEV stats to that specific season.')
+})
+
 export const GetPlayerStatsResponse = zod.object({
   "playerId": zod.number(),
   "gamesPlayed": zod.number(),

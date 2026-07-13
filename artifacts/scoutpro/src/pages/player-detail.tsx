@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,6 +19,7 @@ import {
   usePlayerProfile, getStoredProfile, computeAdvancedStats,
   type SeasonStats, type VideoEntry,
 } from "@/hooks/use-player-profile";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   ArrowLeft, Pencil, Trash2, Plus, Save, Check, X,
   TrendingUp, FileText, Video, GitCompare, History,
@@ -370,8 +371,12 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
   updateStats: ReturnType<typeof usePlayerProfile>["updateStats"];
   updateAdvanced: ReturnType<typeof usePlayerProfile>["updateAdvanced"];
 }) {
-  const { data: apiStats } = useGetPlayerStats(playerId, {
-    query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId) },
+  const { workspaces, activeId } = useWorkspace();
+  const activeWs = useMemo(() => workspaces.find((w) => w.id === activeId), [workspaces, activeId]);
+  const seasonYear = activeWs?.seasonId ? parseInt(activeWs.seasonId) : undefined;
+  const statsParams = seasonYear ? { seasonYear } : undefined;
+  const { data: apiStats } = useGetPlayerStats(playerId, statsParams, {
+    query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId, statsParams) },
   });
 
   const s = profile.seasonStats;

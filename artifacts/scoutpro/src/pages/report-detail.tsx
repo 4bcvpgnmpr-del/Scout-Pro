@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetReport,
@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trash2, TrendingUp, Shield, Zap, Brain, Download, Loader2, Pencil, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useExportPdfPages } from "@/hooks/use-export-pdf-pages";
 import { ScoutingReportPdf, type ScoutingNotes } from "@/components/pdf/scouting-report-pdf";
 
@@ -63,6 +64,11 @@ export default function ReportDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const { workspaces, activeId } = useWorkspace();
+  const activeWs = useMemo(() => workspaces.find((w) => w.id === activeId), [workspaces, activeId]);
+  const seasonYear = activeWs?.seasonId ? parseInt(activeWs.seasonId) : undefined;
+  const statsParams = seasonYear ? { seasonYear } : undefined;
+
   const page1Ref = useRef<HTMLDivElement>(null);
   const page2Ref = useRef<HTMLDivElement>(null);
   const page3Ref = useRef<HTMLDivElement>(null);
@@ -77,8 +83,8 @@ export default function ReportDetail() {
   const { data: game } = useGetGame(report?.gameId ?? 0, {
     query: { enabled: !!report?.gameId, queryKey: getGetGameQueryKey(report?.gameId ?? 0) },
   });
-  const { data: seasonStats } = useGetPlayerStats(report?.playerId ?? 0, {
-    query: { enabled: !!report?.playerId, queryKey: getGetPlayerStatsQueryKey(report?.playerId ?? 0) },
+  const { data: seasonStats } = useGetPlayerStats(report?.playerId ?? 0, statsParams, {
+    query: { enabled: !!report?.playerId, queryKey: getGetPlayerStatsQueryKey(report?.playerId ?? 0, statsParams) },
   });
   const deleteReport = useDeleteReport();
 

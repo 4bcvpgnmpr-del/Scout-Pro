@@ -400,6 +400,12 @@ paths:
           required: true
           schema:
             type: integer
+        - name: seasonYear
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Start year of the season (e.g. 2025 for 2025-26). Filters BEV stats to that specific season.
       responses:
         "200":
           description: Player stats summary

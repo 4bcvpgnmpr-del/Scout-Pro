@@ -14,6 +14,7 @@ export * from './errorEnvelope';
 export * from './game';
 export * from './gameInput';
 export * from './gameUpdate';
+export * from './getPlayerStatsParams';
 export * from './getTopPlayersParams';
 export * from './healthStatus';
 export * from './listPlayersParams';

@@ -583,6 +583,13 @@ position?: string | null;
 watchlisted?: boolean | null;
 };
 
+export type GetPlayerStatsParams = {
+/**
+ * Start year of the season (e.g. 2025 for 2025-26). Filters BEV stats to that specific season.
+ */
+seasonYear?: number;
+};
+
 export type GetTopPlayersParams = {
 limit?: number;
 };

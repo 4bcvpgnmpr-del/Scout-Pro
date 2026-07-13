@@ -280,3 +280,5 @@ export const syncHandlers = {
   bevPlayers: upsertBEVPlayerData,
   historical: upsertHistoricalData,
 };
+
+export { upsertHistoricalYearData };

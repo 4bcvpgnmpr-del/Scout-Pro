@@ -136,6 +136,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const seasonYear = req.query.seasonYear ? parseInt(req.query.seasonYear as string, 10) : null;
 
   const zeros = {
     playerId: params.data.id,
@@ -182,6 +183,10 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
     .where(eq(playersTable.id, params.data.id));
 
   if (player?.statPlayerExternalId) {
+    const bevConditions = seasonYear !== null
+      ? and(eq(syncPlayers.externalId, player.statPlayerExternalId!), eq(seasons.startYear, seasonYear))
+      : eq(syncPlayers.externalId, player.statPlayerExternalId!);
+
     const [bev] = await db
       .select({
         gamesPlayed:  playerStats.gamesPlayed,
@@ -201,7 +206,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
       .from(playerStats)
       .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
       .innerJoin(seasons, eq(seasons.id, playerStats.seasonId))
-      .where(eq(syncPlayers.externalId, player.statPlayerExternalId))
+      .where(bevConditions)
       .orderBy(desc(seasons.startYear))
       .limit(1);
 
