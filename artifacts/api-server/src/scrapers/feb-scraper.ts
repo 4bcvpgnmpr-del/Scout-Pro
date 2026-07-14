@@ -688,7 +688,7 @@ export type BEVTeamLogo = {
 /**
  * Obtiene logos de equipo para todas las ligas BEV.
  * Solo visita rankings.aspx — la URL del escudo es directamente constructable:
- *   https://imagenes.feb.es/Imagen.aspx?i={bevTeamId}&ti=2
+ *   https://imagenes.feb.es/Imagen.aspx?i={bevTeamId}&ti=1
  * ~6 requests (una por liga), instantáneo.
  */
 export async function scrapeBEVAllLeagueLogos(leagueId?: string): Promise<BEVTeamLogo[]> {
@@ -705,7 +705,7 @@ export async function scrapeBEVAllLeagueLogos(leagueId?: string): Promise<BEVTea
 
       for (const team of teams) {
         // Direct URL — no team page fetch needed
-        const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${team.id}&ti=2`;
+        const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${team.id}&ti=1`;
         results.push({ bevId: team.id, name: team.name, logoUrl, leagueId: comp.id });
       }
     } catch (err) {
@@ -721,7 +721,7 @@ export async function scrapeBEVAllLeagueLogos(leagueId?: string): Promise<BEVTea
 
 /**
  * Extrae IDs de jugador únicos de la página de un equipo (Equipo.aspx?i=TEAM_ID).
- * El logo del equipo se construye directamente: imagenes.feb.es/Imagen.aspx?i={id}&ti=2
+ * El logo del equipo se construye directamente: imagenes.feb.es/Imagen.aspx?i={id}&ti=1
  */
 async function scrapeBEVTeamPage(teamBevId: string): Promise<{ playerIds: string[]; logoUrl: string }> {
   const url  = `https://baloncestoenvivo.feb.es/Equipo.aspx?i=${teamBevId}`;
@@ -735,8 +735,8 @@ async function scrapeBEVTeamPage(teamBevId: string): Promise<{ playerIds: string
   });
 
   // Logo URL is directly constructable from the BEV team numeric ID.
-  // imagenes.feb.es/Imagen.aspx?i={teamBevId}&ti=2 always returns the shield image.
-  const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${teamBevId}&ti=2`;
+  // imagenes.feb.es/Imagen.aspx?i={teamBevId}&ti=1 returns the team shield/crest.
+  const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${teamBevId}&ti=1`;
 
   return { playerIds: [...ids], logoUrl };
 }
