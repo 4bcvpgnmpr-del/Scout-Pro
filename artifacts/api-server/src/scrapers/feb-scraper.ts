@@ -660,22 +660,68 @@ function bevSeasonLabel(año: number): string {
 /**
  * Extrae IDs de equipo únicos de la página rankings.aspx de una liga.
  * Los hrefs "Equipo.aspx?i=XXXXX" aparecen en las tablas de rankings.
+ * Devuelve { id, name } donde name es el texto del enlace al equipo.
  */
-async function scrapeBEVTeamIds(g: number, nm: string, año: number): Promise<string[]> {
+async function scrapeBEVTeamIds(g: number, nm: string, año: number): Promise<{ id: string; name: string }[]> {
   const url  = `https://baloncestoenvivo.feb.es/rankings.aspx?g=${g}&t=${año}&nm=${nm}`;
   const html = await fetchHtml(url);
   const $    = load(html);
-  const ids  = new Set<string>();
+  const seen = new Set<string>();
+  const result: { id: string; name: string }[] = [];
   $("a[href]").each((_, el) => {
     const m = ($(el).attr("href") ?? "").match(/Equipo\.aspx\?i=(\d+)/i);
-    if (m) ids.add(m[1]!);
+    if (m && !seen.has(m[1]!)) {
+      seen.add(m[1]!);
+      result.push({ id: m[1]!, name: $(el).text().trim().toUpperCase() });
+    }
   });
-  return [...ids];
+  return result;
+}
+
+export type BEVTeamLogo = {
+  bevId:    string;
+  name:     string;
+  logoUrl:  string;
+  leagueId: string;
+};
+
+/**
+ * Obtiene logos de equipo para todas las ligas BEV.
+ * Solo visita rankings.aspx — la URL del escudo es directamente constructable:
+ *   https://imagenes.feb.es/Imagen.aspx?i={bevTeamId}&ti=2
+ * ~6 requests (una por liga), instantáneo.
+ */
+export async function scrapeBEVAllLeagueLogos(leagueId?: string): Promise<BEVTeamLogo[]> {
+  const comps = leagueId
+    ? BEV_COMPETICIONES.filter((c) => c.id === leagueId)
+    : [...BEV_COMPETICIONES];
+  const results: BEVTeamLogo[] = [];
+  const año = bevSeasonYear();
+
+  for (const comp of comps) {
+    try {
+      const teams = await scrapeBEVTeamIds(comp.g, comp.nm, año);
+      logger.info({ liga: comp.nombre, equipos: teams.length }, "[BEV logos] equipos encontrados");
+
+      for (const team of teams) {
+        // Direct URL — no team page fetch needed
+        const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${team.id}&ti=2`;
+        results.push({ bevId: team.id, name: team.name, logoUrl, leagueId: comp.id });
+      }
+    } catch (err) {
+      logger.warn({ liga: comp.nombre, err }, "[BEV logos] error en rankings — omitida liga");
+    }
+
+    if (comps.length > 1) await new Promise((r) => setTimeout(r, 500));
+  }
+
+  logger.info({ total: results.length }, "[BEV logos] logos construidos");
+  return results;
 }
 
 /**
- * Extrae IDs de jugador únicos y logo de equipo de la página de un equipo (Equipo.aspx?i=TEAM_ID).
- * Los hrefs "Jugador.aspx?i=TEAM_ID&c=PLAYER_ID" aparecen en la tabla de plantilla.
+ * Extrae IDs de jugador únicos de la página de un equipo (Equipo.aspx?i=TEAM_ID).
+ * El logo del equipo se construye directamente: imagenes.feb.es/Imagen.aspx?i={id}&ti=2
  */
 async function scrapeBEVTeamPage(teamBevId: string): Promise<{ playerIds: string[]; logoUrl: string }> {
   const url  = `https://baloncestoenvivo.feb.es/Equipo.aspx?i=${teamBevId}`;
@@ -688,21 +734,9 @@ async function scrapeBEVTeamPage(teamBevId: string): Promise<{ playerIds: string
     if (m) ids.add(m[1]!);
   });
 
-  // Extract team logo — try multiple selectors used across different BEV pages
-  const logoSrc =
-    $(".escudo img").attr("src") ||
-    $(".box-equipo img").first().attr("src") ||
-    $("img.escudo").attr("src") ||
-    $("img[src*='escudo']").first().attr("src") ||
-    $("img[src*='/equipos/']").first().attr("src") ||
-    $("img[src*='logos']").first().attr("src") ||
-    "";
-
-  const logoUrl = logoSrc
-    ? logoSrc.startsWith("http")
-      ? logoSrc
-      : `https://baloncestoenvivo.feb.es/${logoSrc.replace(/^\//, "")}`
-    : "";
+  // Logo URL is directly constructable from the BEV team numeric ID.
+  // imagenes.feb.es/Imagen.aspx?i={teamBevId}&ti=2 always returns the shield image.
+  const logoUrl = `https://imagenes.feb.es/Imagen.aspx?i=${teamBevId}&ti=2`;
 
   return { playerIds: [...ids], logoUrl };
 }
@@ -926,10 +960,10 @@ export async function scrapeBEVLeaguePlayers(comp: {
   const players: BEVPlayerStatsEntry[] = [];
 
   try {
-    const teamIds = await scrapeBEVTeamIds(comp.g, comp.nm, año);
-    logger.info({ liga: comp.nombre, equipos: teamIds.length }, "[BEV] equipos descubiertos para jugadores");
+    const bevTeams = await scrapeBEVTeamIds(comp.g, comp.nm, año);
+    logger.info({ liga: comp.nombre, equipos: bevTeams.length }, "[BEV] equipos descubiertos para jugadores");
 
-    for (const teamId of teamIds) {
+    for (const { id: teamId } of bevTeams) {
       await new Promise((r) => setTimeout(r, 800));
       try {
         const { playerIds, logoUrl: teamLogoUrl } = await scrapeBEVTeamPage(teamId);

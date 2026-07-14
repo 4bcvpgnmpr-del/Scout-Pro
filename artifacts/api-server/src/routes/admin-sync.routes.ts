@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { syncLog, leagues } from "@workspace/db";
-import { desc, gte, eq } from "drizzle-orm";
+import { syncLog, leagues, syncTeams, teamsTable } from "@workspace/db";
+import { desc, gte, eq, or, sql } from "drizzle-orm";
 import { syncHandlers, upsertHistoricalYearData } from "../jobs/sync.job.js";
 import { requireAuth, requirePro } from "../lib/auth.middleware.js";
 import { syncLeagueTeams } from "./auth.routes.js";
-import { scrapeBEVAllLeaguePlayers } from "../scrapers/feb-scraper.js";
+import { logger } from "../lib/logger.js";
+import { scrapeBEVAllLeaguePlayers, scrapeBEVAllLeagueLogos } from "../scrapers/feb-scraper.js";
 import { normalizeBEVPlayerStats } from "../db/normalizer.js";
 
 const router = Router();
@@ -189,6 +190,76 @@ router.post("/scouting-league/:leagueShortName", async (req, res): Promise<void>
   res.json({ message: `Scouting sync para ${leagueShortName} iniciado` });
 });
 
+// ─── POST /team-logos ─────────────────────────────────────────────────────────
+// Scrapes logos from BEV team pages and propagates them to stat_teams + teams.
+// Dev-only open access.
+
+router.post("/team-logos", async (req, res): Promise<void> => {
+  const isDev = String(process.env["NODE_ENV"]) === "development";
+  if (!isDev && !req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+  const leagueId = req.query["leagueId"] as string | undefined;
+
+  const run = async () => {
+    const logos = await scrapeBEVAllLeagueLogos(leagueId);
+    let updated = 0;
+
+    for (const { bevId, name, logoUrl } of logos) {
+      // Normalise name for comparison: uppercase, collapse spaces
+      const bevNorm = name.replace(/\s+/g, " ").trim().toUpperCase();
+
+      // 1. Try match by external_id = 'bev-{bevId}'
+      const byExtId = await db.query.syncTeams.findFirst({
+        where: (t, { eq: eq_ }) => eq_(t.externalId, `bev-${bevId}`),
+      });
+
+      if (byExtId) {
+        await db.update(syncTeams).set({ logoUrl, updatedAt: new Date() })
+          .where(eq(syncTeams.id, byExtId.id));
+        await db.update(teamsTable).set({ logoUrl })
+          .where(eq(teamsTable.statTeamExternalId, `bev-${bevId}`));
+        updated++;
+        continue;
+      }
+
+      // 2. Try match by exact team name (case-insensitive)
+      const byName = await db.query.syncTeams.findFirst({
+        where: (t, { sql: sql_ }) =>
+          sql_`UPPER(REGEXP_REPLACE(${t.name}, '\\s+', ' ', 'g')) = ${bevNorm}`,
+      });
+
+      if (byName) {
+        await db.update(syncTeams).set({ logoUrl, updatedAt: new Date() })
+          .where(eq(syncTeams.id, byName.id));
+        // Propagate to scouting teams table
+        await db.update(teamsTable).set({ logoUrl })
+          .where(eq(teamsTable.statTeamExternalId, byName.externalId ?? ""));
+        updated++;
+      }
+    }
+
+    // Also sync logos from stat_teams → teams for any already-populated rows
+    await db.execute(
+      sql`UPDATE teams t
+          SET logo_url = st.logo_url
+          FROM stat_teams st
+          WHERE t.stat_team_external_id = st.external_id
+            AND st.logo_url IS NOT NULL
+            AND (t.logo_url IS NULL OR t.logo_url != st.logo_url)`,
+    );
+
+    logger.info({ total: logos.length, updated }, "[team-logos sync] completado");
+  };
+
+  run().catch((err) => {
+    logger.error({ err }, "[team-logos sync] failed");
+  });
+
+  res.json({ message: "Sincronización de escudos iniciada en segundo plano" });
+});
+
 // ─── POST /scouting-all ────────────────────────────────────────────────────────
 
 router.post("/scouting-all", async (req, res): Promise<void> => {
@@ -201,11 +272,50 @@ router.post("/scouting-all", async (req, res): Promise<void> => {
   const selectedByLeague: Record<string, string> = {
     lf2: (req.query["lf2Team"] as string) ?? "",
   };
-  // Run leagues sequentially to avoid race conditions creating duplicate teams
+  // Run leagues sequentially to avoid race conditions creating duplicate teams,
+  // then trigger logo sync so shields appear in the Teams page.
   const runAll = async () => {
     for (const l of leagueList) {
       await syncLeagueTeams(selectedByLeague[l] ?? "", l);
     }
+    // Auto-sync team logos after player/team data is up-to-date
+    const logos = await scrapeBEVAllLeagueLogos();
+    let updated = 0;
+    for (const { bevId, name, logoUrl } of logos) {
+      const bevNorm = name.replace(/\s+/g, " ").trim().toUpperCase();
+      const byExtId = await db.query.syncTeams.findFirst({
+        where: (t, { eq: eq_ }) => eq_(t.externalId, `bev-${bevId}`),
+      });
+      if (byExtId) {
+        await db.update(syncTeams).set({ logoUrl, updatedAt: new Date() })
+          .where(eq(syncTeams.id, byExtId.id));
+        await db.update(teamsTable).set({ logoUrl })
+          .where(eq(teamsTable.statTeamExternalId, `bev-${bevId}`));
+        updated++;
+        continue;
+      }
+      const byName = await db.query.syncTeams.findFirst({
+        where: (t, { sql: sql_ }) =>
+          sql_`UPPER(REGEXP_REPLACE(${t.name}, '\\s+', ' ', 'g')) = ${bevNorm}`,
+      });
+      if (byName) {
+        await db.update(syncTeams).set({ logoUrl, updatedAt: new Date() })
+          .where(eq(syncTeams.id, byName.id));
+        await db.update(teamsTable).set({ logoUrl })
+          .where(eq(teamsTable.statTeamExternalId, byName.externalId ?? ""));
+        updated++;
+      }
+    }
+    // Final pass: propagate stat_teams.logo_url → teams.logo_url
+    await db.execute(
+      sql`UPDATE teams t
+          SET logo_url = st.logo_url
+          FROM stat_teams st
+          WHERE t.stat_team_external_id = st.external_id
+            AND st.logo_url IS NOT NULL
+            AND (t.logo_url IS NULL OR t.logo_url != st.logo_url)`,
+    );
+    logger.info({ updated }, "[scouting-all] logos sincronizados");
   };
   runAll().catch((_err) => {});
   res.json({ message: "Scouting sync para todas las ligas iniciado" });
