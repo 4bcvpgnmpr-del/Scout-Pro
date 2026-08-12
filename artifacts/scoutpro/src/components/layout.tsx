@@ -98,7 +98,6 @@ function NavItem({
         }`}
       >
         <item.icon className="h-4 w-4 shrink-0" />
-        <span className="text-sm font-medium">{item.name}</span>
       </div>
     </Link>
   );
