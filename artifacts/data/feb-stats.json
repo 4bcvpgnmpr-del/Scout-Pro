@@ -1,4 +1,6 @@
 {
+<<<<<<< ours — object `primera-feb` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "primera-feb": {
     "liga": "Primera FEB",
     "actualizacion": "2026-08-12T23:14:48.564Z",
@@ -12,34 +14,99 @@
       }
     ]
   },
+=======
+  "primera-feb": {
+    "liga": "Primera FEB",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": [
+      {
+        "local": "SÚPER AGROPAL PALENCIA",
+        "visitante": "MOVISTAR ESTUDIANTES",
+        "marcador": "69-73",
+        "fecha": "—"
+      }
+    ]
+  },
+>>>>>>> theirs — object `primera-feb` (F, confidence: medium)
+<<<<<<< ours — object `segunda-feb` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "segunda-feb": {
     "liga": "Segunda FEB",
     "actualizacion": "2026-08-12T23:14:48.564Z",
     "clasificacion": [],
     "resultados": []
   },
+=======
+  "segunda-feb": {
+    "liga": "Segunda FEB",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": []
+  },
+>>>>>>> theirs — object `segunda-feb` (F, confidence: medium)
+<<<<<<< ours — object `liga-femenina-endesa` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "liga-femenina-endesa": {
     "liga": "Liga Femenina Endesa",
     "actualizacion": "2026-08-12T23:14:48.564Z",
     "clasificacion": [],
     "resultados": []
   },
+=======
+  "liga-femenina-endesa": {
+    "liga": "Liga Femenina Endesa",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": []
+  },
+>>>>>>> theirs — object `liga-femenina-endesa` (F, confidence: medium)
+<<<<<<< ours — object `lf-challenge` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "lf-challenge": {
     "liga": "LF Challenge",
     "actualizacion": "2026-08-12T23:14:48.564Z",
     "clasificacion": [],
     "resultados": []
   },
+=======
+  "lf-challenge": {
+    "liga": "LF Challenge",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": []
+  },
+>>>>>>> theirs — object `lf-challenge` (F, confidence: medium)
+<<<<<<< ours — object `lf2` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "lf2": {
     "liga": "LF2",
     "actualizacion": "2026-08-12T23:14:48.564Z",
     "clasificacion": [],
     "resultados": []
   },
+=======
+  "lf2": {
+    "liga": "LF2",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": []
+  },
+>>>>>>> theirs — object `lf2` (F, confidence: medium)
+<<<<<<< ours — object `tercera-feb` (F, confidence: medium)
+// hint: Logic changed on both sides. Requires understanding intent of each change.
   "tercera-feb": {
     "liga": "Tercera FEB",
     "actualizacion": "2026-08-12T23:14:48.564Z",
     "clasificacion": [],
     "resultados": []
   }
+=======
+  "tercera-feb": {
+    "liga": "Tercera FEB",
+    "actualizacion": "2026-08-12T23:13:53.861Z",
+    "clasificacion": [],
+    "resultados": []
+  }
+>>>>>>> theirs — object `tercera-feb` (F, confidence: medium)
 }
