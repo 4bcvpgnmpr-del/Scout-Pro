@@ -14,16 +14,19 @@ export default function Teams() {
   const playerCountByTeam = (teamId: number) =>
     (players ?? []).filter((p) => p.teamId === teamId).length;
 
-  // Filter by workspace team name — same pattern as players/games/reports pages
-  const visibleTeams = useMemo(() => {
-    if (!activeWorkspace) return teams ?? [];
+  // When workspace active: split into own (name match) + rivals (everything else)
+  // When no workspace: show nothing
+  const ownTeams = useMemo(() => {
+    if (!activeWorkspace) return [];
     const wsLower = activeWorkspace.teamName.toLowerCase();
     return (teams ?? []).filter((t) => t.name.toLowerCase() === wsLower);
   }, [activeWorkspace, teams]);
 
-  // Teams only shown when a workspace is active — workspace team = "Mi Equipo", no rivals
-  const ownTeams   = activeWorkspace ? visibleTeams : [];
-  const rivalTeams: typeof visibleTeams = [];
+  const rivalTeams = useMemo(() => {
+    if (!activeWorkspace) return [];
+    const wsLower = activeWorkspace.teamName.toLowerCase();
+    return (teams ?? []).filter((t) => t.name.toLowerCase() !== wsLower);
+  }, [activeWorkspace, teams]);
 
   return (
     <div className="space-y-8 max-w-[1400px]">
