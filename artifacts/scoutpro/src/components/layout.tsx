@@ -91,7 +91,7 @@ function NavItem({
     <Link href={item.href}>
       <div
         onClick={onClick}
-        className="flex gap-3 px-3 py-2 rounded-md transition-all cursor-pointer select-none bg-primary text-[color:var(--color-zinc-100)] justify-start items-start flex-row"
+        className="flex gap-3 px-3 py-2 rounded-md transition-all cursor-pointer select-none justify-start items-start flex-row text-[color:var(--color-zinc-100)] bg-[color:var(--color-orange-600)]"
       >
         <item.icon className="h-4 w-4 shrink-0" />
       </div>
@@ -466,7 +466,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
             {group.label && (
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-widest">
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest bg-[color:var(--color-orange-600)] text-[color:var(--color-zinc-100)] border-t-[color:var(--color-zinc-100)] border-r-[color:var(--color-zinc-100)] border-b-[color:var(--color-zinc-100)] border-l-[color:var(--color-zinc-100)]">
                 {group.label}
               </div>
             )}
