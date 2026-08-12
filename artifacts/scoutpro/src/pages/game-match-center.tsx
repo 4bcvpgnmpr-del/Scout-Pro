@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 import { useToast } from "@/hooks/use-toast";
+import { GameReportExportButton } from "@/components/pdf/game-report-pdf";
 import { uploadPhotoFile } from "@/components/photo-upload";
 import { DIFFICULTY_LABEL } from "@/lib/difficulty";
 
@@ -1325,6 +1326,9 @@ export default function GameMatchCenter() {
   const [activeTab, setActiveTab] = useState<Tab>("resumen");
   const [scout, setScoutRaw] = useState<ScoutingData>(() => loadScouting(gameId));
   const [checklist, setChecklist] = useState<Checklist>(() => loadChecklist(gameId));
+  const [plays] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`sf-playbook-${gameId}`) ?? "[]"); } catch { return []; }
+  });
 
   const setScout = useCallback((s: ScoutingData) => {
     setScoutRaw(s);
@@ -1423,6 +1427,22 @@ export default function GameMatchCenter() {
                 {daysLeft(game.date) === 0 ? "HOY" : `${daysLeft(game.date)}d`}
               </span>
             )}
+            <GameReportExportButton gameProps={{
+              gameId,
+              homeTeam: game.homeTeam,
+              awayTeam: game.awayTeam,
+              date: game.date,
+              location: game.location,
+              difficulty: game.difficulty,
+              homeScore: game.homeScore,
+              awayScore: game.awayScore,
+              homeLogoUrl: homeTeamObj?.logoUrl,
+              awayLogoUrl: awayTeamObj?.logoUrl,
+              rivalTeamId: rivalTeam?.id ?? null,
+              rivalName: rivalTeam?.name ?? (game.homeTeam === ownTeam?.name ? game.awayTeam : game.homeTeam),
+              scout,
+              plays,
+            }} />
             <Link href={`/games/${gameId}/edit`}>
               <button className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 transition flex items-center justify-center text-white/40 hover:text-white/70">
                 <Pencil className="h-3.5 w-3.5" />
