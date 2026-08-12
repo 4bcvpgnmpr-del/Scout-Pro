@@ -1,0 +1,293 @@
+Rediseña completamente todos los PDFs de ScoutPro 
+para que se vean profesionales, limpios y prolijos,
+al nivel de FastScout o un informe deportivo profesional.
+
+═══════════════════════════════════════════
+PDF 1 — INFORME INDIVIDUAL DE JUGADORA
+═══════════════════════════════════════════
+
+PÁGINA 1 — CABECERA PRINCIPAL
+
+┌─────────────────────────────────────────────────────┐
+│▌                                                     │
+│▌  [FOTO]   NOMBRE APELLIDO APELLIDO                 │
+│▌           #7 · Base · 185cm · 72kg · 26 años       │
+│▌           PERFUMERÍAS AVENIDA · LF2                │
+│▌                                    [LOGO LIGA]     │
+│▌  ● JUGADORA CLAVE   Val. 9.0   Prospecto A         │
+└─────────────────────────────────────────────────────┘
+
+La franja izquierda (▌) tiene el color 
+de importancia de la jugadora:
+- Clave    → Rojo   #EF4444
+- Medio    → Ámbar  #F59E0B  
+- Normal   → Verde  #22C55E
+
+La cabecera tiene fondo oscuro del color 
+de acento de la app (ej. azul oscuro #1E3A8A).
+Todo el texto de la cabecera en blanco.
+La foto tiene borde blanco de 2pt.
+
+─────────────────────────────────────────
+BLOQUE 1 — ESTADÍSTICAS BÁSICAS
+─────────────────────────────────────────
+
+Título con línea de acento a la izquierda:
+│ ESTADÍSTICAS DEL PARTIDO
+
+Tabla limpia con fondo alternado por filas:
+
+┌──────┬───────┬───────┬───────┬────────┐
+│      │  MIN  │  PTS  │  REB  │  AST   │
+├──────┼───────┼───────┼───────┼────────┤
+│Part. │  34   │  21   │   3   │   8    │
+└──────┴───────┴───────┴───────┴────────┘
+
+┌────────────┬─────────┬─────────┬──────┐
+│            │ T2      │ T3      │ TL   │
+├────────────┼─────────┼─────────┼──────┤
+│ Anotados   │  5      │  3      │  2   │
+│ Intentos   │  9      │  6      │  3   │
+│ Porcentaje │ 56%     │ 50%     │ 67%  │
+└────────────┴─────────┴─────────┴──────┘
+
+Los porcentajes llevan color según el valor:
+- ≥ 50% → verde  (buen porcentaje)
+- 35-49% → negro (normal)
+- < 35% → rojo   (malo)
+
+Fila inferior de stats:
+ROB: 2  |  TAP: 0  |  PER: 3  |  VAL: 22
+
+─────────────────────────────────────────
+BLOQUE 2 — ESTADÍSTICAS AVANZADAS
+─────────────────────────────────────────
+
+│ ESTADÍSTICAS AVANZADAS
+
+Tabla de 4 columnas con fondo gris claro:
+
+┌─────────┬─────────┬─────────┬──────────┐
+│  TS%    │  eFG%   │  FT-R   │  AST/TO  │
+├─────────┼─────────┼─────────┼──────────┤
+│  61%    │  58%    │  33%    │   2.7    │
+└─────────┴─────────┴─────────┴──────────┘
+
+─────────────────────────────────────────
+BLOQUE 3 — PERFIL DE HABILIDADES
+─────────────────────────────────────────
+
+│ PERFIL DE HABILIDADES
+
+8 barras de habilidades con este diseño:
+- Nombre de la habilidad alineado a la izquierda
+- Barra de progreso con fondo gris y relleno 
+  del color de acento
+- Número a la derecha
+- Barras con esquinas redondeadas
+
+Anotación     ████████████░░░░  85
+Tiro ext.     ██████████████░░  88
+Penetración   ████████████░░░░  78
+Visión juego  ██████████████░░  90
+Defensa       ██████████░░░░░░  65
+Rebote        ████████░░░░░░░░  50
+Atletismo     █████████████░░░  80
+P&R defensa   █████████░░░░░░░  60
+
+─────────────────────────────────────────
+BLOQUE 4 — MAPA DE TIROS
+─────────────────────────────────────────
+
+│ MAPA DE TIROS
+
+Dos columnas:
+IZQUIERDA: imagen SVG de la pista con los 
+tiros dibujados (verde=encestado, rojo=fallado)
+
+DERECHA: tabla de zonas
+┌─────────────┬────────┬──────┐
+│ Zona        │ M/I    │  %   │
+├─────────────┼────────┼──────┤
+│ 2 Puntos    │  5/9   │ 56%  │
+│ 3 Puntos    │  3/6   │ 50%  │
+│ Media dist. │  2/4   │ 50%  │
+│ Tiro libre  │  2/3   │ 67%  │
+├─────────────┼────────┼──────┤
+│ TOTAL       │ 12/22  │ 55%  │
+└─────────────┴────────┴──────┘
+
+─────────────────────────────────────────
+BLOQUE 5 — INFORME NARRATIVO
+─────────────────────────────────────────
+
+│ INFORME DEL SCOUT
+
+Dos columnas:
+┌──────────────────┐  ┌──────────────────┐
+│ ✅ FORTALEZAS    │  │ ❌ DEBILIDADES   │
+├──────────────────┤  ├──────────────────┤
+│ Tiro exterior    │  │ Defensa en       │
+│ élite, visión    │  │ pick-and-roll,   │
+│ de juego,        │  │ pérdidas bajo    │
+│ liderazgo        │  │ presión          │
+└──────────────────┘  └──────────────────┘
+
+ANÁLISIS DEL SCOUT:
+Texto completo del informe narrativo con 
+interlineado de 1.4 y fuente ligeramente 
+más pequeña.
+
+─────────────────────────────────────────
+PIE DE PÁGINA EN TODAS LAS PÁGINAS
+─────────────────────────────────────────
+
+┌─────────────────────────────────────────┐
+│ ScoutPro  ·  [Nombre jugadora]  ·       │
+│ [Fecha del scout]            Página 1/2 │
+└─────────────────────────────────────────┘
+
+Línea fina de separación arriba del pie.
+Logo ScoutPro en texto a la izquierda.
+Número de página a la derecha.
+
+═══════════════════════════════════════════
+PDF 2 — ROSTER COMPLETO DEL EQUIPO RIVAL
+═══════════════════════════════════════════
+
+PÁGINA 1 — PORTADA DEL ROSTER
+
+┌─────────────────────────────────────────┐
+│                                         │
+│         🏀  SCOUTPRO                    │
+│                                         │
+│    INFORME DE PLANTILLA RIVAL           │
+│                                         │
+│    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━       │
+│                                         │
+│    HOZONO GLOBAL JAIRIS                 │
+│    Liga Femenina 2 · Temporada 24-25    │
+│                                         │
+│    16 jugadoras analizadas              │
+│                                         │
+│    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━       │
+│                                         │
+│    Generado el 13 de agosto de 2025     │
+│    por ScoutPro                         │
+│                                         │
+└─────────────────────────────────────────┘
+
+Fondo de la portada con el color de acento 
+de la app. Todo el texto en blanco.
+Franja decorativa horizontal a 1/3 de la página.
+
+PÁGINA 2+ — TABLA DEL ROSTER
+
+Cabecera de cada página:
+HOZONO GLOBAL JAIRIS · LF2 · 2024-25
+
+Sección por posición con cabecera destacada:
+
+█████████████████████████████
+  1 · BASE  (3 jugadoras)
+█████████████████████████████
+
+Tabla de jugadoras:
+┌───┬─────────────────────┬────────┬──────┬────┬────┬────┬─────┬─────┬─────┬──────┐
+│ # │ Jugadora            │ Import.│ Val. │ MIN│ PTS│ REB│  T2%│  T3%│  TL%│  VAL │
+├───┼─────────────────────┼────────┼──────┼────┼────┼────┼─────┼─────┼─────┼──────┤
+│ 7 │ María García        │ ● Clave│  9.0 │ 34 │ 21 │  3 │ 56% │ 50% │ 67% │   22 │
+│ 4 │ Ana Martínez        │ ● Medio│  7.5 │ 28 │ 15 │  6 │ 57% │ 40% │ 50% │   15 │
+│11 │ Laura Sánchez       │ ○ Norm.│  6.5 │ 18 │  8 │  2 │ 43% │ 30% │ 75% │    8 │
+└───┴─────────────────────┴────────┴──────┴────┴────┴────┴─────┴─────┴─────┴──────┘
+
+El punto ● tiene el color de importancia:
+● rojo = Clave
+● ámbar = Medio  
+● verde = Normal
+
+Filas alternas con fondo gris muy claro.
+Los % llevan color (verde/negro/rojo).
+Separación visual clara entre posiciones.
+
+RESUMEN FINAL (última página):
+┌─────────────────────────────────────────┐
+│  RESUMEN DEL EQUIPO                     │
+├──────────────────┬──────────────────────┤
+│ Total analizadas │ 16 jugadoras         │
+│ Jugadoras Clave  │  4 (25%)            │
+│ Jugadoras Medio  │  7 (44%)            │
+│ Jugadoras Normal │  5 (31%)            │
+│ Valoración media │  7.4                 │
+│ Mejor valorada   │ María García (9.0)  │
+└──────────────────┴──────────────────────┘
+
+═══════════════════════════════════════════
+PDF 3 — LISTA DE OBJETIVOS DE FICHAJE
+═══════════════════════════════════════════
+
+PORTADA:
+Igual que el roster pero con título:
+"OBJETIVOS DE FICHAJE · Temporada 2024-25"
+
+CONTENIDO:
+Misma tabla que el roster pero con columna 
+extra "Liga de origen":
+
+┌───┬──────────────┬──────┬──────┬─────┬──────────────┐
+│ # │ Jugadora     │ Equipo│ Liga │ Val.│ Importancia  │
+├───┼──────────────┼──────┼──────┼─────┼──────────────┤
+│ 7 │ María García │ Av.  │ LF1  │ 9.0 │ ● Clave      │
+└───┴──────────────┴──────┴──────┴─────┴──────────────┘
+
+═══════════════════════════════════════════
+ESTILOS GLOBALES PARA TODOS LOS PDFs
+═══════════════════════════════════════════
+
+TIPOGRAFÍA:
+- Títulos de sección: Helvetica Bold, 10pt, 
+  todo en mayúsculas, con línea de color 
+  a la izquierda de 3pt
+- Texto normal: Helvetica, 9pt
+- Números destacados: Helvetica Bold, 11pt
+- Pie de página: Helvetica, 7.5pt, gris
+
+COLORES:
+- Fondo de cabeceras de sección: 
+  Color de acento de la app muy suave (10% opacidad)
+- Texto de cabeceras: Color de acento oscuro
+- Filas alternas de tabla: #F8FAFC
+- Líneas de tabla: #E2E8F0 (gris muy suave)
+- Texto principal: #0F172A (casi negro)
+- Texto secundario: #475569 (gris)
+
+ESPACIADO:
+- Margen superior: 20mm
+- Margen inferior: 20mm  
+- Margen izquierdo: 16mm
+- Margen derecho: 16mm
+- Espacio entre bloques: 8mm
+- Padding interno de celdas: 2mm
+
+DETALLES PROFESIONALES:
+- Todas las tablas con bordes sutiles #E2E8F0
+- Esquinas de las barras de habilidades 
+  redondeadas (1pt de radio)
+- La cabecera del informe individual tiene 
+  mínimo 30mm de alto
+- Si la foto no existe, mostrar rectángulo 
+  con las iniciales de la jugadora sobre 
+  fondo del color de importancia
+- Los bloques nunca se cortan entre páginas
+  (mantener bloques completos juntos)
+- Salto de página automático si un bloque 
+  no cabe completo
+
+IMPLEMENTACIÓN:
+Usa la librería jsPDF que ya está instalada.
+Reemplaza completamente las funciones 
+exportPDF() y rosterPDF() existentes 
+con estas nuevas versiones mejoradas.
+Crea también una nueva función objetivosPDF() 
+para el PDF de fichajes.
+No toques ninguna otra parte de la app.
