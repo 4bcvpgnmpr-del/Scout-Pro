@@ -24,6 +24,7 @@ import {
   ArrowLeft, Trash2, Users, BarChart2, ClipboardList,
   Video, Library, Loader2, Pencil, Plus, Camera, Trophy,
 } from "lucide-react";
+import { TeamReportExportButton } from "@/components/pdf/team-report-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { TeamMediaSection, PlantillaSection, EstadisticasSection, ClasificacionSection } from "@/components/team-scouting";
 import { useMemo } from "react";
@@ -169,6 +170,7 @@ export default function TeamDetail() {
         </div>
 
         <div className="flex gap-2 flex-shrink-0">
+          <TeamReportExportButton team={team} />
           <Link href={`/teams/${teamId}/edit`}>
             <Button variant="outline" className="font-black tracking-wide uppercase text-xs gap-1.5">
               <Pencil className="h-3.5 w-3.5" /> Editar
