@@ -131,7 +131,19 @@ async function syncTeamContext(teamId: string, leagueShortName: string, qc: Retu
       credentials: "include",
       body: JSON.stringify({ teamId, leagueShortName }),
     });
-    // Refresh the Equipos page data
+    await qc.invalidateQueries({ queryKey: ["/api/teams"] });
+  } catch {
+    // non-fatal
+  }
+}
+
+// Calls DELETE /api/auth/select-team to clear teamType="own" from the DB
+async function clearTeamContext(qc: ReturnType<typeof useQueryClient>) {
+  try {
+    await fetch("/api/auth/select-team", {
+      method: "DELETE",
+      credentials: "include",
+    });
     await qc.invalidateQueries({ queryKey: ["/api/teams"] });
   } catch {
     // non-fatal
@@ -299,7 +311,11 @@ function WorkspaceBar() {
                   </div>
                   {isActive && <CheckCircle2 size={13} className="text-primary shrink-0" />}
                   <button
-                    onClick={(e) => { e.stopPropagation(); remove(ws.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (ws.id === activeId) void clearTeamContext(queryClient);
+                      remove(ws.id);
+                    }}
                     title="Eliminar"
                     className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all shrink-0 ml-1"
                   >

@@ -194,6 +194,41 @@ router.patch("/select-team", async (req, res): Promise<void> => {
   res.json({ ok: true, user: safeUser(updatedUser) });
 });
 
+// ─── DELETE /api/auth/select-team ─────────────────────────────────────────────
+// Clears the "own" team designation — called when the user removes their workspace.
+// Resets every team in the user's previously-selected league back to "rival".
+
+router.delete("/select-team", async (req, res): Promise<void> => {
+  if (!req.session?.userId) {
+    res.status(401).json({ error: "No autenticado" });
+    return;
+  }
+
+  const league = req.session.user?.selectedLeagueShortName;
+
+  // Reset teamType for all teams in that league (if we know which league it was)
+  if (league) {
+    await db
+      .update(teamsTable)
+      .set({ teamType: "rival" })
+      .where(eq(teamsTable.league, league));
+  }
+
+  // Clear user's selection
+  const [updatedUser] = await db
+    .update(usersTable)
+    .set({ selectedTeamId: null, selectedLeagueShortName: null })
+    .where(eq(usersTable.id, req.session.userId))
+    .returning();
+
+  if (req.session.user) {
+    req.session.user.selectedTeamId          = null;
+    req.session.user.selectedLeagueShortName = null;
+  }
+
+  res.json({ ok: true, user: safeUser(updatedUser) });
+});
+
 // ─── Helper: sync stat_teams → teams table ───────────────────────────────────
 
 export async function syncLeagueTeams(
