@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Report } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +30,7 @@ export default function Reports() {
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [leagueFilter, setLeagueFilter] = useState<string>("");
   const { selectedSeason } = useSeason();
+  const { activeWorkspace } = useWorkspace();
 
   const { data: reports, isLoading } = useListReports(
     playerFilter ? { playerId: playerFilter } : undefined,
@@ -69,10 +71,26 @@ export default function Reports() {
     return [...s].sort();
   }, [teams]);
 
+  // Build a set of teamIds matching the active workspace team name
+  const wsTeamIds = useMemo(() => {
+    if (!activeWorkspace) return null;
+    const wsNameLower = activeWorkspace.teamName.toLowerCase();
+    const ids = new Set<number>();
+    (teams ?? []).forEach((t) => {
+      if (t.name.toLowerCase() === wsNameLower) ids.add(t.id);
+    });
+    return ids.size > 0 ? ids : null;
+  }, [activeWorkspace?.id, teams]);
+
   const filteredReports = useMemo(() => {
     if (!reports) return [];
     return reports.filter((r) => {
       const player = playerMap[r.playerId];
+      // Workspace filter: only show reports for players on the active workspace team
+      if (wsTeamIds) {
+        const tId = player?.teamId;
+        if (!tId || !wsTeamIds.has(tId)) return false;
+      }
       if (positionFilter && player?.position !== positionFilter) return false;
       if (leagueFilter) {
         const teamId = player?.teamId;
@@ -81,7 +99,7 @@ export default function Reports() {
       }
       return true;
     });
-  }, [reports, playerMap, teamLeagueMap, positionFilter, leagueFilter]);
+  }, [reports, playerMap, teamLeagueMap, positionFilter, leagueFilter, wsTeamIds]);
 
   return (
     <div className="space-y-6">

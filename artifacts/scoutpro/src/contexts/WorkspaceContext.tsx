@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 export type Workspace = {
   id: string;
@@ -13,6 +13,7 @@ export type Workspace = {
 type WorkspaceContextValue = {
   workspaces: Workspace[];
   activeId: string | null;
+  activeWorkspace: Workspace | null;
   activate: (id: string) => void;
   add: (w: Omit<Workspace, "id">) => string;
   remove: (id: string) => void;
@@ -36,6 +37,7 @@ function save(ws: Workspace[]) {
 const WorkspaceContext = createContext<WorkspaceContextValue>({
   workspaces: [],
   activeId:   null,
+  activeWorkspace: null,
   activate:   () => {},
   add:        () => "",
   remove:     () => {},
@@ -45,6 +47,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => load());
   const [activeId,   setActiveId]   = useState<string | null>(
     () => localStorage.getItem(ACTIVE_KEY)
+  );
+
+  const activeWorkspace = useMemo(
+    () => workspaces.find((w) => w.id === activeId) ?? null,
+    [workspaces, activeId]
   );
 
   const activate = useCallback((id: string) => {
@@ -75,7 +82,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [workspaces, activeId]);
 
   return (
-    <WorkspaceContext.Provider value={{ workspaces, activeId, activate, add, remove }}>
+    <WorkspaceContext.Provider value={{ workspaces, activeId, activeWorkspace, activate, add, remove }}>
       {children}
     </WorkspaceContext.Provider>
   );

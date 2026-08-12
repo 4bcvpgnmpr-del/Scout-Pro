@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListPlayers, getListPlayersQueryKey, useListTeams } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,8 +23,20 @@ export default function Players() {
   const [positionFilter, setPositionFilter] = useState("ALL");
   const [teamFilter, setTeamFilter] = useState<number | "ALL">("ALL");
   const { selectedSeason, isLoading: seasonLoading } = useSeason();
+  const { activeWorkspace } = useWorkspace();
 
   const { data: teams = [] } = useListTeams();
+
+  // Sync team filter with active workspace — find team by name, use its numeric id
+  useEffect(() => {
+    if (!activeWorkspace) {
+      setTeamFilter("ALL");
+      return;
+    }
+    const wsTeamNameLower = activeWorkspace.teamName.toLowerCase();
+    const match = teams.find((t) => t.name.toLowerCase() === wsTeamNameLower);
+    if (match) setTeamFilter(match.id);
+  }, [activeWorkspace?.id, teams]);
 
   // Always send seasonYear — never fetch without it to avoid cross-season duplicates
   const params = {

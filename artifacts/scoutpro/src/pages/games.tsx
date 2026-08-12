@@ -1,6 +1,7 @@
 import { useListGames, useDeleteGame, getListGamesQueryKey } from "@workspace/api-client-react";
 import type { Game } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,15 +13,26 @@ import { DIFFICULTY_BADGE, DIFFICULTY_LABEL } from "@/lib/difficulty";
 
 export default function Games() {
   const { selectedSeason } = useSeason();
+  const { activeWorkspace } = useWorkspace();
   const seasonQs = selectedSeason ? `?season=${selectedSeason.startYear}` : "";
 
-  const { data: games, isLoading } = useListGames({
+  const { data: allGames, isLoading } = useListGames({
     query: {
       queryKey: [...getListGamesQueryKey(), selectedSeason?.id],
       queryFn: (): Promise<Game[]> =>
         fetch(`/api/games${seasonQs}`, { credentials: "include" }).then((r) => r.json()),
     },
   });
+
+  // Filter games to active workspace team (home or away) when one is selected
+  const wsTeamLower = activeWorkspace?.teamName.toLowerCase() ?? null;
+  const games = wsTeamLower
+    ? (allGames ?? []).filter(
+        (g) =>
+          g.homeTeam.toLowerCase() === wsTeamLower ||
+          g.awayTeam.toLowerCase() === wsTeamLower
+      )
+    : allGames;
   const deleteGame = useDeleteGame();
   const queryClient = useQueryClient();
   const { toast } = useToast();
