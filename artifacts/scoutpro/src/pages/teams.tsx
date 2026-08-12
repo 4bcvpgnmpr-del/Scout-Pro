@@ -21,8 +21,10 @@ export default function Teams() {
     return (teams ?? []).filter((t) => t.name.toLowerCase() === wsLower);
   }, [activeWorkspace, teams]);
 
-  const ownTeams   = visibleTeams.filter((t) => t.teamType === "own");
-  const rivalTeams = visibleTeams.filter((t) => t.teamType !== "own");
+  // "Mi Equipo" only exists when a workspace is active — never read teamType from DB
+  // This avoids stale DB state persisting after workspace removal
+  const ownTeams   = activeWorkspace ? visibleTeams : [];
+  const rivalTeams = activeWorkspace ? [] : visibleTeams;
 
   return (
     <div className="space-y-8 max-w-[1400px]">
