@@ -30,6 +30,7 @@ interface PlayerStats {
   avgFieldGoalPct?: string | number | null;
   avgThreePointPct?: string | number | null;
   avgFreeThrowPct?: string | number | null;
+  avgValuation?: string | number | null;
 }
 interface Team { id: number; name: string; logoUrl?: string | null; league?: string | null; city?: string | null; }
 interface Player { id: number; name: string; position?: string | null; jerseyNumber?: number | null; photoUrl?: string | null; age?: number | null; height?: string | null; nationality?: string | null; }
@@ -281,15 +282,16 @@ function drawCover(doc: JsPDF, team: Team, season: string, playerCount: number, 
 
 const COLS = [
   { label: "#",    w: 9,  align: "center" as const },
-  { label: "Jugadora", w: 52, align: "left"   as const },
+  { label: "Jugadora", w: 46, align: "left"   as const },
   { label: "Pos",  w: 12, align: "center" as const },
   { label: "Imp.", w: 16, align: "center" as const },
-  { label: "Min",  w: 14, align: "center" as const },
-  { label: "Pts",  w: 14, align: "center" as const },
-  { label: "Reb",  w: 14, align: "center" as const },
-  { label: "T2%",  w: 16, align: "center" as const },
-  { label: "T3%",  w: 16, align: "center" as const },
-  { label: "TL%",  w: 15, align: "center" as const },
+  { label: "Min",  w: 13, align: "center" as const },
+  { label: "Pts",  w: 13, align: "center" as const },
+  { label: "Reb",  w: 13, align: "center" as const },
+  { label: "T2%",  w: 15, align: "center" as const },
+  { label: "T3%",  w: 14, align: "center" as const },
+  { label: "TL%",  w: 13, align: "center" as const },
+  { label: "Val",  w: 14, align: "center" as const },
 ];
 
 function colX(i: number): number {
@@ -375,6 +377,12 @@ function drawPlayerRow(
     st(doc, label === "—" ? [200, 210, 220] as RGB : pctColor(raw));
     doc.text(label, colX(ci) + COLS[ci].w / 2, cy, { align: "center" });
   });
+
+  // VAL
+  const valLabel = s?.avgValuation != null ? f1(s.avgValuation) : "—";
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8);
+  st(doc, valLabel === "—" ? [200, 210, 220] as RGB : D.dark);
+  doc.text(valLabel, colX(10) + COLS[10].w / 2, cy, { align: "center" });
 }
 
 // ─── Pages 2+: Roster by position ─────────────────────────────────────────────

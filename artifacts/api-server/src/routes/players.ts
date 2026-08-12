@@ -223,6 +223,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
     avgFieldGoalPct: null,
     avgThreePointPct: null,
     avgFreeThrowPct: null,
+    avgValuation: null,
   };
 
   // 1. Try manual scouting reports first
@@ -239,6 +240,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
       avgFieldGoalPct: sql<number | null>`CASE WHEN SUM(${reportsTable.fieldGoalsAttempted}) > 0 THEN SUM(${reportsTable.fieldGoalsMade})::float / SUM(${reportsTable.fieldGoalsAttempted}) ELSE NULL END`,
       avgThreePointPct: sql<number | null>`CASE WHEN SUM(${reportsTable.threesAttempted}) > 0 THEN SUM(${reportsTable.threesMade})::float / SUM(${reportsTable.threesAttempted}) ELSE NULL END`,
       avgFreeThrowPct: sql<number | null>`CASE WHEN SUM(${reportsTable.freeThrowsAttempted}) > 0 THEN SUM(${reportsTable.freeThrowsMade})::float / SUM(${reportsTable.freeThrowsAttempted}) ELSE NULL END`,
+      avgValuation: sql<number | null>`AVG(${reportsTable.points} + ${reportsTable.rebounds} + ${reportsTable.assists} + ${reportsTable.steals} + ${reportsTable.blocks} - (${reportsTable.fieldGoalsAttempted} - ${reportsTable.fieldGoalsMade}) - (${reportsTable.freeThrowsAttempted} - ${reportsTable.freeThrowsMade}))`,
     })
     .from(reportsTable)
     .where(eq(reportsTable.playerId, params.data.id))
@@ -275,6 +277,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
         fg3Att:       playerStats.fg3Att,
         ftMade:       playerStats.ftMade,
         ftAtt:        playerStats.ftAtt,
+        pir:          playerStats.pir,
       })
       .from(playerStats)
       .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
@@ -299,6 +302,7 @@ router.get("/players/:id/stats", async (req, res): Promise<void> => {
         avgFieldGoalPct:    fgAtt  > 0 ? fgMade  / fgAtt  : null,
         avgThreePointPct:   (bev.fg3Att ?? 0) > 0 ? (bev.fg3Made ?? 0) / (bev.fg3Att ?? 0) : null,
         avgFreeThrowPct:    (bev.ftAtt  ?? 0) > 0 ? (bev.ftMade  ?? 0) / (bev.ftAtt  ?? 0) : null,
+        avgValuation:       bev.pir != null ? bev.pir / gp : null,
       });
       return;
     }

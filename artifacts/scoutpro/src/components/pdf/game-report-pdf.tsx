@@ -41,6 +41,7 @@ interface PlayerStats {
   avgFieldGoalPct?: string | number | null;
   avgThreePointPct?: string | number | null;
   avgFreeThrowPct?: string | number | null;
+  avgValuation?: string | number | null;
 }
 
 interface Player {
@@ -593,16 +594,17 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
   // Column layout
   const SCOLS = [
     { label: "#",   w: 9,  align: "center" as const },
-    { label: "Jugadora", w: 50, align: "left" as const },
-    { label: "Min", w: 14, align: "center" as const },
+    { label: "Jugadora", w: 44, align: "left" as const },
+    { label: "Min", w: 12, align: "center" as const },
     { label: "Pts", w: 14, align: "center" as const },
     { label: "Reb", w: 14, align: "center" as const },
-    { label: "Ast", w: 12, align: "center" as const },
-    { label: "Rob", w: 12, align: "center" as const },
-    { label: "Tap", w: 12, align: "center" as const },
+    { label: "Ast", w: 11, align: "center" as const },
+    { label: "Rob", w: 11, align: "center" as const },
+    { label: "Tap", w: 11, align: "center" as const },
+    { label: "Val", w: 13, align: "center" as const },
     { label: "T2%", w: 16, align: "center" as const },
     { label: "T3%", w: 15, align: "center" as const },
-    { label: "TL%", w: 10, align: "center" as const },
+    { label: "TL%", w: 8,  align: "center" as const },
   ];
   const sColX = (i: number) => { let x = ML; for (let j = 0; j < i; j++) x += SCOLS[j].w; return x; };
 
@@ -628,6 +630,7 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
     doc.setFont(_fnt, "bold"); doc.setFontSize(7.5); st(doc, D.dark);
     doc.text(p.name.length > 22 ? p.name.slice(0, 20) + "…" : p.name, sColX(1) + 2, cy);
 
+    // # Min Pts Reb Ast Rob Tap Val (cols 2–8)
     const vals = [
       s?.avgMinutes != null ? f0(s.avgMinutes) + "'" : "—",
       s ? f1(s.avgPoints)   : "—",
@@ -635,18 +638,20 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
       s ? f1(s.avgAssists)  : "—",
       s ? f1(s.avgSteals)   : "—",
       s ? f1(s.avgBlocks)   : "—",
+      s?.avgValuation != null ? f1(s.avgValuation) : "—",
     ];
     const pctVals = [s?.avgFieldGoalPct, s?.avgThreePointPct, s?.avgFreeThrowPct];
 
     vals.forEach((v, j) => {
       const ci = j + 2;
       const isPts = ci === 3;
-      doc.setFont("helvetica", isPts ? "bold" : "normal"); doc.setFontSize(7.5);
-      st(doc, v === "—" ? [200, 210, 220] as RGB : isPts ? D.dark : D.mid);
+      const isVal = ci === 8;
+      doc.setFont(_fnt, isPts || isVal ? "bold" : "normal"); doc.setFontSize(7.5);
+      st(doc, v === "—" ? [200, 210, 220] as RGB : isPts || isVal ? D.dark : D.mid);
       doc.text(v, sColX(ci) + SCOLS[ci].w / 2, cy, { align: "center" });
     });
     pctVals.forEach((raw, j) => {
-      const ci = j + 8;
+      const ci = j + 9; // T2% T3% TL% now at 9 10 11
       const label = fPct(raw);
       doc.setFont(_fnt, "bold"); doc.setFontSize(7);
       st(doc, label === "—" ? [200, 210, 220] as RGB : pctColor(raw));

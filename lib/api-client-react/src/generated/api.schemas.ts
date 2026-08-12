@@ -248,6 +248,8 @@ export interface PlayerStatsSummary {
   avgThreePointPct?: number | null;
   /** @nullable */
   avgFreeThrowPct?: number | null;
+  /** @nullable */
+  avgValuation?: number | null;
 }
 
 export interface PlayerWithStats {
