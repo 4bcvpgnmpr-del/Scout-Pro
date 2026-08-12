@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useListPlayers, getListPlayersQueryKey, useListTeams } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -21,22 +21,22 @@ const POSITIONS = [
 export default function Players() {
   const [search, setSearch] = useState("");
   const [positionFilter, setPositionFilter] = useState("ALL");
-  const [teamFilter, setTeamFilter] = useState<number | "ALL">("ALL");
+  const [manualTeamFilter, setManualTeamFilter] = useState<number | "ALL">("ALL");
   const { selectedSeason, isLoading: seasonLoading } = useSeason();
   const { activeWorkspace } = useWorkspace();
 
   const { data: teams = [] } = useListTeams();
 
-  // Sync team filter with active workspace — find team by name, use its numeric id
-  useEffect(() => {
-    if (!activeWorkspace) {
-      setTeamFilter("ALL");
-      return;
-    }
-    const wsTeamNameLower = activeWorkspace.teamName.toLowerCase();
-    const match = teams.find((t) => t.name.toLowerCase() === wsTeamNameLower);
-    setTeamFilter(match ? match.id : "ALL");
-  }, [activeWorkspace?.id, teams]);
+  // Derive the workspace team id directly — no effect, no stale state
+  const wsTeamId = useMemo<number | "ALL">(() => {
+    if (!activeWorkspace) return "ALL";
+    const lower = activeWorkspace.teamName.toLowerCase();
+    const match = teams.find((t) => t.name.toLowerCase() === lower);
+    return match ? match.id : "ALL";
+  }, [activeWorkspace, teams]);
+
+  // Workspace always wins; manual override only applies when no workspace active
+  const teamFilter = activeWorkspace ? wsTeamId : manualTeamFilter;
 
   // Always send seasonYear — never fetch without it to avoid cross-season duplicates
   const params = {
@@ -110,8 +110,9 @@ export default function Players() {
             <select
               value={teamFilter === "ALL" ? "ALL" : String(teamFilter)}
               onChange={(e) =>
-                setTeamFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
+                setManualTeamFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
               }
+              disabled={!!activeWorkspace}
               className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 pr-8 text-xs font-semibold text-gray-700 h-9 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
             >
               <option value="ALL">Todos los equipos</option>
