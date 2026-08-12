@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
-  Swords, RefreshCw, LogOut, Zap, Plus,
+  Swords, LogOut, Zap, Plus,
   CheckCircle2, ChevronDown, ChevronUp, Trash2, Database,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,17 +14,11 @@ import { useSeason, type Season } from "@/contexts/SeasonContext";
 import { useWorkspace, type Workspace } from "@/contexts/WorkspaceContext";
 
 // ─── Static season options (previous + current + 2 upcoming) ─────────────────
-function buildSeasonOptions() {
-  const current = new Date().getFullYear();
-  const options: { id: string; name: string }[] = [];
-  // current-2 = temporada pasada, current-1 = esta temporada, current/current+1 = futuras
-  for (let y = current - 2; y <= current + 1; y++) {
-    const short = String(y + 1).slice(2);
-    options.push({ id: `${y}-${short}`, name: `${y}/${y + 1}` });
-  }
-  return options;
-}
-const SEASON_OPTIONS = buildSeasonOptions();
+// Solo temporadas activas: 25-26 y 26-27
+const SEASON_OPTIONS: { id: string; name: string }[] = [
+  { id: "2025-26", name: "2025/2026" },
+  { id: "2026-27", name: "2026/2027" },
+];
 
 // ─── Nav groups ───────────────────────────────────────────────────────────────
 
@@ -68,9 +62,8 @@ const navGroups = [
   {
     label: "Admin",
     items: [
-      { name: "Usuarios",       href: "/usuarios",   icon: UserCog },
-      { name: "Sincronización", href: "/admin/sync", icon: RefreshCw },
-      { name: "Ajustes",        href: "/ajustes",    icon: Settings },
+      { name: "Usuarios", href: "/usuarios", icon: UserCog },
+      { name: "Ajustes",  href: "/ajustes",  icon: Settings },
     ],
   },
 ];
