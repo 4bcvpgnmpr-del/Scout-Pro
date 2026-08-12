@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useListTeams, useListPlayers, getListTeamsQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,33 +9,17 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 export default function Teams() {
   const { data: teams, isLoading } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
   const { data: players } = useListPlayers();
-  const { workspaces, activeId } = useWorkspace();
-  const activeWs = workspaces.find((w) => w.id === activeId);
-
-  const activeSeasonYear = activeWs
-    ? parseInt(activeWs.seasonId.split("-")[0] ?? "0", 10) || null
-    : null;
+  const { activeWorkspace } = useWorkspace();
 
   const playerCountByTeam = (teamId: number) =>
-    (players ?? []).filter(
-      (p) => p.teamId === teamId && (activeSeasonYear == null || p.seasonYear === activeSeasonYear)
-    ).length;
+    (players ?? []).filter((p) => p.teamId === teamId).length;
 
-  const teamsWithSeasonPlayers = activeSeasonYear
-    ? new Set(
-        (players ?? [])
-          .filter((p) => p.seasonYear === activeSeasonYear && p.teamId != null)
-          .map((p) => p.teamId!)
-      )
-    : null;
-
-  const visibleTeams = activeWs
-    ? (teams ?? []).filter(
-        (t) =>
-          t.league === activeWs.leagueId &&
-          (teamsWithSeasonPlayers == null || teamsWithSeasonPlayers.has(t.id))
-      )
-    : (teams ?? []);
+  // Filter by workspace team name — same pattern as players/games/reports pages
+  const visibleTeams = useMemo(() => {
+    if (!activeWorkspace) return teams ?? [];
+    const wsLower = activeWorkspace.teamName.toLowerCase();
+    return (teams ?? []).filter((t) => t.name.toLowerCase() === wsLower);
+  }, [activeWorkspace, teams]);
 
   const ownTeams   = visibleTeams.filter((t) => t.teamType === "own");
   const rivalTeams = visibleTeams.filter((t) => t.teamType !== "own");
@@ -45,11 +30,11 @@ export default function Teams() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black uppercase italic tracking-tight">Equipos</h1>
-          {activeWs ? (
+          {activeWorkspace ? (
             <p className="text-muted-foreground text-sm mt-1">
-              Liga: <span className="font-semibold text-foreground">{activeWs.leagueName}</span>
+              Liga: <span className="font-semibold text-foreground">{activeWorkspace.leagueName}</span>
               <span className="mx-1.5 text-muted-foreground/40">·</span>
-              <span className="text-muted-foreground/60">{activeWs.teamName}</span>
+              <span className="text-muted-foreground/60">{activeWorkspace.teamName}</span>
             </p>
           ) : (
             <p className="text-muted-foreground text-sm mt-1">Equipos y plantillas bajo seguimiento.</p>
