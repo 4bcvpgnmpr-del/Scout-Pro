@@ -21,10 +21,9 @@ export default function Teams() {
     return (teams ?? []).filter((t) => t.name.toLowerCase() === wsLower);
   }, [activeWorkspace, teams]);
 
-  // "Mi Equipo" only exists when a workspace is active — never read teamType from DB
-  // This avoids stale DB state persisting after workspace removal
+  // Teams only shown when a workspace is active — workspace team = "Mi Equipo", no rivals
   const ownTeams   = activeWorkspace ? visibleTeams : [];
-  const rivalTeams = activeWorkspace ? [] : visibleTeams;
+  const rivalTeams: typeof visibleTeams = [];
 
   return (
     <div className="space-y-8 max-w-[1400px]">
