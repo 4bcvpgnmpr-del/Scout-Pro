@@ -16,6 +16,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useListPlayers, getListPlayersQueryKey } from "@workspace/api-client-react";
 import { FileDown, Loader2 } from "lucide-react";
+import { PdfSettingsPopover } from "@/components/pdf/pdf-settings-popover";
+import { loadPdfPrefs, type PdfFont } from "@/hooks/use-pdf-prefs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +123,20 @@ const sf = (doc: JsPDF, c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
 const sd = (doc: JsPDF, c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 const st = (doc: JsPDF, c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
 
+// ─── Mutable preferences (set once before each export) ────────────────────────
+let _fnt: PdfFont = "helvetica";
+let _acc: RGB = D.accent;
+
+function hexToRgb(hex: string): RGB {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function applyPdfPrefs(font: PdfFont, accentHex: string) {
+  _fnt = font;
+  _acc = hexToRgb(accentHex);
+}
+
 function pctColor(val: string | number | null | undefined): RGB {
   const n = Number(val);
   if (val == null || val === "" || isNaN(n)) return D.light;
@@ -130,7 +146,7 @@ function pctColor(val: string | number | null | undefined): RGB {
 }
 
 /** Section title: 3pt orange left bar + tinted background */
-function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = D.accent): number {
+function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = _acc): number {
   sf(doc, accent); doc.rect(ML, y, 3, 6, "F");
   // very light tinted bg
   const bg: RGB = [
@@ -139,7 +155,7 @@ function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = D.acce
     Math.min(255, Math.round(accent[2] * 0.02 + 248)),
   ];
   sf(doc, bg); doc.rect(ML + 3, y, CW - 3, 6, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); st(doc, D.dark);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8.5); st(doc, D.dark);
   doc.text(label.toUpperCase(), ML + 8, y + 4.2);
   return y + 9;
 }
@@ -148,9 +164,9 @@ function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = D.acce
 function pageFooter(doc: JsPDF, ctx: string, right: string) {
   sd(doc, D.border); doc.setLineWidth(0.25);
   doc.line(ML, PH - FOOT + 3, PW - MR, PH - FOOT + 3);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
   doc.text("ScoutPro", ML, PH - FOOT + 8);
-  doc.setFont("helvetica", "normal"); st(doc, D.mid);
+  doc.setFont(_fnt, "normal"); st(doc, D.mid);
   doc.text(` · ${ctx}`, ML + 14, PH - FOOT + 8);
   st(doc, D.mid); doc.text(right, PW - MR, PH - FOOT + 8, { align: "right" });
 }
@@ -158,7 +174,7 @@ function pageFooter(doc: JsPDF, ctx: string, right: string) {
 /** Compact page header with both team logos */
 function pageHeader(doc: JsPDF, props: GameReportProps, imgMap: Record<string, string>, label: string) {
   sf(doc, D.dark); doc.rect(0, 0, PW, MT, "F");
-  sf(doc, D.accent); doc.rect(0, 0, PW, 1.8, "F");
+  sf(doc, _acc); doc.rect(0, 0, PW, 1.8, "F");
 
   const homeB64 = props.homeLogoUrl ? imgMap[props.homeLogoUrl] : undefined;
   const awayB64 = props.awayLogoUrl ? imgMap[props.awayLogoUrl] : undefined;
@@ -166,30 +182,30 @@ function pageHeader(doc: JsPDF, props: GameReportProps, imgMap: Record<string, s
 
   // Home logo
   if (homeB64) { try { doc.addImage(homeB64, ML, 3, LR * 2, LR * 2, undefined, "FAST"); } catch {} }
-  else { sf(doc, [30, 45, 68]); doc.circle(ML + LR, 3 + LR, LR, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(5.5); st(doc, D.accent); doc.text(ini(props.homeTeam), ML + LR, 3 + LR + 1.5, { align: "center" }); }
+  else { sf(doc, [30, 45, 68]); doc.circle(ML + LR, 3 + LR, LR, "F"); doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc); doc.text(ini(props.homeTeam), ML + LR, 3 + LR + 1.5, { align: "center" }); }
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.white);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.white);
   doc.text(props.homeTeam.length > 18 ? props.homeTeam.slice(0, 16) + "…" : props.homeTeam, ML + LR * 2 + 3, 9);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(5.5); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(5.5); st(doc, [100, 116, 139]);
   doc.text("LOCAL", ML + LR * 2 + 3, 14);
 
   // Away logo (right side)
   const awayX = PW - MR - LR * 2;
   if (awayB64) { try { doc.addImage(awayB64, awayX, 3, LR * 2, LR * 2, undefined, "FAST"); } catch {} }
-  else { sf(doc, [30, 45, 68]); doc.circle(awayX + LR, 3 + LR, LR, "F"); doc.setFont("helvetica", "bold"); doc.setFontSize(5.5); st(doc, D.accent); doc.text(ini(props.awayTeam), awayX + LR, 3 + LR + 1.5, { align: "center" }); }
+  else { sf(doc, [30, 45, 68]); doc.circle(awayX + LR, 3 + LR, LR, "F"); doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc); doc.text(ini(props.awayTeam), awayX + LR, 3 + LR + 1.5, { align: "center" }); }
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.white);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.white);
   doc.text(props.awayTeam.length > 18 ? props.awayTeam.slice(0, 16) + "…" : props.awayTeam, awayX - 3, 9, { align: "right" });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(5.5); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(5.5); st(doc, [100, 116, 139]);
   doc.text("VISITANTE", awayX - 3, 14, { align: "right" });
 
   // Center: date + section label
   const cx = PW / 2;
   const fmtDate = new Date(props.date + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); st(doc, [148, 163, 184]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(6.5); st(doc, [148, 163, 184]);
   doc.text(fmtDate, cx, 9, { align: "center" });
   if (props.location) doc.text(props.location, cx, 14, { align: "center" });
-  doc.setFont("helvetica", "bold"); doc.setFontSize(5.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc);
   doc.text(label.toUpperCase(), cx, 19, { align: "center" });
 }
 
@@ -197,7 +213,7 @@ function pageHeader(doc: JsPDF, props: GameReportProps, imgMap: Record<string, s
 function drawAvatar(doc: JsPDF, b64: string | undefined, name: string, cx: number, cy: number, r: number) {
   sf(doc, D.rowAlt); doc.circle(cx, cy, r, "F");
   if (b64) { try { doc.addImage(b64, cx - r, cy - r, r * 2, r * 2, undefined, "FAST"); } catch {} }
-  else { doc.setFont("helvetica", "bold"); doc.setFontSize(r * 4); st(doc, D.accent); doc.text(ini(name), cx, cy + r * 0.8, { align: "center" }); }
+  else { doc.setFont(_fnt, "bold"); doc.setFontSize(r * 4); st(doc, _acc); doc.text(ini(name), cx, cy + r * 0.8, { align: "center" }); }
   sd(doc, D.border); doc.setLineWidth(0.2); doc.circle(cx, cy, r, "D");
 }
 
@@ -206,7 +222,7 @@ function drawAvatar(doc: JsPDF, b64: string | undefined, name: string, cx: numbe
 function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, string>) {
   sf(doc, D.dark); doc.rect(0, 0, PW, PH, "F");
   // Right accent strip
-  sf(doc, D.accent); doc.rect(PW - 7, 0, 7, PH, "F");
+  sf(doc, _acc); doc.rect(PW - 7, 0, 7, PH, "F");
   // Top thin line
   sf(doc, [24, 37, 63]); doc.rect(0, 0, PW - 7, 2.5, "F");
 
@@ -215,12 +231,12 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
   const fmtDate = new Date(props.date + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   // ScoutPro brand
-  doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(7.5); st(doc, [100, 116, 139]);
   doc.text("SCOUTPRO", cx, 17, { align: "center" });
 
   // Tag
   sf(doc, [22, 35, 58]); doc.roundedRect(cx - 42, 22, 84, 7, 2, 2, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, _acc);
   doc.text("INFORME DE SCOUTING · CENTRO DE PARTIDO", cx, 26.5, { align: "center" });
 
   // Logos
@@ -239,32 +255,32 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
   // VS or score
   const hasScore = props.homeScore != null && props.awayScore != null;
   if (hasScore) {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(18); st(doc, D.white);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(18); st(doc, D.white);
     doc.text(`${props.homeScore}`, cx - 8, logoY + 4, { align: "right" });
     doc.setFontSize(10); st(doc, [55, 70, 90]);
     doc.text("–", cx, logoY + 4, { align: "center" });
     doc.setFontSize(18); st(doc, D.white);
     doc.text(`${props.awayScore}`, cx + 8, logoY + 4, { align: "left" });
   } else {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); st(doc, [55, 70, 90]);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(11); st(doc, [55, 70, 90]);
     doc.text("VS", cx, logoY + 3, { align: "center" });
   }
 
   // Team names
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); st(doc, D.white);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(9.5); st(doc, D.white);
   const hn = props.homeTeam.length > 16 ? props.homeTeam.slice(0, 14) + "…" : props.homeTeam;
   const an = props.awayTeam.length > 16 ? props.awayTeam.slice(0, 14) + "…" : props.awayTeam;
   doc.text(hn.toUpperCase(), cx - 30, logoY + LR + 9, { align: "center" });
   doc.text(an.toUpperCase(), cx + 30, logoY + LR + 9, { align: "center" });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(6); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(6); st(doc, [100, 116, 139]);
   doc.text("LOCAL", cx - 30, logoY + LR + 14, { align: "center" });
   doc.text("VISITANTE", cx + 30, logoY + LR + 14, { align: "center" });
 
   // Divider
-  sf(doc, D.accent); doc.rect(cx - 18, logoY + LR + 20, 36, 0.7, "F");
+  sf(doc, _acc); doc.rect(cx - 18, logoY + LR + 20, 36, 0.7, "F");
 
   // Date + location
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, [148, 163, 184]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, [148, 163, 184]);
   doc.text(fmtDate.charAt(0).toUpperCase() + fmtDate.slice(1), cx, logoY + LR + 30, { align: "center" });
   if (props.location) { doc.setFontSize(7); st(doc, [100, 116, 139]); doc.text(props.location, cx, logoY + LR + 37, { align: "center" }); }
 
@@ -273,7 +289,7 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
     const stars = props.difficulty === "facil" ? 2 : props.difficulty === "medio" ? 3 : 5;
     const label = props.difficulty === "facil" ? "FÁCIL" : props.difficulty === "medio" ? "MEDIO" : "IMPORTANTE";
     const sy = logoY + LR + 48;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
     doc.text(`DIFICULTAD: ${label}`, cx, sy, { align: "center" });
     for (let i = 0; i < 5; i++) {
       st(doc, i < stars ? D.amber : [30, 43, 65]);
@@ -284,20 +300,20 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
   // Contents
   const listY = logoY + LR + 70;
   sf(doc, [18, 30, 52]); doc.roundedRect(cx - 52, listY, 104, 58, 3, 3, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
   doc.text("CONTENIDO DEL INFORME", cx, listY + 7, { align: "center" });
   const items = ["Análisis Táctico (Ataque / Defensa / Transición)", "Inteligencia: Fortalezas y Debilidades", "Plantilla y perfil de jugadoras rivales", "Estadísticas individuales con eficiencia", "Playbook del partido"];
   items.forEach((item, i) => {
-    sf(doc, D.accent); doc.circle(cx - 40, listY + 16 + i * 9, 1.2, "F");
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7); st(doc, [175, 188, 208]);
+    sf(doc, _acc); doc.circle(cx - 40, listY + 16 + i * 9, 1.2, "F");
+    doc.setFont(_fnt, "normal"); doc.setFontSize(7); st(doc, [175, 188, 208]);
     doc.text(item, cx - 35, listY + 17 + i * 9);
   });
 
   // Footer
   sd(doc, [28, 42, 65]); doc.setLineWidth(0.25); doc.line(ML, PH - 16, PW - 9, PH - 16);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
   doc.text("ScoutPro", ML, PH - 9);
-  doc.setFont("helvetica", "normal"); st(doc, [65, 80, 100]);
+  doc.setFont(_fnt, "normal"); st(doc, [65, 80, 100]);
   doc.text(`  ·  Generado el ${today}`, ML + 13, PH - 9);
   st(doc, [40, 54, 72]); doc.text("Documento confidencial", PW - 9, PH - 9, { align: "right" });
 }
@@ -306,9 +322,9 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
 
 function fieldPair(doc: JsPDF, label: string, value: string, x: number, y: number, w: number): number {
   if (!value.trim()) return y;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6); st(doc, D.light);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, D.light);
   doc.text(label.toUpperCase(), x, y); y += 3.5;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.dark);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.dark);
   const lines = doc.splitTextToSize(value, w);
   doc.text(lines.slice(0, 4), x, y);
   return y + lines.slice(0, 4).length * 4 + 2;
@@ -366,7 +382,7 @@ function drawAnalisis(doc: JsPDF, props: GameReportProps, imgMap: Record<string,
 function bulletList(doc: JsPDF, items: string[], x: number, y: number, w: number, color: RGB): number {
   items.slice(0, 8).forEach(item => {
     sf(doc, color); doc.circle(x + 2.5, y - 1, 1.4, "F");
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.dark);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.dark);
     const lines = doc.splitTextToSize(item, w - 8);
     doc.text(lines.slice(0, 3), x + 7, y);
     y += lines.slice(0, 3).length * 4 + 1.5;
@@ -385,10 +401,10 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
   if (props.scout.clavesPartido.trim()) {
     sf(doc, D.accentL); doc.roundedRect(ML, y, CW, 5, 1, 1, "F");
     sd(doc, [254, 215, 170]); doc.setLineWidth(0.2); doc.roundedRect(ML, y, CW, 5, 1, 1, "D");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
     doc.text("CLAVES DEL PARTIDO", ML + 3, y + 3.3);
     y += 8;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.dark);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.dark);
     const lines = doc.splitTextToSize(props.scout.clavesPartido, CW);
     doc.text(lines.slice(0, 3), ML, y);
     y += lines.slice(0, 3).length * 4 + 5;
@@ -396,9 +412,9 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
 
   // Jugadoras destacadas
   if (props.scout.jugadorasDestacadas.trim()) {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.amber);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.amber);
     doc.text("⚑ JUGADORAS A VIGILAR", ML, y); y += 4;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.mid);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.mid);
     const lines = doc.splitTextToSize(props.scout.jugadorasDestacadas, CW);
     doc.text(lines.slice(0, 2), ML, y);
     y += lines.slice(0, 2).length * 4 + 6;
@@ -413,13 +429,13 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
 
   // Left: Fortalezas (red bg)
   sf(doc, D.redL); doc.roundedRect(ML, y, HW, 5, 1, 1, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.red);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.red);
   doc.text("⚠ FORTALEZAS RIVALES", ML + 3, y + 3.3); y += 7;
   const yFort = y;
 
   // Right: Debilidades (green bg)
   sf(doc, D.greenL); doc.roundedRect(ML + HW + 6, y - 7, HW, 5, 1, 1, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.green);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.green);
   doc.text("✓ DEBILIDADES RIVALES", ML + HW + 6 + 3, y - 3.7);
 
   let yL = yFort;
@@ -427,12 +443,12 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
   if (props.scout.fortalezas.length) {
     yL = bulletList(doc, props.scout.fortalezas, ML, yFort, HW, D.red);
   } else {
-    doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); st(doc, [200, 210, 220]); doc.text("Sin datos", ML, yFort); yL = yFort + 6;
+    doc.setFont(_fnt, "italic"); doc.setFontSize(7.5); st(doc, [200, 210, 220]); doc.text("Sin datos", ML, yFort); yL = yFort + 6;
   }
   if (props.scout.debilidades.length) {
     yR = bulletList(doc, props.scout.debilidades, ML + HW + 6, yFort, HW, D.green);
   } else {
-    doc.setFont("helvetica", "italic"); doc.setFontSize(7.5); st(doc, [200, 210, 220]); doc.text("Sin datos", ML + HW + 6, yFort); yR = yFort + 6;
+    doc.setFont(_fnt, "italic"); doc.setFontSize(7.5); st(doc, [200, 210, 220]); doc.text("Sin datos", ML + HW + 6, yFort); yR = yFort + 6;
   }
   y = Math.max(yL, yR) + 6;
 
@@ -440,7 +456,7 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
   if (y < MAX_Y - 30 && props.scout.objetivos.trim()) {
     sd(doc, D.border); doc.setLineWidth(0.2); doc.line(ML, y, PW - MR, y); y += 6;
     y = sectionTitle(doc, "Objetivos del Partido", y, D.blue);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.dark);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.dark);
     const lines = doc.splitTextToSize(props.scout.objetivos, CW);
     doc.text(lines.slice(0, 5), ML, y);
     y += lines.slice(0, 5).length * 4 + 4;
@@ -450,7 +466,7 @@ function drawInteligencia(doc: JsPDF, props: GameReportProps, imgMap: Record<str
   if (y < MAX_Y - 25 && props.scout.notasEntrenador.trim()) {
     sd(doc, D.border); doc.setLineWidth(0.2); doc.line(ML, y, PW - MR, y); y += 6;
     y = sectionTitle(doc, "Notas del Entrenador", y, D.accent);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.mid);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.mid);
     const lines = doc.splitTextToSize(props.scout.notasEntrenador, CW);
     doc.text(lines.slice(0, 5), ML, y);
   }
@@ -471,7 +487,7 @@ function drawPlantilla(doc: JsPDF, props: GameReportProps, players: Player[], im
   let y = MT + 4;
 
   // subtitle
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.mid);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.mid);
   doc.text(`${props.rivalName} · ${players.length} jugadoras`, PW - MR, y + 3, { align: "right" });
   y += 7;
 
@@ -505,7 +521,7 @@ function drawPlantilla(doc: JsPDF, props: GameReportProps, players: Player[], im
     sf(doc, D.hdrBg); doc.rect(ML, yy, CW, 7, "F");
     sd(doc, D.border); doc.setLineWidth(0.2); doc.rect(ML, yy, CW, 7, "D");
     RCOLS.slice(0, 6).forEach((c, i) => {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.mid);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.mid);
       doc.text(c.label.toUpperCase(), rColX(i) + (c.align === "center" ? c.w / 2 : 2), yy + 4.5, { align: c.align });
     });
     return yy + 7;
@@ -520,16 +536,16 @@ function drawPlantilla(doc: JsPDF, props: GameReportProps, players: Player[], im
       if (i % 2 === 1) { sf(doc, D.rowAlt); doc.rect(ML, y, CW, 8, "F"); }
       sd(doc, D.border); doc.setLineWidth(0.15); doc.line(ML, y + 8, ML + CW, y + 8);
       const cy = y + 5;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); st(doc, D.mid);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(7.5); st(doc, D.mid);
       doc.text(p.jerseyNumber != null ? String(p.jerseyNumber) : "—", rColX(0) + RCOLS[0].w / 2, cy, { align: "center" });
-      doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.dark);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.dark);
       doc.text(p.name.length > 28 ? p.name.slice(0, 26) + "…" : p.name, rColX(1) + 2, cy);
       if (p.position) {
         sf(doc, D.accentL); doc.roundedRect(rColX(2) + 1, y + 1.5, 12, 5, 1, 1, "F");
-        doc.setFont("helvetica", "bold"); doc.setFontSize(5.5); st(doc, D.accent);
+        doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc);
         doc.text(p.position, rColX(2) + 7, cy, { align: "center" });
       }
-      doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); st(doc, D.mid);
+      doc.setFont(_fnt, "normal"); doc.setFontSize(7.5); st(doc, D.mid);
       doc.text(p.age != null ? String(p.age) : "—", rColX(3) + RCOLS[3].w / 2, cy, { align: "center" });
       doc.text(p.height ?? "—", rColX(4) + RCOLS[4].w / 2, cy, { align: "center" });
       doc.text(p.nationality?.slice(0, 3) ?? "—", rColX(5) + RCOLS[5].w / 2, cy, { align: "center" });
@@ -551,7 +567,7 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
   let y = MT + 4;
 
   // subtitle
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.mid);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.mid);
   doc.text(`${props.rivalName} · Media por partido`, PW - MR, y + 3, { align: "right" });
   y += 7;
 
@@ -575,7 +591,7 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
   sf(doc, D.hdrBg); doc.rect(ML, y, CW, 7, "F");
   sd(doc, D.border); doc.setLineWidth(0.2); doc.rect(ML, y, CW, 7, "D");
   SCOLS.forEach((c, i) => {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(5.5); st(doc, i === 3 ? D.accent : D.mid);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, i === 3 ? D.accent : D.mid);
     doc.text(c.label.toUpperCase(), sColX(i) + (c.align === "center" ? c.w / 2 : 2), y + 4.5, { align: c.align });
   });
   y += 7;
@@ -588,9 +604,9 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
     const cy = y + 5.5;
     const s = p.stats;
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7); st(doc, D.mid);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(7); st(doc, D.mid);
     doc.text(p.jerseyNumber != null ? String(p.jerseyNumber) : "—", sColX(0) + SCOLS[0].w / 2, cy, { align: "center" });
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); st(doc, D.dark);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(7.5); st(doc, D.dark);
     doc.text(p.name.length > 22 ? p.name.slice(0, 20) + "…" : p.name, sColX(1) + 2, cy);
 
     const vals = [
@@ -613,7 +629,7 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
     pctVals.forEach((raw, j) => {
       const ci = j + 8;
       const label = fPct(raw);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(7);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(7);
       st(doc, label === "—" ? [200, 210, 220] as RGB : pctColor(raw));
       doc.text(label, sColX(ci) + SCOLS[ci].w / 2, cy, { align: "center" });
     });
@@ -624,7 +640,7 @@ function drawEstadisticas(doc: JsPDF, props: GameReportProps, players: PlayerWit
   // Legend
   if (y + 12 < MAX_Y) {
     y += 5;
-    doc.setFont("helvetica", "italic"); doc.setFontSize(6.5); st(doc, [175, 185, 200]);
+    doc.setFont(_fnt, "italic"); doc.setFontSize(6.5); st(doc, [175, 185, 200]);
     doc.text("Verde ≥ 50%  ·  Rojo < 35%  ·  Ordenado por media de puntos", ML, y);
   }
 
@@ -640,13 +656,13 @@ function drawPlaybook(doc: JsPDF, props: GameReportProps, plays: string[], imgMa
   const MAX_Y = PH - FOOT;
   let y = MT + 4;
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.mid);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.mid);
   doc.text(`${plays.length} jugada${plays.length !== 1 ? "s" : ""} preparadas`, PW - MR, y + 3, { align: "right" });
   y += 7;
 
   if (!plays.length) {
     sf(doc, D.rowAlt); doc.roundedRect(ML, y, CW, 18, 3, 3, "F");
-    doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); st(doc, [180, 190, 205]);
+    doc.setFont(_fnt, "italic"); doc.setFontSize(8.5); st(doc, [180, 190, 205]);
     doc.text("Sin jugadas anotadas para este partido", PW / 2, y + 11, { align: "center" });
   } else {
     plays.forEach((play, i) => {
@@ -658,15 +674,15 @@ function drawPlaybook(doc: JsPDF, props: GameReportProps, plays: string[], imgMa
       // Number badge
       const bc = i % 2 === 0 ? D.accent : D.mid;
       sf(doc, bc); doc.circle(ML + 6, y + ROW_H / 2, 4, "F");
-      doc.setFont("helvetica", "bold"); doc.setFontSize(7); st(doc, D.white);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(7); st(doc, D.white);
       doc.text(String(i + 1), ML + 6, y + ROW_H / 2 + 1.5, { align: "center" });
 
       // Play text
-      doc.setFont("helvetica", "bold"); doc.setFontSize(9); st(doc, D.dark);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(9); st(doc, D.dark);
       const lines = doc.splitTextToSize(play, CW - 18);
       doc.text(lines[0] ?? "", ML + 14, y + ROW_H / 2 + 1.5);
       if (lines.length > 1) {
-        doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); st(doc, D.mid);
+        doc.setFont(_fnt, "normal"); doc.setFontSize(7.5); st(doc, D.mid);
         doc.text(lines[1], ML + 14, y + ROW_H / 2 + 5.5);
       }
       y += ROW_H;
@@ -704,6 +720,10 @@ export function GameReportExportButton({ gameProps }: { gameProps: GameReportPro
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
+      // Apply current preferences before drawing
+      const prefs = loadPdfPrefs();
+      applyPdfPrefs(prefs.font, prefs.accent);
+
       const { default: jsPDF } = await import("jspdf");
       const imgMap = await fetchAllImages([gameProps.homeLogoUrl, gameProps.awayLogoUrl, ...players.map(p => p.photoUrl)]);
 
@@ -723,10 +743,13 @@ export function GameReportExportButton({ gameProps }: { gameProps: GameReportPro
   }, [gameProps, players, playersWithStats]);
 
   return (
-    <button onClick={handleExport} disabled={exporting}
-      className="h-7 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 transition flex items-center gap-1.5 text-primary text-[11px] font-black uppercase tracking-wide disabled:opacity-50">
-      {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
-      {exporting ? "Generando…" : "PDF"}
-    </button>
+    <div className="flex items-center gap-1">
+      <button onClick={handleExport} disabled={exporting}
+        className="h-7 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 transition flex items-center gap-1.5 text-primary text-[11px] font-black uppercase tracking-wide disabled:opacity-50">
+        {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
+        {exporting ? "Generando…" : "PDF"}
+      </button>
+      <PdfSettingsPopover />
+    </div>
   );
 }

@@ -14,6 +14,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useListPlayers, useListTeamMedia, getListTeamMediaQueryKey } from "@workspace/api-client-react";
 import { FileDown, Loader2 } from "lucide-react";
+import { PdfSettingsPopover } from "@/components/pdf/pdf-settings-popover";
+import { loadPdfPrefs, type PdfFont } from "@/hooks/use-pdf-prefs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +106,20 @@ const sf = (doc: JsPDF, c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
 const sd = (doc: JsPDF, c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 const st = (doc: JsPDF, c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
 
+// ─── Mutable preferences (set once before each export) ────────────────────────
+let _fnt: PdfFont = "helvetica";
+let _acc: RGB = D.accent;
+
+function hexToRgb(hex: string): RGB {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function applyPdfPrefs(font: PdfFont, accentHex: string) {
+  _fnt = font;
+  _acc = hexToRgb(accentHex);
+}
+
 function impColor(imp: string | null): RGB {
   if (imp === "clave") return D.impRed;
   if (imp === "medio") return D.impAmb;
@@ -119,11 +135,11 @@ function pctColor(val: string | number | null | undefined): RGB {
 }
 
 /** Section title with orange left bar + tinted background strip */
-function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = D.accent): number {
+function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = _acc): number {
   sf(doc, accent); doc.rect(ML, y, 3, 6, "F");
   const bg: RGB = [Math.round(accent[0] * 0.08 + 248), Math.round(accent[1] * 0.08 + 248), Math.round(accent[2] * 0.08 + 245)];
   sf(doc, bg); doc.rect(ML + 3, y, CW - 3, 6, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); st(doc, D.dark);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8.5); st(doc, D.dark);
   doc.text(label.toUpperCase(), ML + 8, y + 4.2);
   return y + 9;
 }
@@ -132,9 +148,9 @@ function sectionTitle(doc: JsPDF, label: string, y: number, accent: RGB = D.acce
 function pageFooter(doc: JsPDF, left: string, right: string) {
   sd(doc, D.border); doc.setLineWidth(0.25);
   doc.line(ML, PH - FOOT + 3, PW - MR, PH - FOOT + 3);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
   doc.text("ScoutPro", ML, PH - FOOT + 8);
-  doc.setFont("helvetica", "normal"); st(doc, D.mid);
+  doc.setFont(_fnt, "normal"); st(doc, D.mid);
   doc.text(` · ${left}`, ML + 14, PH - FOOT + 8);
   st(doc, D.mid); doc.text(right, PW - MR, PH - FOOT + 8, { align: "right" });
 }
@@ -142,20 +158,20 @@ function pageFooter(doc: JsPDF, left: string, right: string) {
 /** Page header (compact) for inner pages */
 function pageHeader(doc: JsPDF, team: Team, season: string, logoB64: string | undefined) {
   sf(doc, D.dark); doc.rect(0, 0, PW, MT, "F");
-  sf(doc, D.accent); doc.rect(0, 0, PW, 2, "F");
+  sf(doc, _acc); doc.rect(0, 0, PW, 2, "F");
   // Logo
   if (logoB64) { try { doc.addImage(logoB64, ML, 3.5, 11, 11, undefined, "FAST"); } catch {} }
   else {
     sf(doc, [30, 45, 70]); doc.roundedRect(ML, 3.5, 11, 11, 1, 1, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
     doc.text(ini(team.name), ML + 5.5, 10, { align: "center" });
   }
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); st(doc, D.white);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(9.5); st(doc, D.white);
   doc.text(team.name.toUpperCase(), ML + 14, 10);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7); st(doc, [148, 163, 184]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(7); st(doc, [148, 163, 184]);
   const sub = [team.league, season].filter(Boolean).join(" · ");
   doc.text(sub, ML + 14, 15);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(7); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(7); st(doc, _acc);
   doc.text("INFORME DE PLANTILLA", PW - MR, 10, { align: "right" });
 }
 
@@ -164,7 +180,7 @@ function drawAvatar(doc: JsPDF, b64: string | undefined, name: string, cx: numbe
   sf(doc, D.rowAlt); doc.circle(cx, cy, r, "F");
   if (b64) { try { doc.addImage(b64, cx - r, cy - r, r * 2, r * 2, undefined, "FAST"); } catch {} }
   else {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(r * 4.5); st(doc, D.accent);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(r * 4.5); st(doc, _acc);
     doc.text(ini(name), cx, cy + r * 0.8, { align: "center" });
   }
   sd(doc, D.border); doc.setLineWidth(0.2); doc.circle(cx, cy, r, "D");
@@ -175,20 +191,20 @@ function drawAvatar(doc: JsPDF, b64: string | undefined, name: string, cx: numbe
 function drawCover(doc: JsPDF, team: Team, season: string, playerCount: number, logoB64: string | undefined) {
   sf(doc, D.dark); doc.rect(0, 0, PW, PH, "F");
   // Accent side strip
-  sf(doc, D.accent); doc.rect(PW - 8, 0, 8, PH, "F");
+  sf(doc, _acc); doc.rect(PW - 8, 0, 8, PH, "F");
   // Top bar
   sf(doc, [24, 37, 63]); doc.rect(0, 0, PW - 8, 3, "F");
 
   const cx = (PW - 8) / 2;
 
   // ScoutPro brand top
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, [100, 116, 139]);
   doc.text("SCOUTPRO", cx, 18, { align: "center" });
 
   // Tag
   sf(doc, [24, 37, 63]);
   doc.roundedRect(cx - 40, 24, 80, 7, 2, 2, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
   doc.text("INFORME DE PLANTILLA RIVAL", cx, 28.5, { align: "center" });
 
   // Logo
@@ -200,24 +216,24 @@ function drawCover(doc: JsPDF, team: Team, season: string, playerCount: number, 
   doc.circle(cx, logoY, LR + 4, "D");
   if (logoB64) { try { doc.addImage(logoB64, cx - LR, logoY - LR, LR * 2, LR * 2, undefined, "FAST"); } catch {} }
   else {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(20); st(doc, D.accent);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(20); st(doc, _acc);
     doc.text(ini(team.name), cx, logoY + 5, { align: "center" });
   }
 
   // Team name
   const fontSize = team.name.length > 20 ? 20 : 26;
-  doc.setFont("helvetica", "bold"); doc.setFontSize(fontSize); st(doc, D.white);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(fontSize); st(doc, D.white);
   doc.text(team.name.toUpperCase(), cx, logoY + LR + 14, { align: "center" });
 
   if (team.league) {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); st(doc, [148, 163, 184]);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(10); st(doc, [148, 163, 184]);
     doc.text(team.league, cx, logoY + LR + 23, { align: "center" });
   }
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "normal"); doc.setFontSize(9); st(doc, [100, 116, 139]);
   doc.text(`Temporada ${season}`, cx, logoY + LR + 31, { align: "center" });
 
   // Divider
-  sf(doc, D.accent); doc.rect(cx - 20, logoY + LR + 37, 40, 0.8, "F");
+  sf(doc, _acc); doc.rect(cx - 20, logoY + LR + 37, 40, 0.8, "F");
 
   // Stats summary boxes
   const boxY = logoY + LR + 50;
@@ -233,30 +249,30 @@ function drawCover(doc: JsPDF, team: Team, season: string, playerCount: number, 
     const bx = bx0 + i * (boxW + gap);
     sf(doc, [20, 32, 55]); doc.roundedRect(bx, boxY, boxW, boxH, 2, 2, "F");
     sd(doc, [35, 50, 75]); doc.setLineWidth(0.3); doc.roundedRect(bx, boxY, boxW, boxH, 2, 2, "D");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); st(doc, D.white);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(11); st(doc, D.white);
     doc.text(b.value.length > 8 ? b.value.slice(0, 7) : b.value, bx + boxW / 2, boxY + 11, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(6); st(doc, [100, 116, 139]);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(6); st(doc, [100, 116, 139]);
     doc.text(b.label.toUpperCase(), bx + boxW / 2, boxY + 18, { align: "center" });
   });
 
   // Contents list
   const listY = boxY + boxH + 18;
   sf(doc, [20, 32, 55]); doc.roundedRect(cx - 50, listY, 100, 55, 3, 3, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, [100, 116, 139]);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, [100, 116, 139]);
   doc.text("CONTENIDO DEL INFORME", cx, listY + 7, { align: "center" });
   const items = ["Plantilla organizada por posición", "Estadísticas individuales (Min, Pts, Reb)", "Porcentajes de tiro (T2, T3, TL)", "Clasificación por importancia"];
   items.forEach((item, i) => {
-    sf(doc, D.accent); doc.circle(cx - 38, listY + 16 + i * 10, 1.3, "F");
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); st(doc, [180, 195, 215]);
+    sf(doc, _acc); doc.circle(cx - 38, listY + 16 + i * 10, 1.3, "F");
+    doc.setFont(_fnt, "normal"); doc.setFontSize(7.5); st(doc, [180, 195, 215]);
     doc.text(item, cx - 32, listY + 17 + i * 10);
   });
 
   // Date + footer
   const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
   sd(doc, [30, 45, 68]); doc.setLineWidth(0.25); doc.line(ML, PH - 18, PW - 16, PH - 18);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.accent);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, _acc);
   doc.text("ScoutPro", ML, PH - 11);
-  doc.setFont("helvetica", "normal"); st(doc, [70, 85, 104]);
+  doc.setFont(_fnt, "normal"); st(doc, [70, 85, 104]);
   doc.text(`  ·  Generado el ${today}`, ML + 13, PH - 11);
   st(doc, [45, 58, 78]); doc.text("Documento confidencial", PW - 16, PH - 11, { align: "right" });
 }
@@ -288,7 +304,7 @@ function drawTableHeader(doc: JsPDF, y: number): number {
   sd(doc, D.border); doc.setLineWidth(0.2);
   doc.rect(ML, y, CW, ROW_H, "D");
   COLS.forEach((c, i) => {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6.5); st(doc, D.mid);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.mid);
     const x = colX(i) + (c.align === "center" ? c.w / 2 : 2);
     doc.text(c.label.toUpperCase(), x, y + 4.5, { align: c.align });
   });
@@ -306,11 +322,11 @@ function drawPlayerRow(
   const cy = y + ROW_H / 2 + 1;
 
   // #
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.mid);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.mid);
   doc.text(p.jerseyNumber != null ? String(p.jerseyNumber) : "—", colX(0) + COLS[0].w / 2, cy, { align: "center" });
 
   // Name
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.dark);
+  doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.dark);
   const nm = p.name.length > 24 ? p.name.slice(0, 22) + "…" : p.name;
   doc.text(nm, colX(1) + 2, cy);
 
@@ -319,7 +335,7 @@ function drawPlayerRow(
     sf(doc, D.accentL);
     const px = colX(2) + COLS[2].w / 2; const pw2 = 9;
     doc.roundedRect(px - pw2 / 2, y + 1.5, pw2, ROW_H - 3, 1, 1, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(6); st(doc, D.accent);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, _acc);
     doc.text(p.position, px, cy, { align: "center" });
   }
 
@@ -329,10 +345,10 @@ function drawPlayerRow(
     const ic = impColor(imp);
     const label = imp === "clave" ? "Clave" : imp === "medio" ? "Medio" : "Normal";
     sf(doc, ic); doc.circle(colX(3) + 3.5, cy - 0.5, 2, "F");
-    doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); st(doc, ic);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(6.5); st(doc, ic);
     doc.text(label, colX(3) + 7, cy, { align: "left" });
   } else {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); st(doc, [200, 210, 220]);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(6.5); st(doc, [200, 210, 220]);
     doc.text("—", colX(3) + COLS[3].w / 2, cy, { align: "center" });
   }
 
@@ -355,7 +371,7 @@ function drawPlayerRow(
   [7, 8, 9].forEach((ci, j) => {
     const raw = pctVals[j];
     const label = fPct(raw);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
+    doc.setFont(_fnt, "bold"); doc.setFontSize(7.5);
     st(doc, label === "—" ? [200, 210, 220] as RGB : pctColor(raw));
     doc.text(label, colX(ci) + COLS[ci].w / 2, cy, { align: "center" });
   });
@@ -461,9 +477,9 @@ function drawSummary(doc: JsPDF, team: Team, players: PlayerWithStats[], season:
     if (i % 2 === 1) { sf(doc, D.rowAlt); doc.rect(tblX, y, tblW, 8, "F"); }
     sd(doc, D.border); doc.setLineWidth(0.2); doc.line(tblX, y, tblX + tblW, y);
     if (col) { sf(doc, col); doc.circle(tblX + 4, y + 4, 1.8, "F"); }
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.mid);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.mid);
     doc.text(label, tblX + 10, y + 5.5);
-    doc.setFont("helvetica", "bold"); st(doc, col ?? D.dark);
+    doc.setFont(_fnt, "bold"); st(doc, col ?? D.dark);
     doc.text(val, tblX + tblW - 4, y + 5.5, { align: "right" });
     y += 8;
   });
@@ -494,14 +510,14 @@ function drawSummary(doc: JsPDF, team: Team, players: PlayerWithStats[], season:
   ];
   legend.forEach(({ color, label }) => {
     sf(doc, color); doc.circle(ML + 3, y + 3.5, 2.2, "F");
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); st(doc, D.dark);
+    doc.setFont(_fnt, "normal"); doc.setFontSize(8); st(doc, D.dark);
     doc.text(label, ML + 8, y + 5);
     y += 9;
   });
 
   y += 4;
   const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
-  doc.setFont("helvetica", "italic"); doc.setFontSize(7); st(doc, [156, 163, 175]);
+  doc.setFont(_fnt, "italic"); doc.setFontSize(7); st(doc, [156, 163, 175]);
   doc.text(`Los porcentajes en verde (≥50%) indican eficiencia alta. Rojo (<35%) indica baja eficiencia. · Generado el ${today}`, ML, y);
 
   pageFooter(doc, team.name, `Pág. ${pageNum}`);
@@ -524,7 +540,7 @@ function drawSistemas(
   items.slice(0, 3).forEach((item, idx) => {
     const iy = y + idx * ITEM_H;
     if (item.title) {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(8); st(doc, D.dark);
+      doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.dark);
       doc.text(item.title, ML, iy + 5);
     }
     const imgY = iy + (item.title ? 8 : 2);
@@ -534,11 +550,11 @@ function drawSistemas(
       try { doc.addImage(imgMap[item.url], ML, imgY, imgW, imgH, undefined, "FAST"); } catch {}
     } else {
       sf(doc, D.rowAlt); doc.rect(ML, imgY, imgW, imgH, "F");
-      doc.setFont("helvetica", "italic"); doc.setFontSize(7); st(doc, [200, 210, 220]);
+      doc.setFont(_fnt, "italic"); doc.setFontSize(7); st(doc, [200, 210, 220]);
       doc.text("Sin imagen", ML + imgW / 2, imgY + imgH / 2, { align: "center" });
     }
     if (item.description) {
-      doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); st(doc, D.mid);
+      doc.setFont(_fnt, "normal"); doc.setFontSize(7.5); st(doc, D.mid);
       const lines = doc.splitTextToSize(item.description, CW - imgW - 6);
       doc.text(lines.slice(0, 8), ML + imgW + 6, imgY + 6);
     }
@@ -578,6 +594,10 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
+      // Apply current preferences before drawing
+      const prefs = loadPdfPrefs();
+      applyPdfPrefs(prefs.font, prefs.accent);
+
       const { default: jsPDF } = await import("jspdf");
       const allUrls = [team.logoUrl, ...playersWithStats.map(p => p.photoUrl), ...sistemas.map(s => s.url && /\.(png|jpg|jpeg|webp|gif)$/i.test(s.url ?? "") ? s.url : null)];
       const imgMap = await fetchAllImages(allUrls);
@@ -611,10 +631,13 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
   }, [team, season, playersWithStats, sistemas]);
 
   return (
-    <button onClick={handleExport} disabled={exporting}
-      className="flex items-center gap-1.5 text-xs font-black tracking-wide uppercase px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted transition disabled:opacity-50">
-      {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-      {exporting ? "Generando…" : "Exportar PDF"}
-    </button>
+    <div className="flex items-center gap-1.5">
+      <button onClick={handleExport} disabled={exporting}
+        className="flex items-center gap-1.5 text-xs font-black tracking-wide uppercase px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted transition disabled:opacity-50">
+        {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+        {exporting ? "Generando…" : "Exportar PDF"}
+      </button>
+      <PdfSettingsPopover />
+    </div>
   );
 }
