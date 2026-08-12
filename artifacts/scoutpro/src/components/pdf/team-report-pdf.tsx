@@ -96,11 +96,19 @@ async function fetchPlayerStats(playerId: number): Promise<PlayerStats | null> {
   } catch { return null; }
 }
 
-/** Fetch one image URL and convert to base64 data-URL. */
+/** Fetch one image URL and convert to base64 data-URL.
+ *  External URLs (e.g. imagenes.feb.es) are routed through /api/image-proxy
+ *  to avoid CORS restrictions on the client side. */
 async function imgToBase64(url: string): Promise<string> {
   if (!url || url.startsWith("data:")) return url;
+
+  // Route external URLs through the server-side proxy
+  const fetchUrl = /^https?:\/\//i.test(url)
+    ? `/api/image-proxy?url=${encodeURIComponent(url)}`
+    : url;
+
   try {
-    const r = await fetch(url, { credentials: "include", mode: "cors" });
+    const r = await fetch(fetchUrl, { credentials: "include" });
     if (!r.ok) return url;
     const blob = await r.blob();
     return await new Promise<string>((resolve, reject) => {
@@ -110,7 +118,6 @@ async function imgToBase64(url: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    // CORS-blocked: try no-cors (opaque response, no base64 possible) — just keep original
     return url;
   }
 }

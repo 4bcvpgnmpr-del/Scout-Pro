@@ -12,10 +12,12 @@ import adminSyncRouter from "./admin-sync.routes.js";
 import authRouter from "./auth.routes.js";
 import seasonsRouter from "./seasons.js";
 import ligasRouter from "./ligas.js";
+import imageProxyRouter from "./image-proxy.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(imageProxyRouter);
 router.use(storageRouter);
 router.use(dashboardRouter);
 router.use(ligasRouter);
