@@ -72,6 +72,51 @@ async function fetchPlayerStats(playerId: number): Promise<PlayerStats | null> {
   } catch { return null; }
 }
 
+/** Convert any image URL to a base64 data-URL so html2canvas can render it. */
+async function imgToBase64(url: string): Promise<string> {
+  if (!url) return url;
+  // Already a data URL — nothing to do
+  if (url.startsWith("data:")) return url;
+  try {
+    const r = await fetch(url, { credentials: "include" });
+    if (!r.ok) return url;
+    const blob = await r.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return url; }
+}
+
+/** Pre-load all image URLs in a list and return a map: original → base64 */
+async function preloadImages(urls: (string | null | undefined)[]): Promise<Record<string, string>> {
+  const unique = [...new Set(urls.filter((u): u is string => !!u))];
+  const results = await Promise.all(unique.map(async (u) => [u, await imgToBase64(u)] as const));
+  return Object.fromEntries(results);
+}
+
+/** Temporarily replace all img[src] inside el with base64 versions for html2canvas */
+function patchImgs(el: HTMLElement, map: Record<string, string>) {
+  el.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src");
+    if (src && map[src]) {
+      img.dataset.origSrc = src;
+      img.src = map[src];
+    }
+  });
+}
+
+/** Restore img[src] values after capture */
+function restoreImgs(el: HTMLElement) {
+  el.querySelectorAll("img[data-orig-src]").forEach((img) => {
+    const htmlImg = img as HTMLImageElement;
+    const orig = htmlImg.dataset.origSrc;
+    if (orig) { htmlImg.src = orig; delete htmlImg.dataset.origSrc; }
+  });
+}
+
 // ─── PDF page dimensions ──────────────────────────────────────────────────────
 
 const W = 794;   // A4 at 96dpi
@@ -646,16 +691,29 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
       const jsPDF = jspdfMod.default;
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
+      // ── Collect every image URL across all pages ──────────────────────────
+      const imageUrls: (string | null | undefined)[] = [
+        team.logoUrl,
+        ...playersWithStats.map((p) => p.photoUrl),
+        ...sistemas.map((s) => s.url).filter((u) => u && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(u)),
+      ];
+      const imgMap = await preloadImages(imageUrls);
+
+      // ── Capture each page ─────────────────────────────────────────────────
       const refs: Array<HTMLDivElement | null> = [
         coverRef.current,
         plantillaRef.current,
         statsRef.current,
         ...sisRefs.current.slice(0, sistemasChunks.length),
-      ].filter(Boolean);
+      ].filter(Boolean) as HTMLDivElement[];
 
       for (let i = 0; i < refs.length; i++) {
         const el = refs[i];
         if (!el) continue;
+
+        // Replace img srcs with base64 so html2canvas can render them
+        patchImgs(el, imgMap);
+
         if (i > 0) pdf.addPage();
         const canvas = await html2canvasMod(el, {
           scale: 2,
@@ -663,6 +721,10 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
           allowTaint: true,
           backgroundColor: null,
         });
+
+        // Restore original srcs
+        restoreImgs(el);
+
         pdf.addImage(canvas.toDataURL("image/jpeg", 0.93), "JPEG", 0, 0, 210, 297);
       }
 
@@ -673,7 +735,7 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
     } finally {
       setExporting(false);
     }
-  }, [team.name, sistemasChunks.length]);
+  }, [team.name, sistemasChunks.length, playersWithStats, team.logoUrl, sistemas]);
 
   return (
     <>
