@@ -284,21 +284,8 @@ function drawPortada(doc: JsPDF, props: GameReportProps, imgMap: Record<string, 
   doc.text(fmtDate.charAt(0).toUpperCase() + fmtDate.slice(1), cx, logoY + LR + 30, { align: "center" });
   if (props.location) { doc.setFontSize(7); st(doc, [100, 116, 139]); doc.text(props.location, cx, logoY + LR + 37, { align: "center" }); }
 
-  // Difficulty
-  if (props.difficulty) {
-    const stars = props.difficulty === "facil" ? 2 : props.difficulty === "medio" ? 3 : 5;
-    const label = props.difficulty === "facil" ? "FÁCIL" : props.difficulty === "medio" ? "MEDIO" : "IMPORTANTE";
-    const sy = logoY + LR + 48;
-    doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
-    doc.text(`DIFICULTAD: ${label}`, cx, sy, { align: "center" });
-    for (let i = 0; i < 5; i++) {
-      st(doc, i < stars ? D.amber : [30, 43, 65]);
-      doc.text("★", cx - 12 + i * 6, sy + 7, { align: "center" });
-    }
-  }
-
   // Contents
-  const listY = logoY + LR + 70;
+  const listY = logoY + LR + 52;
   sf(doc, [18, 30, 52]); doc.roundedRect(cx - 52, listY, 104, 58, 3, 3, "F");
   doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, [70, 85, 105]);
   doc.text("CONTENIDO DEL INFORME", cx, listY + 7, { align: "center" });
@@ -505,15 +492,17 @@ function drawPlantilla(doc: JsPDF, props: GameReportProps, players: Player[], im
     ...(noPos.length ? [["Otras posiciones", noPos] as [string, Player[]]] : []),
   ];
 
-  // Table columns: #, Jugadora, Pos, Edad, Altura, Nac.
+  // Table columns: #, Foto+Jugadora, Pos, Edad, Altura, Nac.
+  const ROW_H = 13; // taller rows to fit photo
+  const PHOTO_R = 4.5; // avatar radius mm
   const RCOLS = [
-    { label: "#",     w: 10, align: "center" as const },
-    { label: "Jugadora", w: 60, align: "left" as const },
-    { label: "Pos",  w: 14, align: "center" as const },
-    { label: "Edad", w: 14, align: "center" as const },
+    { label: "#",      w: 10, align: "center" as const },
+    { label: "Jugadora", w: 72, align: "left"   as const }, // includes photo
+    { label: "Pos",   w: 14, align: "center" as const },
+    { label: "Edad",  w: 13, align: "center" as const },
     { label: "Altura",w: 16, align: "center" as const },
-    { label: "Nac.", w: 20, align: "center" as const },
-    { label: "cm",   w: 44, align: "center" as const }, // filler
+    { label: "Nac.",  w: 20, align: "center" as const },
+    { label: "",      w: 33, align: "center" as const }, // filler
   ];
   const rColX = (i: number) => { let x = ML; for (let j = 0; j < i; j++) x += RCOLS[j].w; return x; };
 
@@ -521,35 +510,65 @@ function drawPlantilla(doc: JsPDF, props: GameReportProps, players: Player[], im
     sf(doc, D.hdrBg); doc.rect(ML, yy, CW, 7, "F");
     sd(doc, D.border); doc.setLineWidth(0.2); doc.rect(ML, yy, CW, 7, "D");
     RCOLS.slice(0, 6).forEach((c, i) => {
+      if (!c.label) return;
       doc.setFont(_fnt, "bold"); doc.setFontSize(6.5); st(doc, D.mid);
-      doc.text(c.label.toUpperCase(), rColX(i) + (c.align === "center" ? c.w / 2 : 2), yy + 4.5, { align: c.align });
+      doc.text(c.label.toUpperCase(), rColX(i) + (c.align === "center" ? c.w / 2 : 12), yy + 4.5, { align: c.align });
     });
     return yy + 7;
   };
 
   sections.forEach(([posLabel, posPlayers]) => {
-    if (y + 9 + 7 + 8 > MAX_Y) return; // skip if no space
-    y = sectionTitle(doc, posLabel, y, D.accent);
+    if (y + 9 + 7 + ROW_H > MAX_Y) return;
+    y = sectionTitle(doc, posLabel, y, _acc);
     y = drawRHdr(y);
     posPlayers.sort((a, b) => (a.jerseyNumber ?? 99) - (b.jerseyNumber ?? 99)).forEach((p, i) => {
-      if (y + 8 > MAX_Y) return;
-      if (i % 2 === 1) { sf(doc, D.rowAlt); doc.rect(ML, y, CW, 8, "F"); }
-      sd(doc, D.border); doc.setLineWidth(0.15); doc.line(ML, y + 8, ML + CW, y + 8);
-      const cy = y + 5;
+      if (y + ROW_H > MAX_Y) return;
+      if (i % 2 === 1) { sf(doc, D.rowAlt); doc.rect(ML, y, CW, ROW_H, "F"); }
+      sd(doc, D.border); doc.setLineWidth(0.15); doc.line(ML, y + ROW_H, ML + CW, y + ROW_H);
+
+      const midY = y + ROW_H / 2;
+
+      // # number
       doc.setFont(_fnt, "bold"); doc.setFontSize(7.5); st(doc, D.mid);
-      doc.text(p.jerseyNumber != null ? String(p.jerseyNumber) : "—", rColX(0) + RCOLS[0].w / 2, cy, { align: "center" });
-      doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.dark);
-      doc.text(p.name.length > 28 ? p.name.slice(0, 26) + "…" : p.name, rColX(1) + 2, cy);
-      if (p.position) {
-        sf(doc, D.accentL); doc.roundedRect(rColX(2) + 1, y + 1.5, 12, 5, 1, 1, "F");
-        doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc);
-        doc.text(p.position, rColX(2) + 7, cy, { align: "center" });
+      doc.text(p.jerseyNumber != null ? String(p.jerseyNumber) : "—", rColX(0) + RCOLS[0].w / 2, midY + 1, { align: "center" });
+
+      // Photo avatar
+      const photoB64 = p.photoUrl ? imgMap[p.photoUrl] : undefined;
+      const avatarCX = rColX(1) + PHOTO_R + 1;
+      sf(doc, D.rowAlt); doc.circle(avatarCX, midY, PHOTO_R, "F");
+      if (photoB64) {
+        try { doc.addImage(photoB64, avatarCX - PHOTO_R, midY - PHOTO_R, PHOTO_R * 2, PHOTO_R * 2, undefined, "FAST"); } catch {}
+      } else {
+        doc.setFont(_fnt, "bold"); doc.setFontSize(6); st(doc, _acc);
+        doc.text(p.name.split(" ").map((w: string) => w[0] ?? "").join("").slice(0, 2).toUpperCase(), avatarCX, midY + 1.5, { align: "center" });
       }
+      sd(doc, D.border); doc.setLineWidth(0.2); doc.circle(avatarCX, midY, PHOTO_R, "D");
+
+      // Name (after photo)
+      const nameX = rColX(1) + PHOTO_R * 2 + 4;
+      doc.setFont(_fnt, "bold"); doc.setFontSize(8); st(doc, D.dark);
+      const maxNameW = RCOLS[1].w - PHOTO_R * 2 - 6;
+      const shortName = p.name.length > 20 ? p.name.slice(0, 18) + "…" : p.name;
+      doc.text(shortName, nameX, midY - 0.5);
+      if (p.nationality) {
+        doc.setFont(_fnt, "normal"); doc.setFontSize(6); st(doc, D.light);
+        doc.text(p.nationality, nameX, midY + 4);
+      }
+
+      // Position badge
+      if (p.position) {
+        sf(doc, D.accentL); doc.roundedRect(rColX(2) + 1, y + (ROW_H - 5) / 2, 12, 5, 1, 1, "F");
+        doc.setFont(_fnt, "bold"); doc.setFontSize(5.5); st(doc, _acc);
+        doc.text(p.position, rColX(2) + 7, midY + 1, { align: "center" });
+      }
+
+      // Other columns
       doc.setFont(_fnt, "normal"); doc.setFontSize(7.5); st(doc, D.mid);
-      doc.text(p.age != null ? String(p.age) : "—", rColX(3) + RCOLS[3].w / 2, cy, { align: "center" });
-      doc.text(p.height ?? "—", rColX(4) + RCOLS[4].w / 2, cy, { align: "center" });
-      doc.text(p.nationality?.slice(0, 3) ?? "—", rColX(5) + RCOLS[5].w / 2, cy, { align: "center" });
-      y += 8;
+      doc.text(p.age != null ? String(p.age) : "—", rColX(3) + RCOLS[3].w / 2, midY + 1, { align: "center" });
+      doc.text(p.height ?? "—", rColX(4) + RCOLS[4].w / 2, midY + 1, { align: "center" });
+      doc.text(p.nationality?.slice(0, 3) ?? "—", rColX(5) + RCOLS[5].w / 2, midY + 1, { align: "center" });
+
+      y += ROW_H;
     });
     y += 5;
   });
