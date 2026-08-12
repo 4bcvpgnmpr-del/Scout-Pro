@@ -276,9 +276,15 @@ function SkillBar({ label, value }: { label: string; value: number | null | unde
 
 // ─── Page 1: Cover ────────────────────────────────────────────────────────────
 
-function CoverPage({ report, player, game, importancia, pageRef }: {
+function proxyUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return /^https?:\/\//i.test(url) ? `/api/image-proxy?url=${encodeURIComponent(url)}` : url;
+}
+
+function CoverPage({ report, player, game, importancia, teamLogoUrl, pageRef }: {
   report: Report; player?: Player; game?: Game;
   importancia: "clave" | "medio" | "normal" | null;
+  teamLogoUrl?: string | null;
   pageRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const playerName = (player?.name || report.playerName || "").trim();
@@ -329,6 +335,25 @@ function CoverPage({ report, player, game, importancia, pageRef }: {
             <span style={{ color: "white", fontWeight: 900, fontSize: 15, letterSpacing: "-0.01em" }}>
               Scout<span style={{ color: C.accent }}>Pro</span>
             </span>
+            {teamLogoUrl && (
+              <>
+                <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.15)", marginLeft: 4 }} />
+                <div style={{
+                  width: 40, height: 40, borderRadius: 8,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  overflow: "hidden", flexShrink: 0,
+                }}>
+                  <img
+                    src={teamLogoUrl}
+                    crossOrigin="anonymous"
+                    alt="Team logo"
+                    style={{ width: 34, height: 34, objectFit: "contain" }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right meta */}
@@ -1062,7 +1087,7 @@ export function ScoutingReportPdf({ report, player, game, notes, page1Ref, page2
 
   return (
     <div aria-hidden="true" style={{ position: "fixed", left: -9999, top: 0, zIndex: -1, pointerEvents: "none" }}>
-      <CoverPage report={report} player={player} game={game} importancia={importancia} pageRef={page1Ref} />
+      <CoverPage report={report} player={player} game={game} importancia={importancia} teamLogoUrl={proxyUrl(player?.teamLogoUrl)} pageRef={page1Ref} />
       <StatsPage report={report} player={player} importancia={importancia} pageRef={page2Ref} />
       <AnalysisPage report={report} player={player} notes={notes} importancia={importancia} pageRef={page3Ref} />
     </div>
