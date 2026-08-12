@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Shield, Users, Trophy, FileText, Calendar,
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
-  Swords, LogOut, Zap, Plus,
+  Swords, RefreshCw, LogOut, Zap, Plus,
   CheckCircle2, ChevronDown, ChevronUp, Trash2, Database,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,8 +62,9 @@ const navGroups = [
   {
     label: "Admin",
     items: [
-      { name: "Usuarios", href: "/usuarios", icon: UserCog },
-      { name: "Ajustes",  href: "/ajustes",  icon: Settings },
+      { name: "Usuarios",       href: "/usuarios",   icon: UserCog },
+      { name: "Sincronización", href: "/admin/sync", icon: RefreshCw },
+      { name: "Ajustes",        href: "/ajustes",    icon: Settings },
     ],
   },
 ];
