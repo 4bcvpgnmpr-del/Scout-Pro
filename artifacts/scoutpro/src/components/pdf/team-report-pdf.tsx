@@ -1,22 +1,18 @@
 /**
- * TeamReportPDF — exports a professional multi-page A4 PDF dossier.
+ * TeamReportPDF — generates a professional multi-page A4 PDF dossier
+ * using jsPDF's native drawing API (no html2canvas, no DOM capture).
  *
  * Pages:
  *   1. Portada   — dark cover: logo, team name, league, date
- *   2. Plantilla — roster table (photo, #, name, pos, age, height, nationality)
- *   3. Stats     — dark stats table (VAL, Pts, Reb, Ast, Rob, Tap, Min, %TC, %3P, %TL)
- *   4+. Sistemas — tactical systems with title, description, image
+ *   2. Plantilla — roster table with player photos
+ *   3. Estadísticas — dark stats table
+ *   4+. Sistemas — tactical systems with images
  *
- * Uses html2canvas-pro (required for Tailwind v4 oklch colours) + jsPDF.
- * Each page is a fixed 794×1123 px div rendered off-screen.
- *
- * Image strategy: all image URLs are pre-fetched as base64 data-URLs and
- * passed into every page component via `imgMap`. The off-screen divs therefore
- * always render real base64 data, not network URLs that the browser would
- * never load for an element at left:-9999px.
+ * Images are fetched via /api/image-proxy (server-side, no CORS) and
+ * embedded as base64 directly in jsPDF — no html2canvas needed.
  */
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   useListPlayers, useListTeamMedia, getListTeamMediaQueryKey,
 } from "@workspace/api-client-react";
@@ -68,9 +64,6 @@ interface MediaItem {
   category: string;
 }
 
-/** Map: original URL → base64 data-URL */
-type ImgMap = Record<string, string>;
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (v: string | number | null | undefined, dec = 1) => {
@@ -84,10 +77,6 @@ const fmtPct = (v: string | number | null | undefined) => {
 const initials = (name: string) =>
   name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
-/** Resolve URL from imgMap (or return original as fallback). */
-const ri = (url: string | null | undefined, map: ImgMap): string | undefined =>
-  url ? (map[url] ?? url) : undefined;
-
 async function fetchPlayerStats(playerId: number): Promise<PlayerStats | null> {
   try {
     const r = await fetch(`/api/players/${playerId}/stats`, { credentials: "include" });
@@ -96,20 +85,15 @@ async function fetchPlayerStats(playerId: number): Promise<PlayerStats | null> {
   } catch { return null; }
 }
 
-/** Fetch one image URL and convert to base64 data-URL.
- *  External URLs (e.g. imagenes.feb.es) are routed through /api/image-proxy
- *  to avoid CORS restrictions on the client side. */
-async function imgToBase64(url: string): Promise<string> {
-  if (!url || url.startsWith("data:")) return url;
-
-  // Route external URLs through the server-side proxy
-  const fetchUrl = /^https?:\/\//i.test(url)
-    ? `/api/image-proxy?url=${encodeURIComponent(url)}`
-    : url;
-
+/** Fetch an image via server-side proxy and return base64 data URL. */
+async function fetchImageBase64(url: string): Promise<string | null> {
+  if (!url) return null;
   try {
-    const r = await fetch(fetchUrl, { credentials: "include" });
-    if (!r.ok) return url;
+    const proxyUrl = /^https?:\/\//i.test(url)
+      ? `/api/image-proxy?url=${encodeURIComponent(url)}`
+      : url;
+    const r = await fetch(proxyUrl, { credentials: "include" });
+    if (!r.ok) return null;
     const blob = await r.blob();
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -118,410 +102,564 @@ async function imgToBase64(url: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    return url;
+    return null;
   }
 }
 
-/** Pre-load all unique non-null URLs → base64 map. */
-async function preloadImgMap(urls: (string | null | undefined)[]): Promise<ImgMap> {
+/** Fetch all images in parallel; returns map url→base64. */
+async function fetchAllImages(urls: (string | null | undefined)[]): Promise<Record<string, string>> {
   const unique = [...new Set(urls.filter((u): u is string => Boolean(u)))];
-  const pairs = await Promise.all(unique.map(async (u) => [u, await imgToBase64(u)] as const));
-  return Object.fromEntries(pairs);
+  const results = await Promise.all(
+    unique.map(async (u) => {
+      const b64 = await fetchImageBase64(u);
+      return b64 ? ([u, b64] as const) : null;
+    })
+  );
+  return Object.fromEntries(results.filter((r): r is [string, string] => r !== null));
 }
 
-// ─── PDF page dimensions ──────────────────────────────────────────────────────
+// ─── jsPDF drawing helpers ────────────────────────────────────────────────────
 
-const W = 794;   // A4 at 96dpi
-const H = 1123;
+// A4 in mm
+const PW = 210;
+const PH = 297;
 
-// ─── Shared colours ───────────────────────────────────────────────────────────
+// Colours (r,g,b)
+const C_DARK   = [17, 24, 39]   as const;  // #111827
+const C_ORANGE = [249, 115, 22] as const;  // #f97316
+const C_WHITE  = [255, 255, 255] as const;
+const C_GRAY1  = [107, 114, 128] as const; // #6b7280
+const C_GRAY2  = [156, 163, 175] as const; // #9ca3af
+const C_GRAY3  = [55, 65, 81]   as const;  // #374151
+const C_GRAY4  = [209, 213, 219] as const; // #d1d5db
+const C_AMBER  = [245, 158, 11] as const;  // #f59e0b
+const C_LIGHT  = [249, 250, 251] as const; // #f9fafb
 
-const DARK_BG   = "#111827";
-const ORANGE    = "#f97316";
-const ORANGE_DK = "#ea580c";
+type RGB = readonly [number, number, number];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared sub-components
-// ─────────────────────────────────────────────────────────────────────────────
-
-function TeamLogo({ team, size, imgMap }: { team: Team; size: number; imgMap: ImgMap }) {
-  const ini = initials(team.name);
-  const b64 = ri(team.logoUrl, imgMap);
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: size > 80 ? "50%" : 14,
-      border: size > 80 ? `4px solid ${ORANGE}` : `2px solid rgba(249,115,22,0.3)`,
-      overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(249,115,22,0.08)", flexShrink: 0,
-      ...(size > 80 ? { boxShadow: `0 0 60px rgba(249,115,22,0.25)`, marginBottom: 40 } : {}),
-    }}>
-      {b64
-        ? <img src={b64} alt={team.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span style={{ fontSize: size * 0.32, fontWeight: 900, color: ORANGE }}>{ini}</span>
-      }
-    </div>
-  );
-}
-
-function PlayerAvatar({ player, size, dark, imgMap }: { player: Player; size: number; dark?: boolean; imgMap: ImgMap }) {
-  const ini = initials(player.name);
-  const b64 = ri(player.photoUrl, imgMap);
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      border: `1.5px solid ${dark ? "rgba(255,255,255,0.1)" : "#e5e7eb"}`,
-      overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
-      background: dark ? "rgba(255,255,255,0.05)" : "#f3f4f6", flexShrink: 0,
-    }}>
-      {b64
-        ? <img src={b64} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span style={{ fontSize: size * 0.32, fontWeight: 900, color: ORANGE }}>{ini}</span>
-      }
-    </div>
-  );
-}
-
-function PageFooter({ team, page, label }: { team: Team; page: number; label: string }) {
-  return (
-    <div style={{
-      borderTop: "1px solid #f3f4f6", padding: "12px 48px",
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      background: "#fafafa",
-    }}>
-      <span style={{ fontSize: 10, color: "#d1d5db", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-        ScoutPro · {team.name}
-      </span>
-      <span style={{ fontSize: 10, color: "#d1d5db" }}>{label} · Pág. {page}</span>
-    </div>
-  );
-}
-
-function PageFooterDark({ team, page, label }: { team: Team; page: number; label: string }) {
-  return (
-    <div style={{
-      borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 48px",
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-    }}>
-      <span style={{ fontSize: 10, color: "#374151", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-        ScoutPro · {team.name}
-      </span>
-      <span style={{ fontSize: 10, color: "#374151" }}>{label} · Pág. {page}</span>
-    </div>
-  );
+function hexRgb(hex: string): RGB {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page 1: Portada
+// PDF page generators (jsPDF native)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CoverPage({ team, season, imgMap }: { team: Team; season: string; imgMap: ImgMap }) {
+type JsPDF = import("jspdf").jsPDF;
+
+function setFill(doc: JsPDF, c: RGB) { doc.setFillColor(c[0], c[1], c[2]); }
+function setDraw(doc: JsPDF, c: RGB) { doc.setDrawColor(c[0], c[1], c[2]); }
+function setTxt(doc: JsPDF, c: RGB)  { doc.setTextColor(c[0], c[1], c[2]); }
+
+/** Draw filled rounded rect (jsPDF supports 'F' for fill) */
+function rRect(doc: JsPDF, x: number, y: number, w: number, h: number, r: number, c: RGB) {
+  setFill(doc, c);
+  doc.roundedRect(x, y, w, h, r, r, "F");
+}
+
+/** Draw a circle-clipped image, or initials if no image */
+function drawAvatar(
+  doc: JsPDF,
+  b64: string | undefined,
+  name: string,
+  cx: number, cy: number, radius: number,
+  bgDark = false,
+) {
+  const x = cx - radius;
+  const y = cy - radius;
+  const d = radius * 2;
+
+  // Background circle
+  setFill(doc, bgDark ? [30, 41, 59] : [243, 244, 246]);
+  doc.circle(cx, cy, radius, "F");
+
+  if (b64) {
+    // jsPDF doesn't support native circle clip, so we draw the image
+    // inside a slightly smaller square — good enough for small avatars
+    try {
+      doc.addImage(b64, cx - radius * 0.85, cy - radius * 0.85, d * 0.85 * 1.0, d * 0.85, undefined, "FAST");
+    } catch { /* skip bad image */ }
+  } else {
+    // Initials fallback
+    const ini = initials(name);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(radius * 3.5);
+    setTxt(doc, C_ORANGE);
+    doc.text(ini, cx, cy + radius * 0.9, { align: "center" });
+  }
+
+  // Border circle
+  setDraw(doc, bgDark ? [55, 65, 81] : [229, 231, 235]);
+  doc.setLineWidth(0.3);
+  doc.circle(cx, cy, radius, "D");
+}
+
+// ── Page 1: Portada ───────────────────────────────────────────────────────────
+
+function drawCover(doc: JsPDF, team: Team, season: string, logoB64: string | undefined) {
   const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
 
-  return (
-    <div style={{
-      width: W, height: H, background: DARK_BG,
-      fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-      display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      <div style={{ height: 8, background: `linear-gradient(90deg, ${ORANGE}, ${ORANGE_DK})` }} />
+  // Dark background
+  setFill(doc, C_DARK);
+  doc.rect(0, 0, PW, PH, "F");
 
-      <div style={{
-        position: "absolute", top: 8, right: 0, width: 360, height: H,
-        background: "rgba(249,115,22,0.04)",
-        clipPath: "polygon(40% 0%, 100% 0%, 100% 100%, 0% 100%)",
-      }} />
+  // Orange top bar
+  setFill(doc, C_ORANGE);
+  doc.rect(0, 0, PW, 3, "F");
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 80px", position: "relative" }}>
-        <TeamLogo team={team} size={180} imgMap={imgMap} />
+  // Subtle right panel
+  setFill(doc, [20, 28, 46]);
+  doc.rect(PW * 0.55, 0, PW * 0.45, PH, "F");
 
-        {team.league && (
-          <div style={{
-            background: "rgba(249,115,22,0.15)", border: `1px solid rgba(249,115,22,0.3)`,
-            borderRadius: 99, padding: "4px 16px", marginBottom: 16,
-            color: ORANGE, fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase",
-          }}>{team.league}</div>
-        )}
+  // Logo circle (centered)
+  const cx = PW / 2;
+  const logoR = 22;
+  const logoY = 95;
 
-        <h1 style={{
-          color: "#ffffff", fontSize: 52, fontWeight: 900,
-          letterSpacing: "-0.02em", textTransform: "uppercase", textAlign: "center",
-          lineHeight: 1.1, margin: "0 0 12px", fontStyle: "italic",
-        }}>{team.name}</h1>
+  // Orange ring
+  setDraw(doc, C_ORANGE);
+  doc.setLineWidth(1.2);
+  doc.circle(cx, logoY, logoR + 2, "D");
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-          {team.city && (
-            <>
-              <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 600 }}>{team.city}</span>
-              <span style={{ color: "#374151", fontSize: 14 }}>·</span>
-            </>
-          )}
-          <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 600 }}>Temporada {season}</span>
-        </div>
+  // Avatar
+  drawAvatar(doc, logoB64, team.name, cx, logoY, logoR, true);
 
-        <div style={{ width: 120, height: 3, borderRadius: 99, background: `linear-gradient(90deg, ${ORANGE}, transparent)`, margin: "48px 0" }} />
+  // League chip
+  if (team.league) {
+    const chipW = 70;
+    const chipX = cx - chipW / 2;
+    rRect(doc, chipX, logoY + logoR + 8, chipW, 7, 3, [30, 15, 5]);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6);
+    setTxt(doc, C_ORANGE);
+    doc.text(team.league.toUpperCase(), cx, logoY + logoR + 13, { align: "center" });
+  }
 
-        <div style={{
-          background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 16, padding: "24px 48px", textAlign: "center",
-        }}>
-          <p style={{ color: "#9ca3af", fontSize: 12, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", margin: 0 }}>
-            Dossier de Equipo
-          </p>
-          <p style={{ color: "#4b5563", fontSize: 11, margin: "6px 0 0", letterSpacing: "0.1em" }}>
-            Plantilla · Estadísticas · Sistemas de Juego
-          </p>
-        </div>
-      </div>
+  // Team name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(26);
+  setTxt(doc, C_WHITE);
+  const nameY = logoY + logoR + (team.league ? 26 : 16);
+  const nameSplit = doc.splitTextToSize(team.name.toUpperCase(), PW - 40);
+  doc.text(nameSplit, cx, nameY, { align: "center" });
 
-      <div style={{
-        borderTop: "1px solid rgba(255,255,255,0.06)", padding: "16px 48px",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-      }}>
-        <span style={{ color: "#374151", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>ScoutPro</span>
-        <span style={{ color: "#374151", fontSize: 11 }}>Generado el {today}</span>
-      </div>
-    </div>
-  );
+  // City · Season
+  const subY = nameY + nameSplit.length * 10 + 4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  setTxt(doc, C_GRAY1);
+  const sub = [team.city, `Temporada ${season}`].filter(Boolean).join("  ·  ");
+  doc.text(sub, cx, subY, { align: "center" });
+
+  // Divider line
+  setDraw(doc, C_ORANGE);
+  doc.setLineWidth(0.8);
+  doc.line(cx - 20, subY + 10, cx + 20, subY + 10);
+
+  // Report label box
+  const boxY = subY + 18;
+  rRect(doc, cx - 45, boxY, 90, 20, 4, [25, 32, 48]);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setTxt(doc, C_GRAY2);
+  doc.text("DOSSIER DE EQUIPO", cx, boxY + 8, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  setTxt(doc, C_GRAY3);
+  doc.text("Plantilla · Estadísticas · Sistemas de Juego", cx, boxY + 14, { align: "center" });
+
+  // Footer
+  setDraw(doc, [35, 42, 58]);
+  doc.setLineWidth(0.3);
+  doc.line(15, PH - 12, PW - 15, PH - 12);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setTxt(doc, C_GRAY3);
+  doc.text("SCOUTPRO", 15, PH - 7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generado el ${today}`, PW - 15, PH - 7, { align: "right" });
+}
+
+// ── Page 2: Plantilla ─────────────────────────────────────────────────────────
+
+function drawPlantilla(
+  doc: JsPDF, team: Team, players: Player[], season: string,
+  logoB64: string | undefined,
+  photoMap: Record<string, string>,
+) {
+  // White background
+  setFill(doc, C_WHITE);
+  doc.rect(0, 0, PW, PH, "F");
+
+  // Orange top bar
+  setFill(doc, C_ORANGE);
+  doc.rect(0, 0, PW, 2.5, "F");
+
+  // Header
+  const LOGO_R = 8;
+  const LOGO_CX = 18;
+  const LOGO_CY = 18;
+  drawAvatar(doc, logoB64, team.name, LOGO_CX, LOGO_CY, LOGO_R);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setTxt(doc, C_ORANGE);
+  doc.text("PLANTILLA", 30, 14);
+  doc.setFontSize(13);
+  setTxt(doc, C_DARK);
+  doc.text(team.name.toUpperCase(), 30, 21);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  setTxt(doc, C_GRAY2);
+  doc.text(`Temporada ${season}`, PW - 15, 14, { align: "right" });
+  doc.text(`${players.length} jugadores`, PW - 15, 20, { align: "right" });
+
+  // Divider
+  setDraw(doc, [243, 244, 246]);
+  doc.setLineWidth(0.3);
+  doc.line(0, 28, PW, 28);
+
+  // Table header
+  const ROW_H  = 9.5;
+  const HEAD_Y = 34;
+  setFill(doc, C_LIGHT);
+  doc.rect(0, HEAD_Y - 5, PW, 6, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  setTxt(doc, C_GRAY2);
+  const cols = [
+    { label: "#",       x: 14,  align: "center" },
+    { label: "JUGADOR", x: 28,  align: "left"   },
+    { label: "POS",     x: 118, align: "center" },
+    { label: "EDAD",    x: 140, align: "center" },
+    { label: "ALTURA",  x: 163, align: "center" },
+    { label: "NAC.",    x: 186, align: "center" },
+  ] as const;
+  for (const c of cols) {
+    doc.text(c.label, c.x, HEAD_Y - 1, { align: c.align as "center" | "left" });
+  }
+
+  // Rows
+  players.slice(0, 26).forEach((p, i) => {
+    const rowY = HEAD_Y + 4 + i * ROW_H;
+
+    // Alternating background
+    if (i % 2 === 1) {
+      setFill(doc, [250, 250, 250]);
+      doc.rect(0, rowY - 5, PW, ROW_H, "F");
+    }
+
+    const cy = rowY - 1.5;
+
+    // Jersey #
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    setTxt(doc, C_GRAY4);
+    doc.text(String(p.jerseyNumber ?? "—"), 14, cy + 1, { align: "center" });
+
+    // Photo
+    const photoB64 = p.photoUrl ? photoMap[p.photoUrl] : undefined;
+    drawAvatar(doc, photoB64, p.name, 24, cy, 3.5);
+
+    // Name
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    setTxt(doc, C_DARK);
+    const shortName = p.name.length > 30 ? p.name.slice(0, 28) + "…" : p.name;
+    doc.text(shortName, 30, cy + 1.2);
+
+    // Position badge
+    if (p.position) {
+      rRect(doc, 110, cy - 3.5, 18, 5.5, 1.5, [255, 237, 213]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(5.5);
+      setTxt(doc, C_ORANGE);
+      doc.text(p.position, 119, cy + 0.2, { align: "center" });
+    }
+
+    // Age, height, nationality
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setTxt(doc, C_GRAY1);
+    doc.text(String(p.age ?? "—"), 140, cy + 1.2, { align: "center" });
+    doc.text(p.height ? String(p.height) : "—", 163, cy + 1.2, { align: "center" });
+    doc.text(p.nationality ? p.nationality.slice(0, 12) : "—", 186, cy + 1.2, { align: "center" });
+
+    // Row separator
+    setDraw(doc, [243, 244, 246]);
+    doc.setLineWidth(0.2);
+    doc.line(0, rowY + ROW_H - 5, PW, rowY + ROW_H - 5);
+  });
+
+  drawFooter(doc, team.name, "Plantilla", 2);
+}
+
+// ── Page 3: Estadísticas ──────────────────────────────────────────────────────
+
+function drawStats(
+  doc: JsPDF, team: Team, players: PlayerWithStats[], season: string,
+  logoB64: string | undefined,
+  photoMap: Record<string, string>,
+) {
+  // Dark background
+  setFill(doc, C_DARK);
+  doc.rect(0, 0, PW, PH, "F");
+
+  // Orange top bar
+  setFill(doc, C_ORANGE);
+  doc.rect(0, 0, PW, 2.5, "F");
+
+  // Header
+  drawAvatar(doc, logoB64, team.name, 18, 18, 8, true);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setTxt(doc, C_ORANGE);
+  doc.text("ESTADÍSTICAS MEDIAS", 30, 14);
+  doc.setFontSize(13);
+  setTxt(doc, C_WHITE);
+  doc.text(team.name.toUpperCase(), 30, 21);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  setTxt(doc, [75, 85, 99]);
+  doc.text(`Temporada ${season}`, PW - 15, 17, { align: "right" });
+
+  setDraw(doc, [30, 40, 58]);
+  doc.setLineWidth(0.3);
+  doc.line(0, 28, PW, 28);
+
+  // Table header
+  const HEAD_Y = 35;
+  setFill(doc, [20, 30, 48]);
+  doc.rect(0, HEAD_Y - 5, PW, 6, "F");
+
+  const statCols = [
+    { label: "#",    x: 11,  w: 8  },
+    { label: "JUGADOR", x: 27, w: 50 },
+    { label: "VAL",  x: 85,  w: 17 },
+    { label: "PTS",  x: 102, w: 17 },
+    { label: "REB",  x: 119, w: 17 },
+    { label: "AST",  x: 136, w: 17 },
+    { label: "ROB",  x: 153, w: 14 },
+    { label: "TAP",  x: 167, w: 14 },
+    { label: "%TC",  x: 181, w: 14 },
+    { label: "%3P",  x: 195, w: 14 },
+  ];
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5);
+  for (const [i, c] of statCols.entries()) {
+    setTxt(doc, i === 2 ? C_ORANGE : i === 3 ? C_AMBER : [75, 85, 99]);
+    doc.text(c.label, c.x + c.w / 2, HEAD_Y - 1, { align: "center" });
+  }
+
+  // Rows
+  const ROW_H = 9.5;
+  players.slice(0, 26).forEach((p, i) => {
+    const rowY = HEAD_Y + 4 + i * ROW_H;
+
+    if (i % 2 === 1) {
+      setFill(doc, [20, 28, 44]);
+      doc.rect(0, rowY - 5, PW, ROW_H, "F");
+    }
+
+    const cy = rowY - 1.5;
+    const s = p.stats;
+    const hasStats = s && (s.gamesPlayed ?? 0) > 0;
+
+    // #
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    setTxt(doc, [75, 85, 99]);
+    doc.text(String(p.jerseyNumber ?? "—"), 15, cy + 1.2, { align: "center" });
+
+    // Photo
+    const photoB64 = p.photoUrl ? photoMap[p.photoUrl] : undefined;
+    drawAvatar(doc, photoB64, p.name, 23, cy, 3.2, true);
+
+    // Name + position
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    setTxt(doc, [229, 231, 235]);
+    doc.text((p.name.length > 24 ? p.name.slice(0, 22) + "…" : p.name), 29, cy + 0.5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.5);
+    setTxt(doc, [75, 85, 99]);
+    doc.text(p.position ?? "", 29, cy + 4);
+
+    if (hasStats) {
+      const valNum = [s!.avgPoints, s!.avgRebounds, s!.avgAssists, s!.avgSteals, s!.avgBlocks]
+        .reduce<number>((acc, v) => acc + (Number(v) || 0), 0);
+
+      const vals = [
+        valNum.toFixed(1),
+        fmt(s!.avgPoints),
+        fmt(s!.avgRebounds),
+        fmt(s!.avgAssists),
+        fmt(s!.avgSteals),
+        fmt(s!.avgBlocks),
+        fmtPct(s!.avgFieldGoalPct),
+        fmtPct(s!.avgThreePointPct),
+      ];
+      for (const [j, col] of statCols.slice(2).entries()) {
+        setTxt(doc, j === 0 ? C_ORANGE : j === 1 ? C_AMBER : [156, 163, 175]);
+        doc.setFont("helvetica", j <= 1 ? "bold" : "normal");
+        doc.setFontSize(7);
+        doc.text(vals[j] ?? "—", col.x + col.w / 2, cy + 1.2, { align: "center" });
+      }
+    } else {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(6);
+      setTxt(doc, [55, 65, 81]);
+      doc.text("Sin estadísticas", 90, cy + 1.2);
+    }
+
+    setDraw(doc, [30, 40, 56]);
+    doc.setLineWidth(0.2);
+    doc.line(0, rowY + ROW_H - 5, PW, rowY + ROW_H - 5);
+  });
+
+  drawFooterDark(doc, team.name, "Estadísticas", 3);
+}
+
+// ── Page 4+: Sistemas ─────────────────────────────────────────────────────────
+
+function drawSistemas(
+  doc: JsPDF, team: Team, sistemas: MediaItem[], season: string,
+  pageNum: number,
+  logoB64: string | undefined,
+  sysImgMap: Record<string, string>,
+) {
+  setFill(doc, C_WHITE);
+  doc.rect(0, 0, PW, PH, "F");
+  setFill(doc, C_ORANGE);
+  doc.rect(0, 0, PW, 2.5, "F");
+
+  drawAvatar(doc, logoB64, team.name, 18, 18, 8);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  setTxt(doc, C_ORANGE);
+  doc.text("SISTEMAS DE JUEGO", 30, 14);
+  doc.setFontSize(13);
+  setTxt(doc, C_DARK);
+  doc.text(team.name.toUpperCase(), 30, 21);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  setTxt(doc, C_GRAY2);
+  doc.text(`Temporada ${season}`, PW - 15, 17, { align: "right" });
+
+  setDraw(doc, [243, 244, 246]);
+  doc.setLineWidth(0.3);
+  doc.line(0, 28, PW, 28);
+
+  let curY = 34;
+  const MARGIN = 13;
+  const CONTENT_W = PW - MARGIN * 2;
+
+  for (const s of sistemas) {
+    if (curY > PH - 30) break;
+
+    const sImgUrl = s.url && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(s.url) ? s.url : null;
+    const sImgB64 = sImgUrl ? sysImgMap[sImgUrl] : undefined;
+
+    // Title bar (dark)
+    const titleH = 9;
+    setFill(doc, C_DARK);
+    doc.roundedRect(MARGIN, curY, CONTENT_W, titleH, 2, 2, "F");
+
+    // Orange dot
+    setFill(doc, C_ORANGE);
+    doc.circle(MARGIN + 6, curY + titleH / 2, 1.5, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    setTxt(doc, C_WHITE);
+    doc.text((s.title || "Sistema").toUpperCase(), MARGIN + 12, curY + 6);
+    curY += titleH;
+
+    // Body
+    const bodyY = curY;
+    const descW = sImgB64 ? CONTENT_W * 0.52 : CONTENT_W;
+    const imgW  = sImgB64 ? CONTENT_W * 0.44 : 0;
+
+    let bodyH = 0;
+
+    if (s.description) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setTxt(doc, [74, 85, 99]);
+      const lines = doc.splitTextToSize(s.description, descW - 8);
+      const textH = lines.length * 4.5;
+      bodyH = Math.max(bodyH, textH + 10);
+
+      // Draw text box background
+      setFill(doc, [249, 250, 251]);
+      doc.roundedRect(MARGIN, bodyY, descW, bodyH || 20, 0, 0, "F");
+      doc.text(lines, MARGIN + 4, bodyY + 6);
+    }
+
+    if (sImgB64) {
+      const imgTargetH = Math.min(bodyH || 40, 50);
+      bodyH = Math.max(bodyH, imgTargetH);
+      try {
+        doc.addImage(
+          sImgB64,
+          MARGIN + descW + 2, bodyY,
+          imgW - 2, imgTargetH,
+          undefined, "FAST",
+        );
+      } catch { /* skip bad image */ }
+    }
+
+    // Border around body
+    setDraw(doc, [229, 231, 235]);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MARGIN, bodyY, CONTENT_W, bodyH || 20, 0, 0, "D");
+
+    curY = bodyY + (bodyH || 20) + 8;
+  }
+
+  drawFooter(doc, team.name, "Sistemas de Juego", pageNum);
+}
+
+// ── Shared footers ────────────────────────────────────────────────────────────
+
+function drawFooter(doc: JsPDF, teamName: string, label: string, page: number) {
+  setDraw(doc, [243, 244, 246]);
+  doc.setLineWidth(0.3);
+  doc.line(0, PH - 10, PW, PH - 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  setTxt(doc, C_GRAY4);
+  doc.text(`SCOUTPRO · ${teamName.toUpperCase()}`, 13, PH - 5);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${label} · Pág. ${page}`, PW - 13, PH - 5, { align: "right" });
+}
+
+function drawFooterDark(doc: JsPDF, teamName: string, label: string, page: number) {
+  setDraw(doc, [30, 40, 58]);
+  doc.setLineWidth(0.3);
+  doc.line(0, PH - 10, PW, PH - 10);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(5.5);
+  setTxt(doc, C_GRAY3);
+  doc.text(`SCOUTPRO · ${teamName.toUpperCase()}`, 13, PH - 5);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${label} · Pág. ${page}`, PW - 13, PH - 5, { align: "right" });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page 2: Plantilla
-// ─────────────────────────────────────────────────────────────────────────────
-
-function PlantillaPage({ team, players, season, imgMap }: { team: Team; players: Player[]; season: string; imgMap: ImgMap }) {
-  const cols = ["#", "Jugador", "Pos", "Edad", "Alt", "Nac."];
-
-  return (
-    <div style={{
-      width: W, height: H, background: "#ffffff",
-      fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-      display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      <div style={{ height: 6, background: `linear-gradient(90deg, ${ORANGE}, ${ORANGE_DK})` }} />
-
-      <div style={{
-        padding: "28px 48px 20px", borderBottom: "1px solid #f3f4f6",
-        display: "flex", alignItems: "center", gap: 20,
-      }}>
-        <TeamLogo team={team} size={56} imgMap={imgMap} />
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.2em", textTransform: "uppercase" }}>Plantilla</p>
-          <h2 style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 900, color: "#111827", textTransform: "uppercase", fontStyle: "italic" }}>{team.name}</h2>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ margin: 0, fontSize: 10, color: "#9ca3af" }}>Temporada</p>
-          <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: "#374151" }}>{season}</p>
-          <p style={{ margin: "4px 0 0", fontSize: 10, color: "#d1d5db" }}>{players.length} jugadores</p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", padding: "10px 48px", background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-        {cols.map((c, i) => (
-          <div key={c} style={{
-            fontSize: 9, fontWeight: 800, color: "#9ca3af",
-            letterSpacing: "0.15em", textTransform: "uppercase",
-            width: i === 0 ? 32 : i === 1 ? 260 : 80,
-            textAlign: i > 1 ? "center" : "left", flexShrink: 0,
-          }}>{c}</div>
-        ))}
-      </div>
-
-      <div style={{ flex: 1, overflowY: "hidden" }}>
-        {players.slice(0, 22).map((p, idx) => (
-          <div key={p.id} style={{
-            display: "flex", alignItems: "center",
-            padding: "9px 48px",
-            background: idx % 2 === 0 ? "#ffffff" : "#fafafa",
-            borderBottom: "1px solid #f3f4f6",
-          }}>
-            <div style={{ width: 32, fontSize: 12, fontWeight: 700, color: "#d1d5db", fontFamily: "monospace" }}>{p.jerseyNumber ?? "—"}</div>
-            <div style={{ width: 260, display: "flex", alignItems: "center", gap: 10 }}>
-              <PlayerAvatar player={p} size={32} imgMap={imgMap} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{p.name}</span>
-            </div>
-            <div style={{ width: 80, textAlign: "center" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: ORANGE, background: "rgba(249,115,22,0.1)", borderRadius: 6, padding: "2px 8px" }}>{p.position ?? "—"}</span>
-            </div>
-            <div style={{ width: 80, fontSize: 13, color: "#6b7280", textAlign: "center" }}>{p.age ?? "—"}</div>
-            <div style={{ width: 80, fontSize: 13, color: "#6b7280", textAlign: "center" }}>{p.height ?? "—"}</div>
-            <div style={{ width: 80, fontSize: 13, color: "#6b7280", textAlign: "center" }}>{p.nationality ?? "—"}</div>
-          </div>
-        ))}
-      </div>
-
-      <PageFooter team={team} page={2} label="Plantilla" />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Page 3: Estadísticas
-// ─────────────────────────────────────────────────────────────────────────────
-
-function StatsPage({ team, players, season, imgMap }: { team: Team; players: PlayerWithStats[]; season: string; imgMap: ImgMap }) {
-  const headers = ["VAL", "Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
-
-  return (
-    <div style={{
-      width: W, height: H, background: DARK_BG,
-      fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-      display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      <div style={{ height: 6, background: `linear-gradient(90deg, ${ORANGE}, ${ORANGE_DK})` }} />
-
-      <div style={{
-        padding: "28px 48px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)",
-        display: "flex", alignItems: "center", gap: 20,
-      }}>
-        <TeamLogo team={team} size={56} imgMap={imgMap} />
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.2em", textTransform: "uppercase" }}>Estadísticas Medias</p>
-          <h2 style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 900, color: "#ffffff", textTransform: "uppercase", fontStyle: "italic" }}>{team.name}</h2>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ margin: 0, fontSize: 10, color: "#4b5563" }}>Temporada</p>
-          <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: "#6b7280" }}>{season}</p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", padding: "10px 48px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <div style={{ width: 32, fontSize: 9, fontWeight: 800, color: "#4b5563", letterSpacing: "0.15em", textTransform: "uppercase" }}>#</div>
-        <div style={{ width: 220, fontSize: 9, fontWeight: 800, color: "#4b5563", letterSpacing: "0.15em", textTransform: "uppercase" }}>Jugador</div>
-        {headers.map((h, i) => (
-          <div key={h} style={{
-            width: 49, textAlign: "center", fontSize: 9, fontWeight: 800,
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            color: i === 0 ? ORANGE : i === 1 ? "#f59e0b" : "#4b5563",
-          }}>{h}</div>
-        ))}
-      </div>
-
-      <div style={{ flex: 1, overflowY: "hidden" }}>
-        {players.slice(0, 22).map((p, idx) => {
-          const s = p.stats;
-          const hasStats = s && (s.gamesPlayed ?? 0) > 0;
-          const valNum = hasStats
-            ? [s!.avgPoints, s!.avgRebounds, s!.avgAssists, s!.avgSteals, s!.avgBlocks]
-                .reduce<number>((acc, v) => acc + (Number(v) || 0), 0)
-            : 0;
-
-          return (
-            <div key={p.id} style={{
-              display: "flex", alignItems: "center",
-              padding: "9px 48px",
-              background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-            }}>
-              <div style={{ width: 32, fontSize: 11, color: "#374151", fontFamily: "monospace" }}>{p.jerseyNumber ?? "—"}</div>
-              <div style={{ width: 220, display: "flex", alignItems: "center", gap: 8 }}>
-                <PlayerAvatar player={p} size={28} dark imgMap={imgMap} />
-                <div>
-                  <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#e5e7eb" }}>{p.name}</p>
-                  <p style={{ margin: 0, fontSize: 9, color: "#4b5563" }}>{p.position ?? ""}</p>
-                </div>
-              </div>
-              {hasStats ? (
-                <>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, fontWeight: 900, color: ORANGE }}>{valNum.toFixed(1)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#f59e0b" }}>{fmt(s!.avgPoints)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#9ca3af" }}>{fmt(s!.avgRebounds)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#9ca3af" }}>{fmt(s!.avgAssists)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#9ca3af" }}>{fmt(s!.avgSteals)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#6b7280" }}>{fmt(s!.avgBlocks)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#6b7280" }}>{s!.avgMinutes ? fmt(s!.avgMinutes, 0) + "'" : "—"}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#6b7280" }}>{fmtPct(s!.avgFieldGoalPct)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#6b7280" }}>{fmtPct(s!.avgThreePointPct)}</div>
-                  <div style={{ width: 49, textAlign: "center", fontSize: 12, color: "#6b7280" }}>{fmtPct(s!.avgFreeThrowPct)}</div>
-                </>
-              ) : (
-                <div style={{ fontSize: 11, color: "#374151", fontStyle: "italic", paddingLeft: 4 }}>Sin estadísticas</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <PageFooterDark team={team} page={3} label="Estadísticas" />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Page 4+: Sistemas de Juego
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SistemasPage({ team, sistemas, season, pageNum, imgMap }: {
-  team: Team; sistemas: MediaItem[]; season: string; pageNum: number; imgMap: ImgMap;
-}) {
-  return (
-    <div style={{
-      width: W, height: H, background: "#ffffff",
-      fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
-      display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      <div style={{ height: 6, background: `linear-gradient(90deg, ${ORANGE}, ${ORANGE_DK})` }} />
-
-      <div style={{
-        padding: "28px 48px 20px", borderBottom: "1px solid #f3f4f6",
-        display: "flex", alignItems: "center", gap: 20,
-      }}>
-        <TeamLogo team={team} size={56} imgMap={imgMap} />
-        <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 10, fontWeight: 800, color: ORANGE, letterSpacing: "0.2em", textTransform: "uppercase" }}>Sistemas de Juego</p>
-          <h2 style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 900, color: "#111827", textTransform: "uppercase", fontStyle: "italic" }}>{team.name}</h2>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ margin: 0, fontSize: 10, color: "#9ca3af" }}>Temporada</p>
-          <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: "#374151" }}>{season}</p>
-        </div>
-      </div>
-
-      <div style={{ flex: 1, padding: "24px 48px", overflowY: "hidden", display: "flex", flexDirection: "column", gap: 20 }}>
-        {sistemas.map((s) => {
-          const sImgUrl = s.url && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(s.url) ? s.url : null;
-          const sImgB64 = sImgUrl ? ri(sImgUrl, imgMap) : undefined;
-
-          return (
-            <div key={s.id} style={{ border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden", flexShrink: 0 }}>
-              <div style={{ background: "#111827", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: ORANGE, flexShrink: 0 }} />
-                <span style={{ fontSize: 14, fontWeight: 900, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.05em", fontStyle: "italic" }}>
-                  {s.title || "Sistema"}
-                </span>
-              </div>
-              <div style={{ display: "flex" }}>
-                {s.description && (
-                  <div style={{ padding: "16px 20px", flex: sImgB64 ? "0 0 280px" : 1, borderRight: sImgB64 ? "1px solid #f3f4f6" : "none" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "#4b5563", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.description}</p>
-                  </div>
-                )}
-                {sImgB64 && (
-                  <div style={{ flex: 1, maxHeight: 200, overflow: "hidden" }}>
-                    <img src={sImgB64} alt={s.title ?? "Sistema"} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 12 }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <PageFooter team={team} page={pageNum} label="Sistemas de Juego" />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main export button + orchestration
+// Export button
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function TeamReportExportButton({ team, season = "2025/26" }: { team: Team; season?: string }) {
   const [exporting, setExporting] = useState(false);
-  /** base64 image map — populated lazily when export is triggered */
-  const [imgMap, setImgMap] = useState<ImgMap>({});
-  const [imgMapReady, setImgMapReady] = useState(false);
 
-  // Fetch players + media
   const { data: players = [] } = useListPlayers(
     { teamId: team.id },
     { query: { queryKey: ["players-pdf", team.id] } },
@@ -531,18 +669,6 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
   });
   const sistemas = allMedia.filter((m) => m.category === "system");
 
-  // Refs
-  const coverRef     = useRef<HTMLDivElement | null>(null);
-  const plantillaRef = useRef<HTMLDivElement | null>(null);
-  const statsRef     = useRef<HTMLDivElement | null>(null);
-  const SIS_PER_PAGE = 3;
-  const sistemasChunks: MediaItem[][] = [];
-  for (let i = 0; i < sistemas.length; i += SIS_PER_PAGE) {
-    sistemasChunks.push(sistemas.slice(i, i + SIS_PER_PAGE));
-  }
-  const sisRefs = useRef<Array<HTMLDivElement | null>>([]);
-
-  // Stats pre-fetch
   const [statsMap, setStatsMap] = useState<Record<number, PlayerStats | null>>({});
   const playerIds = (players as Player[]).map((p) => p.id).join(",");
   useEffect(() => {
@@ -560,106 +686,68 @@ export function TeamReportExportButton({ team, season = "2025/26" }: { team: Tea
     .sort((a, b) => (a.jerseyNumber ?? 99) - (b.jerseyNumber ?? 99))
     .map((p) => ({ ...p, stats: statsMap[p.id] ?? null }));
 
-  // When imgMap is ready, proceed to capture
-  const captureRef = useRef(false);
-  useEffect(() => {
-    if (!imgMapReady || !exporting || captureRef.current) return;
-    captureRef.current = true;
-
-    (async () => {
-      try {
-        const [html2canvasMod, jspdfMod] = await Promise.all([
-          import("html2canvas-pro").then((m) => m.default),
-          import("jspdf"),
-        ]);
-        const jsPDF = jspdfMod.default;
-        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-        const refs: Array<HTMLDivElement | null> = [
-          coverRef.current,
-          plantillaRef.current,
-          statsRef.current,
-          ...sisRefs.current.slice(0, sistemasChunks.length),
-        ].filter(Boolean) as HTMLDivElement[];
-
-        for (let i = 0; i < refs.length; i++) {
-          const el = refs[i];
-          if (!el) continue;
-          if (i > 0) pdf.addPage();
-          const canvas = await html2canvasMod(el, {
-            scale: 2,
-            useCORS: false,
-            allowTaint: false,
-            backgroundColor: null,
-            imageTimeout: 0,
-          });
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.93), "JPEG", 0, 0, 210, 297);
-        }
-
-        const safeName = team.name.replace(/[^a-z0-9]/gi, "-").toLowerCase();
-        pdf.save(`dossier-${safeName}.pdf`);
-      } catch (err) {
-        console.error("PDF export failed", err);
-      } finally {
-        setExporting(false);
-        setImgMapReady(false);
-        setImgMap({});
-        captureRef.current = false;
-      }
-    })();
-  }, [imgMapReady, exporting, sistemasChunks.length, team.name]);
-
   const handleExport = useCallback(async () => {
     setExporting(true);
-    captureRef.current = false;
+    try {
+      const { default: jsPDF } = await import("jspdf");
 
-    // Collect all image URLs
-    const imageUrls: (string | null | undefined)[] = [
-      team.logoUrl,
-      ...playersWithStats.map((p) => p.photoUrl),
-      ...sistemas
-        .map((s) => s.url)
-        .filter((u) => u && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(u)),
-    ];
+      // ── 1. Collect all image URLs ────────────────────────────────────────
+      const allImageUrls = [
+        team.logoUrl,
+        ...playersWithStats.map((p) => p.photoUrl),
+        ...sistemas.map((s) => (s.url && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(s.url) ? s.url : null)),
+      ];
 
-    const map = await preloadImgMap(imageUrls);
-    setImgMap(map);
-    // Small delay so React re-renders the off-screen pages with base64 images
-    setTimeout(() => setImgMapReady(true), 150);
-  }, [team.logoUrl, playersWithStats, sistemas]);
+      // ── 2. Fetch all as base64 in parallel via server proxy ──────────────
+      const imgMap = await fetchAllImages(allImageUrls);
+      const logoB64 = team.logoUrl ? imgMap[team.logoUrl] : undefined;
+      const photoMap: Record<string, string> = {};
+      playersWithStats.forEach((p) => { if (p.photoUrl && imgMap[p.photoUrl]) photoMap[p.photoUrl] = imgMap[p.photoUrl]; });
+
+      // ── 3. Build PDF programmatically ────────────────────────────────────
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+      // Page 1 — Cover
+      drawCover(doc, team, season, logoB64);
+
+      // Page 2 — Plantilla
+      doc.addPage();
+      drawPlantilla(doc, team, playersWithStats, season, logoB64, photoMap);
+
+      // Page 3 — Stats
+      doc.addPage();
+      drawStats(doc, team, playersWithStats, season, logoB64, photoMap);
+
+      // Pages 4+ — Sistemas (3 per page)
+      const SIS_PER = 3;
+      for (let i = 0; i < sistemas.length; i += SIS_PER) {
+        doc.addPage();
+        const sysImgMap: Record<string, string> = {};
+        sistemas.slice(i, i + SIS_PER).forEach((s) => {
+          if (s.url && imgMap[s.url]) sysImgMap[s.url] = imgMap[s.url];
+        });
+        drawSistemas(doc, team, sistemas.slice(i, i + SIS_PER), season, 4 + i / SIS_PER, logoB64, sysImgMap);
+      }
+
+      const safeName = team.name.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+      doc.save(`dossier-${safeName}.pdf`);
+    } catch (err) {
+      console.error("PDF export failed", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [team, season, playersWithStats, sistemas]);
 
   return (
-    <>
-      <button
-        onClick={handleExport}
-        disabled={exporting}
-        className="flex items-center gap-1.5 text-xs font-black tracking-wide uppercase px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted transition disabled:opacity-50"
-      >
-        {exporting
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          : <FileDown className="h-3.5 w-3.5" />}
-        {exporting ? "Generando…" : "Exportar PDF"}
-      </button>
-
-      {/* ── Off-screen A4 pages — only mounted when exporting ───────────────── */}
-      {exporting && (
-        <div style={{ position: "fixed", left: -9999, top: 0, zIndex: -1, pointerEvents: "none" }}>
-          <div ref={coverRef} style={{ width: W, height: H }}>
-            <CoverPage team={team} season={season} imgMap={imgMap} />
-          </div>
-          <div ref={plantillaRef} style={{ width: W, height: H }}>
-            <PlantillaPage team={team} players={playersWithStats} season={season} imgMap={imgMap} />
-          </div>
-          <div ref={statsRef} style={{ width: W, height: H }}>
-            <StatsPage team={team} players={playersWithStats} season={season} imgMap={imgMap} />
-          </div>
-          {sistemasChunks.map((chunk, idx) => (
-            <div key={idx} ref={(el) => { sisRefs.current[idx] = el; }} style={{ width: W, height: H }}>
-              <SistemasPage team={team} sistemas={chunk} season={season} pageNum={4 + idx} imgMap={imgMap} />
-            </div>
-          ))}
-        </div>
-      )}
-    </>
+    <button
+      onClick={handleExport}
+      disabled={exporting}
+      className="flex items-center gap-1.5 text-xs font-black tracking-wide uppercase px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted transition disabled:opacity-50"
+    >
+      {exporting
+        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        : <FileDown className="h-3.5 w-3.5" />}
+      {exporting ? "Generando…" : "Exportar PDF"}
+    </button>
   );
 }
