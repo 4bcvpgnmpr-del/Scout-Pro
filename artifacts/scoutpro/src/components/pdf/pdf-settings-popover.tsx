@@ -78,7 +78,7 @@ export function PdfSettingsPopover({ onChange }: Props) {
             <span className="ml-auto text-[10px] text-muted-foreground">Se guarda automáticamente</span>
           </div>
 
-          <div className="p-4 space-y-5">
+          <div className="p-4 space-y-5 overflow-y-auto max-h-[70vh]">
 
             {/* ── Font family ─────────────────────────────────────── */}
             <div>
