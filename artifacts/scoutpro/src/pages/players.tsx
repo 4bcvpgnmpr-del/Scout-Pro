@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useListPlayers, getListPlayersQueryKey, useListTeams } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -35,8 +35,15 @@ export default function Players() {
     return match ? match.id : "ALL";
   }, [activeWorkspace, teams]);
 
-  // Workspace always wins; manual override only applies when no workspace active
-  const teamFilter = activeWorkspace ? wsTeamId : manualTeamFilter;
+  // Reset manual selection when workspace changes (switch workspace → auto-select that team)
+  useEffect(() => {
+    setManualTeamFilter("ALL");
+  }, [activeWorkspace?.id]);
+
+  // Manual override always wins; when "ALL" and workspace active, default to workspace team
+  const teamFilter = manualTeamFilter !== "ALL"
+    ? manualTeamFilter
+    : wsTeamId;
 
   // Always send seasonYear — never fetch without it to avoid cross-season duplicates
   const params = {
@@ -112,7 +119,6 @@ export default function Players() {
               onChange={(e) =>
                 setManualTeamFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))
               }
-              disabled={!!activeWorkspace}
               className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 pr-8 text-xs font-semibold text-gray-700 h-9 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
             >
               <option value="ALL">Todos los equipos</option>
