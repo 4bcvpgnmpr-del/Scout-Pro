@@ -94,6 +94,7 @@ function NavItem({
         className="flex gap-3 px-3 py-2 rounded-md transition-all cursor-pointer select-none justify-start items-start flex-row text-[color:var(--color-zinc-100)] bg-[color:var(--color-orange-600)]"
       >
         <item.icon className="h-4 w-4 shrink-0" />
+        <span className="text-sm font-medium">{item.name}</span>
       </div>
     </Link>
   );
