@@ -30,6 +30,7 @@ import { THEMES, FONTS } from "@/lib/themes";
 import { useExportPdf } from "@/hooks/use-export-pdf";
 import { useReportPrefs, REPORT_SECTIONS } from "@/hooks/use-report-prefs";
 import { ShotMap } from "@/components/shot-map";
+import { WatchlistPdfExportButton } from "@/components/pdf/watchlist-pdf";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const POSITION_LABELS: Record<string, string> = {
@@ -1487,12 +1488,18 @@ export default function Scout() {
             <p className="text-[10px] text-blue-400 font-semibold mb-3">Mi liga: {ownLeague}</p>
           )}
 
-          {/* ── WATCHLIST: add button ── */}
+          {/* ── WATCHLIST: add button + PDF export ── */}
           {view.kind === "watchlist" && (
-            <button onClick={() => setShowAddPlayer(true)}
-              className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 mb-3 flex items-center justify-center gap-2">
-              <Plus className="h-4 w-4" /> AÑADIR A FICHAR
-            </button>
+            <div className="flex flex-col gap-2 mb-3">
+              <button onClick={() => setShowAddPlayer(true)}
+                className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition shadow-lg shadow-orange-100 flex items-center justify-center gap-2">
+                <Plus className="h-4 w-4" /> AÑADIR A FICHAR
+              </button>
+              <WatchlistPdfExportButton
+                players={filteredPlayers}
+                teams={teams ?? []}
+              />
+            </div>
           )}
 
           {/* ── PLANTILLA RIVAL: team selector + add button ── */}
