@@ -35,7 +35,7 @@ export default function Players() {
     }
     const wsTeamNameLower = activeWorkspace.teamName.toLowerCase();
     const match = teams.find((t) => t.name.toLowerCase() === wsTeamNameLower);
-    if (match) setTeamFilter(match.id);
+    setTeamFilter(match ? match.id : "ALL");
   }, [activeWorkspace?.id, teams]);
 
   // Always send seasonYear — never fetch without it to avoid cross-season duplicates

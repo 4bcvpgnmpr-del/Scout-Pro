@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import type { Game, Report } from "@workspace/api-client-react";
 import { useSeason } from "@/contexts/SeasonContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Bell, Trophy, ChevronRight, Clock, Video, FileText, Shield, Users,
   Star, Zap, CheckCircle2, Circle, Target, Calendar, ArrowRight, Plus,
@@ -154,10 +155,11 @@ function SectionLabel({ icon: Icon, label, color }: { icon: React.ElementType; l
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { selectedSeason } = useSeason();
+  const { activeWorkspace } = useWorkspace();
   const seasonQs = selectedSeason ? `?season=${selectedSeason.startYear}` : "";
 
   const { data: summary } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
-  const { data: games } = useListGames({
+  const { data: allGames } = useListGames({
     query: {
       queryKey: [...getListGamesQueryKey(), selectedSeason?.id],
       queryFn: (): Promise<Game[]> =>
@@ -172,6 +174,16 @@ export default function Dashboard() {
     },
   });
   const { data: teams } = useListTeams({ query: { queryKey: getListTeamsQueryKey() } });
+
+  // Workspace team drives the whole dashboard — filter games to that team
+  const wsTeamName = activeWorkspace?.teamName ?? null;
+  const games = useMemo(() => {
+    if (!wsTeamName || !allGames) return allGames ?? [];
+    const lower = wsTeamName.toLowerCase();
+    return allGames.filter(
+      (g) => g.homeTeam.toLowerCase() === lower || g.awayTeam.toLowerCase() === lower
+    );
+  }, [allGames, wsTeamName]);
   // nextGame is defined below — we re-derive gameId here lazily after nextGame is available
   // We compute nextGame inline first to feed into hooks (hooks must be unconditional)
   const _nextGame = useMemo(
@@ -218,7 +230,9 @@ export default function Dashboard() {
   const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const ownTeam = useMemo(() => (teams ?? []).find((t) => t.teamType === "own"), [teams]);
-  const ownNameLower = ownTeam?.name.toLowerCase() ?? "";
+  // Workspace team takes priority; fall back to DB "own" team
+  const ownNameLower = wsTeamName?.toLowerCase() ?? ownTeam?.name.toLowerCase() ?? "";
+  const hasOwnTeam = !!wsTeamName || !!ownTeam;
 
   const teamByName = useMemo(() => {
     const m: Record<string, NonNullable<typeof teams>[0]> = {};
@@ -747,10 +761,10 @@ export default function Dashboard() {
         {/* ── Resumen de Temporada ── */}
         <div className={`${P} bg-card`}>
           <SectionLabel icon={BarChart2} label="Resumen de Temporada" color="text-blue-400" />
-          {!ownTeam ? (
+          {!hasOwnTeam ? (
             <div className="py-10 text-center space-y-3">
               <Shield className="h-10 w-10 mx-auto text-muted-foreground/20" />
-              <p className="text-sm text-muted-foreground">Marca un equipo como "Mi Equipo" para ver estadísticas de temporada</p>
+              <p className="text-sm text-muted-foreground">Selecciona un equipo en "Contexto de trabajo" para ver estadísticas de temporada</p>
               <Link href="/equipos">
                 <button className="text-xs bg-card border border-border px-4 py-2 rounded-xl hover:border-primary/50 transition">Ver equipos</button>
               </Link>
