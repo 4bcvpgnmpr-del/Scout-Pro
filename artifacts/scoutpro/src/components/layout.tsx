@@ -471,7 +471,7 @@ function SidebarContent({ location, onNavClick }: { location: string; onNavClick
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
             {group.label && (
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest bg-[color:var(--color-orange-600)] text-[color:var(--color-zinc-100)] border-t-[color:var(--color-zinc-100)] border-r-[color:var(--color-zinc-100)] border-b-[color:var(--color-zinc-100)] border-l-[color:var(--color-zinc-100)]">
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/40">
                 {group.label}
               </div>
             )}
