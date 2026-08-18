@@ -202,14 +202,12 @@ function InfoPair({ icon: Icon, label, value }: { icon: any, label: string, valu
 // Hero info block — value prominent, label small below, icon to left
 function InfoStat({ icon: Icon, value, label }: { icon: any; value: string; label: string }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="h-8 w-8 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
-        <Icon className="h-3.5 w-3.5 text-white/50" />
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <div className="flex items-center gap-1.5">
+        <Icon className="h-3 w-3 text-white/35 shrink-0" />
+        <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider leading-none whitespace-nowrap">{label}</span>
       </div>
-      <div className="min-w-0">
-        <div className="text-sm font-bold text-white truncate leading-tight">{value}</div>
-        <div className="text-[10px] text-white/40 font-medium mt-0.5 truncate">{label}</div>
-      </div>
+      <div className="text-sm font-bold text-white leading-snug break-words">{value}</div>
     </div>
   );
 }
@@ -1388,8 +1386,8 @@ export default function PlayerDetail() {
             </div>
           </div>
 
-          {/* Info grid — one row, 7 stats spread across full width */}
-          <div className="grid grid-cols-4 md:grid-cols-7 gap-x-3 gap-y-2 mt-1">
+          {/* Info grid — 2 rows × 4 cols so each item has room to breathe */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-1">
             <InfoStat icon={CalendarDays} value={player.age ? `${player.age} años` : "—"}              label="Edad" />
             <InfoStat icon={Globe}        value={player.nationality || "—"}                             label="Nacionalidad" />
             <InfoStat icon={Ruler}        value={player.height || "—"}                                  label="Altura" />
