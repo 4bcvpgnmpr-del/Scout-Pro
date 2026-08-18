@@ -472,6 +472,9 @@ type SeasonRow = {
   pts: number; reb: number; ast: number; stl: number; blk: number; min: number;
   fgPct: number | null; fg3Pct: number | null; ftPct: number | null;
   val?: number | null;
+  fg2Made: number | null; fg2Att: number | null;
+  fg3Made: number | null; fg3Att: number | null;
+  ftMade:  number | null; ftAtt:  number | null;
 };
 
 function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
@@ -497,88 +500,153 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
   return (
     <div className="space-y-6 mt-6">
       {hasApiStats && (
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
-            <Activity className="h-4 w-4 text-primary" />
-            <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas por temporada (FEB)</h3>
-          </div>
-          <div className="overflow-x-auto -mx-1">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground uppercase tracking-widest">
-                  <th className="text-left px-3 pb-2 font-bold">Temporada</th>
-                  <th className="text-left px-2 pb-2 font-bold">Liga</th>
-                  <th className="text-left px-2 pb-2 font-bold hidden sm:table-cell">Equipo</th>
-                  <th className="text-center px-2 pb-2 font-bold">PJ</th>
-                  <th className="text-center px-2 pb-2 font-bold text-primary">PTS</th>
-                  <th className="text-center px-2 pb-2 font-bold">REB</th>
-                  <th className="text-center px-2 pb-2 font-bold">AST</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">ROB</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">TAP</th>
-                  <th className="text-center px-2 pb-2 font-bold text-amber-400">VAL</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">MIN</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TC%</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">T3%</th>
-                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TL%</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {seasonRows.map((row, i) => (
-                  <tr key={row.startYear} className={`hover:bg-muted/30 transition-colors ${i === 0 ? "font-bold" : "font-medium"}`}>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      {row.seasonName}
-                      {i === 0 && <Badge variant="secondary" className="ml-2 text-[9px] py-0 h-4 uppercase bg-primary/20 text-primary border-0">Actual</Badge>}
-                    </td>
-                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
-                    <td className="px-2 py-3 hidden sm:table-cell text-muted-foreground truncate max-w-[140px]">{row.teamName}</td>
-                    <td className="px-2 py-3 text-center tabular-nums">{row.gamesPlayed}</td>
-                    <td className="px-2 py-3 text-center tabular-nums text-primary font-bold text-sm">{row.pts.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums">{row.reb.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums">{row.ast.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums text-amber-400 font-bold">{row.val != null ? row.val.toFixed(1) : "—"}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}</td>
-                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}</td>
+        <>
+          {/* FEB season averages table */}
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+              <Activity className="h-4 w-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas por temporada (FEB)</h3>
+            </div>
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground uppercase tracking-widest">
+                    <th className="text-left px-3 pb-2 font-bold">Temporada</th>
+                    <th className="text-left px-2 pb-2 font-bold">Liga</th>
+                    <th className="text-left px-2 pb-2 font-bold hidden sm:table-cell">Equipo</th>
+                    <th className="text-center px-2 pb-2 font-bold">PJ</th>
+                    <th className="text-center px-2 pb-2 font-bold text-primary">PTS</th>
+                    <th className="text-center px-2 pb-2 font-bold">REB</th>
+                    <th className="text-center px-2 pb-2 font-bold">AST</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">ROB</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">TAP</th>
+                    <th className="text-center px-2 pb-2 font-bold text-amber-400">VAL</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">MIN</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TC%</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">T3%</th>
+                    <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TL%</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {seasonRows.map((row, i) => (
+                    <tr key={row.startYear} className={`hover:bg-muted/30 transition-colors ${i === 0 ? "font-bold" : "font-medium"}`}>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        {row.seasonName}
+                        {i === 0 && <Badge variant="secondary" className="ml-2 text-[9px] py-0 h-4 uppercase bg-primary/20 text-primary border-0">Actual</Badge>}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
+                      <td className="px-2 py-3 hidden sm:table-cell text-muted-foreground truncate max-w-[140px]">{row.teamName}</td>
+                      <td className="px-2 py-3 text-center tabular-nums">{row.gamesPlayed}</td>
+                      <td className="px-2 py-3 text-center tabular-nums text-primary font-bold text-sm">{row.pts.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums">{row.reb.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums">{row.ast.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums text-amber-400 font-bold">{row.val != null ? row.val.toFixed(1) : "—"}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}</td>
+                      <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Shot breakdown table */}
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+              <Target className="h-4 w-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Desglose de tiros (FEB)</h3>
+            </div>
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground uppercase tracking-widest">
+                    <th className="text-left px-3 pb-2 font-bold">Temporada</th>
+                    <th className="text-left px-2 pb-2 font-bold hidden sm:table-cell">Liga</th>
+                    <th className="text-center px-2 pb-2 font-bold">PJ</th>
+                    {/* 2PT */}
+                    <th className="text-center px-2 pb-2 font-bold text-blue-400">T2 Met.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-blue-300">T2 Int.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-blue-400">T2%</th>
+                    {/* 3PT */}
+                    <th className="text-center px-2 pb-2 font-bold text-emerald-400">T3 Met.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-emerald-300">T3 Int.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-emerald-400">T3%</th>
+                    {/* FT */}
+                    <th className="text-center px-2 pb-2 font-bold text-amber-400">TL Met.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-amber-300">TL Int.</th>
+                    <th className="text-center px-2 pb-2 font-bold text-amber-400">TL%</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {seasonRows.map((row, i) => {
+                    const fg2Pct = row.fg2Att != null && row.fg2Att > 0 && row.fg2Made != null
+                      ? `${((row.fg2Made / row.fg2Att) * 100).toFixed(1)}%` : "—";
+                    return (
+                      <tr key={row.startYear} className={`hover:bg-muted/30 transition-colors ${i === 0 ? "font-bold" : "font-medium"}`}>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {row.seasonName}
+                          {i === 0 && <Badge variant="secondary" className="ml-2 text-[9px] py-0 h-4 uppercase bg-primary/20 text-primary border-0">Actual</Badge>}
+                        </td>
+                        <td className="px-2 py-3 hidden sm:table-cell text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
+                        <td className="px-2 py-3 text-center tabular-nums">{row.gamesPlayed}</td>
+                        {/* 2PT */}
+                        <td className="px-2 py-3 text-center tabular-nums text-blue-400">{row.fg2Made ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-muted-foreground">{row.fg2Att ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-blue-400 font-bold">{fg2Pct}</td>
+                        {/* 3PT */}
+                        <td className="px-2 py-3 text-center tabular-nums text-emerald-400">{row.fg3Made ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-muted-foreground">{row.fg3Att ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-emerald-400 font-bold">{row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}</td>
+                        {/* FT */}
+                        <td className="px-2 py-3 text-center tabular-nums text-amber-400">{row.ftMade ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-muted-foreground">{row.ftAtt ?? "—"}</td>
+                        <td className="px-2 py-3 text-center tabular-nums text-amber-400 font-bold">{row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
-      {!hasApiStats && (
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas básicas <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">(entrada manual)</span></h3>
-          </div>
-          
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
-            <StatInput label="Partidos" value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
-            <StatInput label="Minutos" value={s.minutes} onChange={(v) => updateStats({ minutes: v })} />
-            <StatInput label="Puntos" value={s.points} onChange={(v) => updateStats({ points: v })} />
-            <StatInput label="Reb Of." value={s.offReb} onChange={(v) => updateStats({ offReb: v })} />
-            <StatInput label="Reb Def." value={s.defReb} onChange={(v) => updateStats({ defReb: v })} />
-            <StatInput label="Asist." value={s.assists} onChange={(v) => updateStats({ assists: v })} />
-            <StatInput label="Robos" value={s.steals} onChange={(v) => updateStats({ steals: v })} />
-            <StatInput label="Tapones" value={s.blocks} onChange={(v) => updateStats({ blocks: v })} />
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-            <StatInput label="Pérdidas" value={s.turnovers} onChange={(v) => updateStats({ turnovers: v })} />
-            <StatInput label="Faltas" value={s.fouls} onChange={(v) => updateStats({ fouls: v })} />
-            <StatInput label="TC Met." value={s.fgMade} onChange={(v) => updateStats({ fgMade: v })} />
-            <StatInput label="TC Int." value={s.fgAtt} onChange={(v) => updateStats({ fgAtt: v })} />
-            <StatInput label="T3 Met." value={s.t3Made} onChange={(v) => updateStats({ t3Made: v })} />
-            <StatInput label="T3 Int." value={s.t3Att} onChange={(v) => updateStats({ t3Att: v })} />
-            <StatInput label="TL Met." value={s.ftMade} onChange={(v) => updateStats({ ftMade: v })} />
-            <StatInput label="TL Int." value={s.ftAtt} onChange={(v) => updateStats({ ftAtt: v })} />
-          </div>
+      {/* Manual stats — always visible so any stat not in FEB can be filled in */}
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest">
+            Estadísticas básicas
+            <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">
+              {hasApiStats ? "(complemento manual — rellena lo que no cubra FEB)" : "(entrada manual)"}
+            </span>
+          </h3>
         </div>
-      )}
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
+          <StatInput label="Partidos"  value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
+          <StatInput label="Minutos"   value={s.minutes}     onChange={(v) => updateStats({ minutes: v })} />
+          <StatInput label="Puntos"    value={s.points}      onChange={(v) => updateStats({ points: v })} />
+          <StatInput label="Reb Of."   value={s.offReb}      onChange={(v) => updateStats({ offReb: v })} />
+          <StatInput label="Reb Def."  value={s.defReb}      onChange={(v) => updateStats({ defReb: v })} />
+          <StatInput label="Asist."    value={s.assists}     onChange={(v) => updateStats({ assists: v })} />
+          <StatInput label="Robos"     value={s.steals}      onChange={(v) => updateStats({ steals: v })} />
+          <StatInput label="Tapones"   value={s.blocks}      onChange={(v) => updateStats({ blocks: v })} />
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+          <StatInput label="Pérdidas"  value={s.turnovers}   onChange={(v) => updateStats({ turnovers: v })} />
+          <StatInput label="Faltas"    value={s.fouls}       onChange={(v) => updateStats({ fouls: v })} />
+          <StatInput label="T2 Met."   value={s.fgMade}      onChange={(v) => updateStats({ fgMade: v })} />
+          <StatInput label="T2 Int."   value={s.fgAtt}       onChange={(v) => updateStats({ fgAtt: v })} />
+          <StatInput label="T3 Met."   value={s.t3Made}      onChange={(v) => updateStats({ t3Made: v })} />
+          <StatInput label="T3 Int."   value={s.t3Att}       onChange={(v) => updateStats({ t3Att: v })} />
+          <StatInput label="TL Met."   value={s.ftMade}      onChange={(v) => updateStats({ ftMade: v })} />
+          <StatInput label="TL Int."   value={s.ftAtt}       onChange={(v) => updateStats({ ftAtt: v })} />
+        </div>
+      </div>
 
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
@@ -1320,27 +1388,19 @@ export default function PlayerDetail() {
             </div>
           </div>
 
-          {/* Info grid — 4 cols × 2 rows, compact */}
-          <div className="grid grid-cols-4 gap-x-3 gap-y-1.5">
-            <InfoStat icon={CalendarDays} value={player.age ? `${player.age} años` : "—"} label="Edad" />
-            <InfoStat icon={Globe}        value={player.nationality || "—"}             label="Nacionalidad" />
-            <InfoStat icon={Ruler}        value={player.height || "—"}                  label="Altura" />
-            <InfoStat icon={Scale}        value={player.weight ? `${player.weight} kg` : "—"} label="Peso" />
-            <InfoStat icon={Hand}         value={player.handedness || "—"}              label="Mano dom." />
-            <InfoStat icon={Shield}       value={player.teamName || "Agente libre"}     label="Equipo actual" />
-            <InfoStat icon={Hash}         value={player.jerseyNumber != null ? String(player.jerseyNumber) : "—"} label="Dorsal" />
-            <div className="flex items-center">
-              <SaveBadge saving={saving} savedAt={savedAt} />
-            </div>
+          {/* Info grid — one row, 7 stats spread across full width */}
+          <div className="grid grid-cols-4 md:grid-cols-7 gap-x-3 gap-y-2 mt-1">
+            <InfoStat icon={CalendarDays} value={player.age ? `${player.age} años` : "—"}              label="Edad" />
+            <InfoStat icon={Globe}        value={player.nationality || "—"}                             label="Nacionalidad" />
+            <InfoStat icon={Ruler}        value={player.height || "—"}                                  label="Altura" />
+            <InfoStat icon={Scale}        value={player.weight ? `${player.weight} kg` : "—"}           label="Peso" />
+            <InfoStat icon={Hand}         value={player.handedness || "—"}                              label="Mano dom." />
+            <InfoStat icon={Shield}       value={player.teamName || "Agente libre"}                     label="Equipo actual" />
+            <InfoStat icon={Hash}         value={player.jerseyNumber != null ? `#${player.jerseyNumber}` : "—"} label="Dorsal" />
           </div>
-        </div>
-
-        {/* ── RIGHT: Rating card ── */}
-        <div className="w-36 md:w-40 shrink-0 flex flex-col items-center justify-center bg-black/25 border-l border-white/[0.07] p-4 gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/35 mb-1 text-center leading-tight">
-            Valoración<br/>General
-          </span>
-          <CircularGauge value={profile.overallRating} />
+          <div className="mt-auto pt-1">
+            <SaveBadge saving={saving} savedAt={savedAt} />
+          </div>
         </div>
       </div>
 

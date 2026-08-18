@@ -198,6 +198,13 @@ router.get("/players/:id/stats/seasons", async (req, res): Promise<void> => {
       fg3Pct: (r.fg3Att ?? 0)   > 0 ? (r.fg3Made ?? 0) / (r.fg3Att ?? 0) : null,
       ftPct:  (r.ftAtt  ?? 0)   > 0 ? (r.ftMade  ?? 0) / (r.ftAtt  ?? 0) : null,
       val:    gp > 0 && r.pir != null ? r.pir / gp : null,
+      // Shot counts
+      fg2Made: r.fg2Made ?? null,
+      fg2Att:  r.fg2Att  ?? null,
+      fg3Made: r.fg3Made ?? null,
+      fg3Att:  r.fg3Att  ?? null,
+      ftMade:  r.ftMade  ?? null,
+      ftAtt:   r.ftAtt   ?? null,
     };
   });
 
