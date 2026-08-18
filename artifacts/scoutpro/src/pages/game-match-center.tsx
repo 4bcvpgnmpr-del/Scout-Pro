@@ -829,13 +829,14 @@ function PlayerStatsRow({ player }: { player: { id: number; name: string; positi
           <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgAssists)}</td>
           <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgSteals)}</td>
           <td className="py-3 px-2 text-sm text-white/60 text-center">{fmt(stats.avgBlocks)}</td>
+          <td className="py-3 px-2 text-sm font-bold text-amber-400 text-center">{stats.avgValuation != null ? fmt(stats.avgValuation) : "—"}</td>
           <td className="py-3 px-2 text-sm text-white/50 text-center">{fmt(stats.avgMinutes, 0)}'</td>
           <td className="py-3 px-2 text-sm text-white/50 text-center">{fmtPct(stats.avgFieldGoalPct)}</td>
           <td className="py-3 px-2 text-sm text-white/50 text-center">{fmtPct(stats.avgThreePointPct)}</td>
           <td className="py-3 pr-0 text-sm text-white/50 text-center">{fmtPct(stats.avgFreeThrowPct)}</td>
         </>
       ) : (
-        <td colSpan={9} className="py-3 px-3 text-xs text-white/20 italic">Sin estadísticas registradas</td>
+        <td colSpan={10} className="py-3 px-3 text-xs text-white/20 italic">Sin estadísticas registradas</td>
       )}
     </tr>
   );
@@ -853,7 +854,7 @@ function TabEstadisticas({ homeTeam, awayTeam, homeScore, awayScore, h2hResults,
     { query: { enabled: !!rivalTeamId, queryKey: getListPlayersQueryKey(rivalTeamId ? { teamId: rivalTeamId } : undefined) } },
   );
 
-  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Val", "Min", "%TC", "%3P", "%TL"];
 
   return (
     <div className="space-y-4">
@@ -977,7 +978,7 @@ function TabInforme({ game, scout, checklist, homeTeamLogo, awayTeamLogo, gameId
   const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const fmtShort = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
-  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Min", "%TC", "%3P", "%TL"];
+  const statsHeaders = ["Pts", "Reb", "Ast", "Rob", "Tap", "Val", "Min", "%TC", "%3P", "%TL"];
   const hasScouting = !!(scout.clavesPartido || scout.sistemas || scout.ritmo || scout.tipoDefensa || scout.presion || scout.fortalezas.length || scout.debilidades.length || scout.jugadorasDestacadas || scout.objetivos || scout.notasEntrenador);
 
   return (

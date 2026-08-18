@@ -1,14 +1,12 @@
-import { useState, useRef, useMemo } from "react";
+import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
-  useGetPlayer, useGetPlayerStats, useListReports, useDeletePlayer,
+  useGetPlayer, useListReports, useDeletePlayer,
   useUpdatePlayer, useListPlayers,
-  getGetPlayerQueryKey, getGetPlayerStatsQueryKey,
-  getListReportsQueryKey, getListPlayersQueryKey,
+  getGetPlayerQueryKey, getListReportsQueryKey, getListPlayersQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,13 +17,14 @@ import {
   usePlayerProfile, getStoredProfile, computeAdvancedStats,
   type SeasonStats, type VideoEntry,
 } from "@/hooks/use-player-profile";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   ArrowLeft, Pencil, Trash2, Plus, Save, Check, X,
-  TrendingUp, FileText, Video, GitCompare, History,
-  User, Target, Activity, ExternalLink, Star,
-  ChevronRight, BarChart3, Zap, Shield, Brain,
+  Video, GitCompare, History, User, Target, Activity, 
+  ExternalLink, ChevronRight, BarChart3, Zap, Shield, 
+  Brain, Globe, Ruler, Scale, Hand, Hash,
+  Star
 } from "lucide-react";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -48,10 +47,8 @@ function parseNum(v: string | number | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
-function fmt1(v: string | null): string { return v ?? "—"; }
 function fmtPct(v: string | null): string { return v ? v + "%" : "—"; }
 
-// AI comparison
 function generateAIComparison(
   nameA: string, sA: SeasonStats, ratingA: string, potA: string,
   nameB: string, sB: SeasonStats, ratingB: string, potB: string,
@@ -93,12 +90,12 @@ function generateAIComparison(
 
 function SaveBadge({ saving, savedAt }: { saving: boolean; savedAt: Date | null }) {
   if (saving) return (
-    <span className="text-xs text-amber-500 flex items-center gap-1">
+    <span className="text-xs font-bold uppercase tracking-widest text-amber-500 flex items-center gap-1">
       <Save className="h-3 w-3 animate-pulse" /> Guardando…
     </span>
   );
   if (savedAt) return (
-    <span className="text-xs text-emerald-500 flex items-center gap-1">
+    <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 flex items-center gap-1">
       <Check className="h-3 w-3" /> Guardado
     </span>
   );
@@ -107,7 +104,7 @@ function SaveBadge({ saving, savedAt }: { saving: boolean; savedAt: Date | null 
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{children}</div>
+    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{children}</div>
   );
 }
 
@@ -118,66 +115,80 @@ function InlineTextarea({
   placeholder?: string; rows?: number;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <SectionLabel>{label}</SectionLabel>
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? `${label}…`}
         rows={rows}
-        className="text-sm resize-none"
+        className="text-sm resize-none bg-muted/20 border-border focus-visible:ring-1 focus-visible:ring-primary/50 text-foreground"
       />
     </div>
   );
 }
 
-function StatInput({
-  label, value, onChange,
-}: {
-  label: string; value: string; onChange: (v: string) => void;
-}) {
+function StatInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="bg-muted/40 border rounded-lg p-2 text-center">
+    <div className="bg-muted/30 border border-border rounded-lg p-2 text-center transition-colors focus-within:border-primary/50 focus-within:bg-muted/50">
       <Input
-        type="number" min="0" value={value}
+        type="number" min="0" max="100" value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 text-center text-base font-bold border-0 bg-transparent focus-visible:ring-0 p-0"
+        className="h-7 text-center text-sm font-bold border-0 bg-transparent focus-visible:ring-0 p-0 shadow-none text-foreground"
         placeholder="—"
       />
-      <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
+      <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
+        {label}
+      </div>
     </div>
   );
 }
 
-function RatingCircle({ value, max = 10, label }: { value: string; max?: number; label: string }) {
-  const num = parseNum(value);
-  const pct = num !== null ? (num / max) * 100 : 0;
-  const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f97316" : pct >= 25 ? "#eab308" : "#ef4444";
+function CircularGauge({ value }: { value: string | number }) {
+  const v = parseNum(value) ?? 0;
+  const pct = Math.min(100, Math.max(0, v));
+  const color = pct >= 80 ? "#f59e0b" : pct >= 65 ? "#eab308" : "#94a3b8";
+  const label = pct >= 80 ? "Jugador Importante" : pct >= 65 ? "Promesa" : "En Desarrollo";
+  
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative h-14 w-14">
-        <svg className="h-14 w-14 -rotate-90" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/30" />
+    <div className="flex flex-col items-center text-center">
+      <div className="relative h-28 w-28 mb-4">
+        <svg className="h-28 w-28 -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/30" />
           <circle
-            cx="28" cy="28" r="22" fill="none"
-            stroke={color} strokeWidth="5"
-            strokeDasharray={`${2 * Math.PI * 22}`}
-            strokeDashoffset={`${2 * Math.PI * 22 * (1 - pct / 100)}`}
+            cx="50" cy="50" r="42" fill="none"
+            stroke={color} strokeWidth="6"
+            strokeDasharray={`${2 * Math.PI * 42}`}
+            strokeDashoffset={`${2 * Math.PI * 42 * (1 - pct / 100)}`}
             strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center font-bold text-sm">
-          {num !== null ? num : "—"}
+        <span className="absolute inset-0 flex items-center justify-center font-black text-4xl text-foreground">
+          {v || "—"}
         </span>
       </div>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-widest text-center">{label}</span>
+      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Valoración Global</div>
+      <div className="text-xs font-black uppercase tracking-wider mt-1" style={{ color }}>{label}</div>
     </div>
   );
 }
 
-function CompareBar({
-  labelA, labelB, valA, valB, unit = "",
-}: {
+function InfoPair({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-9 w-9 rounded-xl bg-muted/40 flex items-center justify-center shrink-0 border border-border">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex flex-col min-w-0">
+        <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{label}</span>
+        <span className="text-sm font-semibold text-foreground truncate">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function CompareBar({ labelA, labelB, valA, valB, unit = "" }: {
   labelA: string; labelB: string; valA: number | null; valB: number | null; unit?: string;
 }) {
   const max = Math.max(valA ?? 0, valB ?? 0, 1);
@@ -186,16 +197,16 @@ function CompareBar({
   const colorA = (valA ?? 0) >= (valB ?? 0) ? "bg-primary" : "bg-muted-foreground/40";
   const colorB = (valB ?? 0) > (valA ?? 0) ? "bg-primary" : "bg-muted-foreground/40";
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1.5 border-b last:border-0">
-      <div className="flex flex-col items-end gap-0.5">
-        <span className="text-sm font-bold">{valA !== null ? `${valA.toFixed(1)}${unit}` : "—"}</span>
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-2.5 border-b border-border last:border-0">
+      <div className="flex flex-col items-end gap-1.5 min-w-0">
+        <span className="text-sm font-bold text-foreground">{valA !== null ? `${valA.toFixed(1)}${unit}` : "—"}</span>
         <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden flex justify-end">
           <div className={`h-full rounded-full transition-all ${colorA}`} style={{ width: `${pA}%` }} />
         </div>
       </div>
-      <span className="text-[10px] text-muted-foreground uppercase text-center whitespace-nowrap px-1">{labelA}</span>
-      <div className="flex flex-col items-start gap-0.5">
-        <span className="text-sm font-bold">{valB !== null ? `${valB.toFixed(1)}${unit}` : "—"}</span>
+      <span className="text-[10px] text-muted-foreground uppercase tracking-widest text-center whitespace-nowrap px-3 font-bold">{labelA}</span>
+      <div className="flex flex-col items-start gap-1.5 min-w-0">
+        <span className="text-sm font-bold text-foreground">{valB !== null ? `${valB.toFixed(1)}${unit}` : "—"}</span>
         <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
           <div className={`h-full rounded-full transition-all ${colorB}`} style={{ width: `${pB}%` }} />
         </div>
@@ -206,159 +217,193 @@ function CompareBar({
 
 // ─── Tab: General ────────────────────────────────────────────────────────────
 
-function TabGeneral({ player, playerId, profile, onUpdate }: {
-  player: { name: string; position: string; jerseyNumber?: number | null; age?: number | null; height?: string | null; weight?: number | null; nationality?: string | null; handedness?: string | null; teamName?: string | null; photoUrl?: string | null };
-  playerId: number;
+function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
+  player: any;
   profile: ReturnType<typeof usePlayerProfile>["profile"];
   onUpdate: (p: Partial<typeof profile>) => void;
+  setActiveTab: (id: string) => void;
 }) {
-  const dbRows: [string, string | number | null | undefined][] = [
-    ["Posición principal", player.position],
-    ["Posición secundaria", profile.secondaryPosition || "—"],
-    ["Dorsal", player.jerseyNumber != null ? `#${player.jerseyNumber}` : "—"],
-    ["Edad", player.age != null ? `${player.age} años` : "—"],
-    ["Nacimiento", profile.birthday || "—"],
-    ["Nacionalidad", player.nationality || "—"],
-    ["Altura", player.height || "—"],
-    ["Peso", player.weight != null ? `${player.weight} kg` : "—"],
-    ["Mano dominante", player.handedness || "—"],
-    ["Equipo actual", player.teamName || "Agente libre"],
+  const s = profile.seasonStats;
+  const games = parseNum(s.gamesPlayed) ?? 0;
+  const totReb = (parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0);
+  
+  const fmtTotal = (g: number, avg: string | undefined | null) => {
+    const a = parseNum(avg);
+    if (g > 0 && a !== null) return Math.round(g * a);
+    return "-";
+  };
+
+  const fgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
+    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1) + "%" : "—";
+  const t3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
+    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1) + "%" : "—";
+  const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
+    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—";
+
+  // Compute Radar Data
+  const rPts = Math.min(100, Math.round(((parseNum(s.points) ?? 0) / 25) * 100));
+  const rReb = Math.min(100, Math.round((totReb / 12) * 100));
+  const rAst = Math.min(100, Math.round(((parseNum(s.assists) ?? 0) / 8) * 100));
+  const rDef = parseNum(profile.defensiveRating) ?? 50;
+  const rFis = parseNum(profile.athleticism) ?? 50;
+  const rVis = parseNum(profile.bbIQ) ?? 50;
+
+  const radarData = [
+    { subject: 'Anotación', A: rPts },
+    { subject: 'Rebote', A: rReb },
+    { subject: 'Pase', A: rAst },
+    { subject: 'Defensa', A: rDef },
+    { subject: 'Físico', A: rFis },
+    { subject: 'Visión', A: rVis },
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* Left: Info */}
-      <div className="lg:col-span-3 space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" /> Información personal
-              </CardTitle>
-              <Button variant="ghost" size="sm" className="text-xs h-7 text-muted-foreground" asChild>
-                <Link href={`/players/${playerId}/edit`}>
-                  <Pencil className="h-3 w-3 mr-1" /> Editar info básica →
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-              {dbRows.map(([label, val]) => (
-                <div key={label} className="flex items-center justify-between border-b border-dashed border-muted/50 py-1.5">
-                  <span className="text-muted-foreground text-xs uppercase tracking-wide">{label}</span>
-                  <span className="font-medium text-right">{val ?? "—"}</span>
-                </div>
-              ))}
-            </div>
-            {/* Extended: secondaryPosition + birthday inline */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <SectionLabel>Posición secundaria (editable)</SectionLabel>
-                <Input
-                  value={profile.secondaryPosition}
-                  onChange={(e) => onUpdate({ secondaryPosition: e.target.value })}
-                  placeholder="Ej: Alero"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <SectionLabel>Fecha de nacimiento</SectionLabel>
-                <Input
-                  type="date"
-                  value={profile.birthday}
-                  onChange={(e) => onUpdate({ birthday: e.target.value })}
-                  className="h-8 text-sm"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+      
+      {/* Left: Role Panel */}
+      <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+            <Target className="h-4 w-4 text-primary" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Perfil & Rol</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <InlineTextarea label="Rol en el equipo" value={profile.role} onChange={v => onUpdate({role: v})} placeholder="Ej: Especialista defensivo" rows={1} />
+            <InlineTextarea label="Estilo de juego" value={profile.playStyle} onChange={v => onUpdate({playStyle: v})} placeholder="Ej: 3&D" rows={1} />
+          </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" /> Perfil de juego
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <SectionLabel>Estilo de juego</SectionLabel>
-                <Input value={profile.playStyle} onChange={(e) => onUpdate({ playStyle: e.target.value })} placeholder="Ej: Playmaker físico" className="h-8 text-sm" />
-              </div>
-              <div className="space-y-1">
-                <SectionLabel>Rol en el equipo</SectionLabel>
-                <Input value={profile.role} onChange={(e) => onUpdate({ role: e.target.value })} placeholder="Ej: Sexto hombre" className="h-8 text-sm" />
-              </div>
+          <div className="space-y-2 mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+               <Check className="h-3 w-3 text-emerald-500" /> Fortalezas
             </div>
-            <InlineTextarea label="Fortalezas" value={profile.strengths} onChange={(v) => onUpdate({ strengths: v })} placeholder="Principales puntos fuertes del jugador…" rows={2} />
-            <InlineTextarea label="Debilidades" value={profile.weaknesses} onChange={(v) => onUpdate({ weaknesses: v })} placeholder="Áreas de mejora…" rows={2} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" /> Observaciones del scout
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <InlineTextarea label="Observaciones técnicas" value={profile.technicalNotes} onChange={(v) => onUpdate({ technicalNotes: v })} rows={2} />
-            <InlineTextarea label="Observaciones tácticas" value={profile.tacticalNotes} onChange={(v) => onUpdate({ tacticalNotes: v })} rows={2} />
-            <InlineTextarea label="Observaciones físicas" value={profile.physicalNotes} onChange={(v) => onUpdate({ physicalNotes: v })} rows={2} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Right: Ratings */}
-      <div className="lg:col-span-2 space-y-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Star className="h-4 w-4 text-primary" /> Valoraciones (1–10)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-around mb-5">
-              <RatingCircle value={profile.overallRating} label="Global" />
-              <RatingCircle value={profile.currentLevel} label="Nivel actual" />
-              <RatingCircle value={profile.potential} label="Potencial" />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {(["overallRating", "currentLevel", "potential"] as const).map((k) => (
-                <div key={k} className="space-y-1">
-                  <SectionLabel>{k === "overallRating" ? "Global" : k === "currentLevel" ? "Nivel" : "Potencial"}</SectionLabel>
-                  <Input
-                    type="number" min="1" max="10"
-                    value={profile[k]}
-                    onChange={(e) => onUpdate({ [k]: e.target.value })}
-                    className="h-8 text-center text-sm font-bold"
-                    placeholder="1-10"
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Notas de seguimiento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InlineTextarea
-              label="Observaciones generales"
-              value={profile.scoutingNotes}
-              onChange={(v) => onUpdate({ scoutingNotes: v })}
-              placeholder="Seguimiento, recomendaciones, comentarios…"
-              rows={7}
+            <Textarea 
+              value={profile.strengths || ''} 
+              onChange={e => onUpdate({strengths: e.target.value})} 
+              className="bg-muted/20 border-border text-sm resize-none focus-visible:ring-1 focus-visible:ring-emerald-500/50" 
+              rows={3} 
+              placeholder="Añade fortalezas (una por línea)..."
             />
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="space-y-2 mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+               <X className="h-3 w-3 text-red-500" /> Debilidades
+            </div>
+            <Textarea 
+              value={profile.weaknesses || ''} 
+              onChange={e => onUpdate({weaknesses: e.target.value})} 
+              className="bg-muted/20 border-border text-sm resize-none focus-visible:ring-1 focus-visible:ring-red-500/50" 
+              rows={3} 
+              placeholder="Añade debilidades (una por línea)..."
+            />
+          </div>
+
+          <div className="space-y-2 mt-5">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+               <Brain className="h-3 w-3 text-purple-500" /> Notas del entrenador
+            </div>
+            <Textarea 
+              value={profile.technicalNotes || ''} 
+              onChange={e => onUpdate({technicalNotes: e.target.value})} 
+              className="bg-muted/20 border-border text-sm resize-none focus-visible:ring-1 focus-visible:ring-purple-500/50" 
+              rows={3} 
+              placeholder="Observaciones adicionales..."
+            />
+          </div>
+        </div>
       </div>
+      
+      {/* Center: Radar Chart */}
+      <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="bg-card border border-border rounded-xl p-5 flex flex-col h-full shadow-sm">
+          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4 shrink-0">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Scouting Radar</h3>
+          </div>
+          
+          <div className="flex-1 min-h-[320px] flex items-center justify-center -mx-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                <PolarGrid stroke="var(--color-border)" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11, fontWeight: "bold" }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                <Radar
+                  name="Atributos"
+                  dataKey="A"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.35}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-border shrink-0">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex justify-between items-center">
+               <span>Editar Atributos (0-100)</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <StatInput label="Global" value={profile.overallRating} onChange={v => onUpdate({overallRating: v})} />
+              <StatInput label="Defensa" value={profile.defensiveRating} onChange={v => onUpdate({defensiveRating: v})} />
+              <StatInput label="Físico" value={profile.athleticism} onChange={v => onUpdate({athleticism: v})} />
+              <StatInput label="Visión" value={profile.bbIQ} onChange={v => onUpdate({bbIQ: v})} />
+              <StatInput label="Potencial" value={profile.potential} onChange={v => onUpdate({potential: v})} />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right: Season Stats Table */}
+      <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="bg-card border border-border rounded-xl p-5 h-full shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas Temporada</h3>
+            </div>
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => setActiveTab('stats')}>
+              Editar →
+            </Button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground uppercase tracking-widest">
+                  <th className="pb-2.5 font-bold">Métrica</th>
+                  <th className="pb-2.5 text-center font-bold">Total</th>
+                  <th className="pb-2.5 text-right font-bold">Promedio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {[
+                  ['Partidos', games, '-'],
+                  ['Minutos', fmtTotal(games, s.minutes), s.minutes],
+                  ['Puntos', fmtTotal(games, s.points), s.points],
+                  ['Rebotes', games > 0 && totReb > 0 ? (games * totReb).toFixed(0) : '-', totReb > 0 ? totReb.toFixed(1) : '-'],
+                  ['Asistencias', fmtTotal(games, s.assists), s.assists],
+                  ['Robos', fmtTotal(games, s.steals), s.steals],
+                  ['Tapones', fmtTotal(games, s.blocks), s.blocks],
+                  ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers],
+                  ['Faltas', fmtTotal(games, s.fouls), s.fouls],
+                  ['FG%', '-', fgPct],
+                  ['3P%', '-', t3Pct],
+                  ['FT%', '-', ftPct],
+                ].map(([label, total, avg]) => (
+                  <tr key={label} className="hover:bg-muted/30 transition-colors">
+                     <td className="py-2.5 text-muted-foreground font-semibold">{label}</td>
+                     <td className="py-2.5 text-center font-mono font-medium text-foreground/80">{total === 'NaN' || total === 0 ? '-' : total || '-'}</td>
+                     <td className="py-2.5 text-right font-mono font-bold text-foreground text-sm">{avg || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
     </div>
   );
 }
@@ -393,248 +438,109 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
   });
 
   const s = profile.seasonStats;
-  const adv = computeAdvancedStats(s);
   const manual = profile.advancedStats;
 
-  const totReb = (parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0);
-  const fgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
-    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1) + "%" : "—";
-  const t3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
-    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1) + "%" : "—";
-  const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
-    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—";
-
-  const gamesPlayed = parseNum(s.gamesPlayed) ?? 0;
-  const ptsAvg = parseNum(s.points) ?? 0;
-  const ptsTotal = gamesPlayed > 0 && ptsAvg > 0 ? Math.round(gamesPlayed * ptsAvg) : null;
-  const valAvg = ptsAvg + totReb + (parseNum(s.assists) ?? 0) + (parseNum(s.steals) ?? 0) + (parseNum(s.blocks) ?? 0);
-  const valTotal = gamesPlayed > 0 && valAvg > 0 ? Math.round(gamesPlayed * valAvg) : null;
-  const hasValData = ptsAvg > 0 || valAvg > 0;
-
   return (
-    <div className="space-y-6">
-      {/* ── Historial de estadísticas por temporada (FEB/Liga) ── */}
+    <div className="space-y-6 mt-6">
       {seasonRows && seasonRows.length > 0 && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Activity className="h-4 w-4 text-primary" />
-              Estadísticas por temporada (FEB)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-primary/10 bg-primary/5">
-                    <th className="text-left px-3 py-2 font-semibold text-muted-foreground whitespace-nowrap">Temporada</th>
-                    <th className="text-left px-2 py-2 font-semibold text-muted-foreground whitespace-nowrap">Liga</th>
-                    <th className="text-left px-2 py-2 font-semibold text-muted-foreground whitespace-nowrap hidden sm:table-cell">Equipo</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">PJ</th>
-                    <th className="text-center px-2 py-2 font-semibold text-primary">PTS</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">REB</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground">AST</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">ROB</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">TAP</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden sm:table-cell">MIN</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">TC%</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">T3%</th>
-                    <th className="text-center px-2 py-2 font-semibold text-muted-foreground hidden md:table-cell">TL%</th>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas por temporada (FEB)</h3>
+          </div>
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground uppercase tracking-widest">
+                  <th className="text-left px-3 pb-2 font-bold">Temporada</th>
+                  <th className="text-left px-2 pb-2 font-bold">Liga</th>
+                  <th className="text-left px-2 pb-2 font-bold hidden sm:table-cell">Equipo</th>
+                  <th className="text-center px-2 pb-2 font-bold">PJ</th>
+                  <th className="text-center px-2 pb-2 font-bold text-primary">PTS</th>
+                  <th className="text-center px-2 pb-2 font-bold">REB</th>
+                  <th className="text-center px-2 pb-2 font-bold">AST</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">ROB</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">TAP</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">MIN</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TC%</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">T3%</th>
+                  <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TL%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {seasonRows.map((row, i) => (
+                  <tr key={row.startYear} className={`hover:bg-muted/30 transition-colors ${i === 0 ? "font-bold" : "font-medium"}`}>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {row.seasonName}
+                      {i === 0 && <Badge variant="secondary" className="ml-2 text-[9px] py-0 h-4 uppercase bg-primary/20 text-primary border-0">Actual</Badge>}
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
+                    <td className="px-2 py-3 hidden sm:table-cell text-muted-foreground truncate max-w-[140px]">{row.teamName}</td>
+                    <td className="px-2 py-3 text-center tabular-nums">{row.gamesPlayed}</td>
+                    <td className="px-2 py-3 text-center tabular-nums text-primary font-bold text-sm">{row.pts.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums">{row.reb.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums">{row.ast.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}</td>
+                    <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {seasonRows.map((row, i) => (
-                    <tr
-                      key={row.startYear}
-                      className={`border-b border-primary/5 hover:bg-primary/5 transition-colors ${i === 0 ? "font-semibold" : ""}`}
-                    >
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="font-medium">{row.seasonName}</span>
-                        {i === 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">Actual</Badge>}
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">{row.leagueShortName?.toUpperCase()}</td>
-                      <td className="px-2 py-2 hidden sm:table-cell text-muted-foreground max-w-[140px] truncate">{row.teamName}</td>
-                      <td className="px-2 py-2 text-center tabular-nums">{row.gamesPlayed}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-primary font-semibold">{row.pts.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums">{row.reb.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums">{row.ast.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
-                        {row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}
-                      </td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
-                        {row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}
-                      </td>
-                      <td className="px-2 py-2 text-center tabular-nums hidden md:table-cell">
-                        {row.ftPct != null ? `${(row.ftPct * 100).toFixed(1)}%` : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Valoración total PTS ── */}
-      {hasValData && (
-        <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 p-0.5 shadow-lg shadow-orange-200/40">
-          <div className="rounded-[14px] bg-white px-5 py-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="h-4 w-4 text-orange-500" />
-              <span className="text-xs font-black text-gray-700 uppercase tracking-widest">Valoración de temporada</span>
-              {gamesPlayed > 0 && <Badge variant="secondary" className="ml-auto">{gamesPlayed} partidos</Badge>}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* PTS Total */}
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
-                <div className="text-3xl font-black text-orange-600 leading-none">
-                  {ptsTotal !== null ? ptsTotal : (ptsAvg > 0 ? ptsAvg.toFixed(1) : "—")}
-                </div>
-                <div className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">
-                  {ptsTotal !== null ? "PTS Total" : "PTS Prom."}
-                </div>
-                {ptsTotal !== null && ptsAvg > 0 && (
-                  <div className="text-[10px] text-gray-400 mt-0.5">{ptsAvg.toFixed(1)} por partido</div>
-                )}
-              </div>
-              {/* VAL Total */}
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
-                <div className="text-3xl font-black text-amber-600 leading-none">
-                  {valTotal !== null ? valTotal : (valAvg > 0 ? valAvg.toFixed(1) : "—")}
-                </div>
-                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">
-                  {valTotal !== null ? "VAL Total" : "VAL Prom."}
-                </div>
-                {valTotal !== null && valAvg > 0 && (
-                  <div className="text-[10px] text-gray-400 mt-0.5">{valAvg.toFixed(1)} por partido</div>
-                )}
-              </div>
-            </div>
-            {/* mini breakdown */}
-            {valAvg > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
-                {[
-                  { l: "PTS", v: ptsAvg },
-                  { l: "REB", v: totReb },
-                  { l: "AST", v: parseNum(s.assists) ?? 0 },
-                  { l: "ROB", v: parseNum(s.steals) ?? 0 },
-                  { l: "TAP", v: parseNum(s.blocks) ?? 0 },
-                ].filter(x => x.v > 0).map(({ l, v }) => (
-                  <span key={l} className="px-2 py-0.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-600">
-                    {l} {v.toFixed(1)}
-                  </span>
                 ))}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Basic stats grid */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" /> Estadísticas básicas
-            {s.gamesPlayed && <Badge variant="secondary" className="ml-1">{s.gamesPlayed} PJ</Badge>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-3">
-            <StatInput label="PJ" value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
-            <StatInput label="MIN" value={s.minutes} onChange={(v) => updateStats({ minutes: v })} />
-            <StatInput label="PTS" value={s.points} onChange={(v) => updateStats({ points: v })} />
-            <StatInput label="REB-O" value={s.offReb} onChange={(v) => updateStats({ offReb: v })} />
-            <StatInput label="REB-D" value={s.defReb} onChange={(v) => updateStats({ defReb: v })} />
-            <StatInput label="AST" value={s.assists} onChange={(v) => updateStats({ assists: v })} />
-            <StatInput label="ROB" value={s.steals} onChange={(v) => updateStats({ steals: v })} />
-            <StatInput label="TAP" value={s.blocks} onChange={(v) => updateStats({ blocks: v })} />
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            <StatInput label="PÉR" value={s.turnovers} onChange={(v) => updateStats({ turnovers: v })} />
-            <StatInput label="FALT" value={s.fouls} onChange={(v) => updateStats({ fouls: v })} />
-            <StatInput label="TC-M" value={s.fgMade} onChange={(v) => updateStats({ fgMade: v })} />
-            <StatInput label="TC-I" value={s.fgAtt} onChange={(v) => updateStats({ fgAtt: v })} />
-            <StatInput label="T3-M" value={s.t3Made} onChange={(v) => updateStats({ t3Made: v })} />
-            <StatInput label="T3-I" value={s.t3Att} onChange={(v) => updateStats({ t3Att: v })} />
-            <StatInput label="TL-M" value={s.ftMade} onChange={(v) => updateStats({ ftMade: v })} />
-            <StatInput label="TL-I" value={s.ftAtt} onChange={(v) => updateStats({ ftAtt: v })} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Shooting efficiency computed */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {[
-          { label: "TC%", value: fgPct },
-          { label: "T3%", value: t3Pct },
-          { label: "TL%", value: ftPct },
-          { label: "eFG%", value: fmtPct(adv.eFG) },
-          { label: "TS%", value: fmtPct(adv.tS) },
-        ].map(({ label, value }) => (
-          <div key={label} className="bg-card border rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold text-primary">{value}</div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
-            {(label === "eFG%" || label === "TS%") && (
-              <div className="text-[9px] text-muted-foreground/60 mt-0.5">calculado</div>
-            )}
-          </div>
-        ))}
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas básicas <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">(entrada manual)</span></h3>
+        </div>
+        
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
+          <StatInput label="Partidos" value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
+          <StatInput label="Minutos" value={s.minutes} onChange={(v) => updateStats({ minutes: v })} />
+          <StatInput label="Puntos" value={s.points} onChange={(v) => updateStats({ points: v })} />
+          <StatInput label="Reb Of." value={s.offReb} onChange={(v) => updateStats({ offReb: v })} />
+          <StatInput label="Reb Def." value={s.defReb} onChange={(v) => updateStats({ defReb: v })} />
+          <StatInput label="Asist." value={s.assists} onChange={(v) => updateStats({ assists: v })} />
+          <StatInput label="Robos" value={s.steals} onChange={(v) => updateStats({ steals: v })} />
+          <StatInput label="Tapones" value={s.blocks} onChange={(v) => updateStats({ blocks: v })} />
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+          <StatInput label="Pérdidas" value={s.turnovers} onChange={(v) => updateStats({ turnovers: v })} />
+          <StatInput label="Faltas" value={s.fouls} onChange={(v) => updateStats({ fouls: v })} />
+          <StatInput label="TC Met." value={s.fgMade} onChange={(v) => updateStats({ fgMade: v })} />
+          <StatInput label="TC Int." value={s.fgAtt} onChange={(v) => updateStats({ fgAtt: v })} />
+          <StatInput label="T3 Met." value={s.t3Made} onChange={(v) => updateStats({ t3Made: v })} />
+          <StatInput label="T3 Int." value={s.t3Att} onChange={(v) => updateStats({ t3Att: v })} />
+          <StatInput label="TL Met." value={s.ftMade} onChange={(v) => updateStats({ ftMade: v })} />
+          <StatInput label="TL Int." value={s.ftAtt} onChange={(v) => updateStats({ ftAtt: v })} />
+        </div>
       </div>
 
-      {/* Resumen display */}
-      {(parseNum(s.points) !== null || totReb > 0 || parseNum(s.assists) !== null) && (
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-          {[
-            { label: "PTS", value: s.points },
-            { label: "REB", value: totReb > 0 ? String(totReb) : "" },
-            { label: "AST", value: s.assists },
-            { label: "ROB", value: s.steals },
-            { label: "TAP", value: s.blocks },
-            { label: "MIN", value: s.minutes },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-center">
-              <div className="text-2xl font-display text-primary">{value || "—"}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
-            </div>
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+          <Zap className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas avanzadas <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">(entrada manual)</span></h3>
+        </div>
+        
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {([
+            ["per", "PER"],
+            ["ortg", "ORtg"],
+            ["drtg", "DRtg"],
+            ["netRtg", "Net Rtg"],
+            ["usagePct", "Usage%"],
+            ["pace", "Pace"],
+          ] as const).map(([key, label]) => (
+            <StatInput key={key} label={label} value={manual[key]} onChange={(v) => updateAdvanced({ [key]: v })} />
           ))}
         </div>
-      )}
-
-      {/* Advanced stats — manual entry */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Zap className="h-4 w-4 text-primary" /> Estadísticas avanzadas
-            <span className="text-xs font-normal text-muted-foreground">(entrada manual)</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {([
-              ["per", "PER"],
-              ["ortg", "ORtg"],
-              ["drtg", "DRtg"],
-              ["netRtg", "Net Rtg"],
-              ["usagePct", "Usage%"],
-              ["pace", "Pace"],
-            ] as const).map(([key, label]) => (
-              <div key={key} className="bg-muted/40 border rounded-lg p-2 text-center">
-                <Input
-                  type="number" value={manual[key]}
-                  onChange={(e) => updateAdvanced({ [key]: e.target.value })}
-                  className="h-8 text-center text-base font-bold border-0 bg-transparent focus-visible:ring-0 p-0"
-                  placeholder="—"
-                />
-                <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">{label}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }
@@ -655,32 +561,26 @@ function TabScouting({ profile, onUpdate }: {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {fields.map(([label, key, placeholder]) => (
-          <Card key={key}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs flex items-center gap-2 uppercase tracking-wider text-muted-foreground">
-                {key.includes("offensive") ? <Activity className="h-3.5 w-3.5 text-orange-500" /> :
-                  key.includes("defensive") ? <Shield className="h-3.5 w-3.5 text-blue-500" /> :
-                  key.includes("decision") ? <Brain className="h-3.5 w-3.5 text-purple-500" /> :
-                  key.includes("tactical") ? <Target className="h-3.5 w-3.5 text-emerald-500" /> :
-                  <Zap className="h-3.5 w-3.5 text-amber-500" />}
-                {label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={profile[key] as string}
-                onChange={(e) => onUpdate({ [key]: e.target.value })}
-                placeholder={placeholder}
-                rows={4}
-                className="text-sm resize-none"
-              />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      {fields.map(([label, key, placeholder]) => (
+        <div key={key} className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+            {key.includes("offensive") ? <Activity className="h-4 w-4 text-orange-500" /> :
+             key.includes("defensive") ? <Shield className="h-4 w-4 text-blue-500" /> :
+             key.includes("decision") ? <Brain className="h-4 w-4 text-purple-500" /> :
+             key.includes("tactical") ? <Target className="h-4 w-4 text-emerald-500" /> :
+             <Zap className="h-4 w-4 text-amber-500" />}
+            <h3 className="text-xs font-bold uppercase tracking-widest">{label}</h3>
+          </div>
+          <Textarea
+            value={profile[key] as string}
+            onChange={(e) => onUpdate({ [key]: e.target.value })}
+            placeholder={placeholder}
+            rows={4}
+            className="text-sm resize-none bg-muted/20 border-border focus-visible:ring-1 focus-visible:ring-primary/50 text-foreground"
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -706,117 +606,121 @@ function TabVideos({ profile, addVideo, removeVideo }: {
   const categories = ["Partido", "Entrenamiento", "Highlight", "Análisis", "Otro"];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 mt-6">
       {!open ? (
         <Button onClick={() => setOpen(true)} className="font-display uppercase tracking-wide">
           <Plus className="h-4 w-4 mr-2" /> Añadir vídeo
         </Button>
       ) : (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /> Nuevo vídeo</span>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}><X className="h-4 w-4" /></Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm max-w-2xl">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Video className="h-4 w-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Nuevo vídeo</h3>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-6 w-6"><X className="h-4 w-4" /></Button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="space-y-1.5">
               <SectionLabel>URL (YouTube / Vimeo)</SectionLabel>
-              <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://youtube.com/watch?v=…" />
+              <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://youtube.com/watch?v=…" className="bg-muted/20 border-border text-foreground" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
                 <SectionLabel>Título</SectionLabel>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Descripción del clip" />
+                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Descripción del clip" className="bg-muted/20 border-border text-foreground" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <SectionLabel>Fecha</SectionLabel>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="bg-muted/20 border-border text-foreground" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
                 <SectionLabel>Categoría</SectionLabel>
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full h-9 text-sm border border-input rounded-md px-3 bg-background"
+                  className="w-full h-9 text-sm border border-border rounded-md px-3 bg-muted/20 text-foreground"
                 >
-                  <option value="">Seleccionar…</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="" className="bg-background text-foreground">Seleccionar…</option>
+                  {categories.map((c) => <option key={c} value={c} className="bg-background text-foreground">{c}</option>)}
                 </select>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <SectionLabel>Etiquetas</SectionLabel>
-                <Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="tiro, 1vs1, transición…" />
+                <Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="tiro, 1vs1, transición…" className="bg-muted/20 border-border text-foreground" />
               </div>
             </div>
-            <Button onClick={handleAdd} disabled={!form.url || !form.title} className="w-full font-display uppercase">
+            <Button onClick={handleAdd} disabled={!form.url || !form.title} className="w-full font-display uppercase tracking-wide mt-2">
               <Check className="h-4 w-4 mr-2" /> Guardar vídeo
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {profile.videos.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
+        <div className="text-center py-20 text-muted-foreground border border-dashed border-border rounded-xl bg-card/50">
           <Video className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p className="text-sm">Sin vídeos asociados todavía.</p>
+          <p className="text-sm font-semibold">Sin vídeos asociados todavía.</p>
           <p className="text-xs mt-1">Añade clips de YouTube o Vimeo para este jugador.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {profile.videos.map((v) => {
             const thumb = getYtThumbnail(v.url);
             const embed = getEmbedUrl(v.url);
             return (
-              <Card key={v.id} className="overflow-hidden">
+              <div key={v.id} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
                 {playing === v.id && embed ? (
-                  <div className="aspect-video">
+                  <div className="aspect-video bg-black">
                     <iframe src={embed} className="w-full h-full" allowFullScreen title={v.title} />
                   </div>
                 ) : (
                   <button
-                    className="relative w-full aspect-video bg-muted flex items-center justify-center group"
+                    className="relative w-full aspect-video bg-muted/30 flex items-center justify-center group overflow-hidden"
                     onClick={() => embed && setPlaying(v.id)}
                   >
                     {thumb ? (
-                      <img src={thumb} alt={v.title} className="w-full h-full object-cover absolute inset-0" />
+                      <img src={thumb} alt={v.title} className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105" />
                     ) : null}
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors">
                       {embed ? (
-                        <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
-                          <Video className="h-5 w-5 text-white ml-0.5" />
+                        <div className="h-14 w-14 rounded-full bg-primary/90 flex items-center justify-center backdrop-blur-sm shadow-lg group-hover:scale-110 transition-transform">
+                          <Video className="h-6 w-6 text-white ml-0.5" />
                         </div>
                       ) : (
-                        <ExternalLink className="h-6 w-6 text-white" />
+                        <ExternalLink className="h-8 w-8 text-white/80 group-hover:text-white" />
                       )}
                     </div>
                   </button>
                 )}
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="font-semibold text-sm truncate">{v.title}</div>
-                      <div className="flex gap-1 mt-1 flex-wrap">
-                        {v.category && <Badge variant="secondary" className="text-[10px] h-4 px-1">{v.category}</Badge>}
-                        {v.tags && v.tags.split(",").map((t) => (
-                          <Badge key={t} variant="outline" className="text-[10px] h-4 px-1">{t.trim()}</Badge>
-                        ))}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1">{v.date}</div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-sm truncate text-foreground">{v.title}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">{v.date}</div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 flex-shrink-0" onClick={() => { if (playing === v.id) setPlaying(null); removeVideo(v.id); }}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0" onClick={() => { if (playing === v.id) setPlaying(null); removeVideo(v.id); }}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  <div className="flex gap-1.5 flex-wrap mt-auto pt-2">
+                    {v.category && <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-0 text-[9px] uppercase tracking-wider px-1.5 py-0 h-5">{v.category}</Badge>}
+                    {v.tags && v.tags.split(",").map((t) => (
+                      <Badge key={t} variant="outline" className="border-border text-muted-foreground text-[9px] uppercase tracking-wider px-1.5 py-0 h-5">{t.trim()}</Badge>
+                    ))}
+                  </div>
+                  
                   {!embed && (
-                    <a href={v.url} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-primary flex items-center gap-1 hover:underline">
+                    <a href={v.url} target="_blank" rel="noopener noreferrer" className="mt-3 text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 hover:text-primary/80 transition-colors">
                       <ExternalLink className="h-3 w-3" /> Ver enlace
                     </a>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -829,7 +733,7 @@ function TabVideos({ profile, addVideo, removeVideo }: {
 
 function TabComparator({ playerId, playerA, profileA }: {
   playerId: number;
-  playerA: { name: string; position: string; age?: number | null; height?: string | null; weight?: number | null; handedness?: string | null };
+  playerA: any;
   profileA: ReturnType<typeof usePlayerProfile>["profile"];
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -861,143 +765,151 @@ function TabComparator({ playerId, playerA, profileA }: {
   ];
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center gap-3">
-            <GitCompare className="h-5 w-5 text-primary flex-shrink-0" />
-            <div className="flex-1">
-              <SectionLabel>Seleccionar jugador para comparar</SectionLabel>
-              <select
-                value={selectedId ?? ""}
-                onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full h-10 text-sm border border-input rounded-md px-3 bg-background"
-              >
-                <option value="">— Seleccionar jugador —</option>
-                {others.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.position ? `(${p.position})` : ""} {p.teamName ? `— ${p.teamName}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <div className="space-y-6 mt-6">
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm max-w-2xl">
+        <div className="flex items-center gap-3">
+          <GitCompare className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1">
+            <SectionLabel>Seleccionar jugador para comparar</SectionLabel>
+            <select
+              value={selectedId ?? ""}
+              onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full h-10 text-sm border border-border rounded-md px-3 bg-muted/20 text-foreground font-semibold"
+            >
+              <option value="" className="bg-background text-foreground">— Seleccionar jugador —</option>
+              {others.map((p) => (
+                <option key={p.id} value={p.id} className="bg-background text-foreground">
+                  {p.name} {p.position ? `(${p.position})` : ""} {p.teamName ? `— ${p.teamName}` : ""}
+                </option>
+              ))}
+            </select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {!playerB ? (
-        <div className="text-center py-16 text-muted-foreground">
+        <div className="text-center py-20 text-muted-foreground border border-dashed border-border rounded-xl bg-card/50">
           <GitCompare className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p className="text-sm">Selecciona un jugador para comparar.</p>
+          <p className="text-sm font-semibold">Selecciona un jugador para comparar.</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {/* Headers */}
-          <div className="grid grid-cols-3 items-center gap-4">
-            <div className="text-center">
-              <div className="text-lg font-bold truncate">{playerA.name}</div>
-              <Badge>{playerA.position}</Badge>
+          <div className="grid grid-cols-3 items-center gap-6">
+            <div className="text-center bg-card border border-border rounded-xl p-5">
+              <div className="text-xl md:text-2xl font-black uppercase tracking-tight text-foreground truncate mb-2">{playerA.name}</div>
+              <Badge className="bg-primary text-primary-foreground font-display uppercase tracking-wider text-sm">{playerA.position}</Badge>
             </div>
-            <div className="text-center text-xs text-muted-foreground font-semibold uppercase tracking-widest">VS</div>
-            <div className="text-center">
-              <div className="text-lg font-bold truncate">{playerB.name}</div>
-              <Badge variant="outline">{playerB.position}</Badge>
+            <div className="text-center text-sm text-muted-foreground font-black uppercase tracking-widest bg-muted/20 py-2 rounded-full w-12 mx-auto">VS</div>
+            <div className="text-center bg-card border border-border rounded-xl p-5">
+              <div className="text-xl md:text-2xl font-black uppercase tracking-tight text-foreground truncate mb-2">{playerB.name}</div>
+              <Badge variant="outline" className="border-border text-muted-foreground font-display uppercase tracking-wider text-sm">{playerB.position}</Badge>
             </div>
           </div>
 
-          {/* Physical */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-muted-foreground">Físico</CardTitle></CardHeader>
-            <CardContent className="space-y-1">
-              {([["Edad", playerA.age, playerB.age, " años"], ["Peso", playerA.weight, playerB.weight, " kg"]] as [string, number | null | undefined, number | null | undefined, string][]).map(([label, a, b, unit]) => (
-                <CompareBar key={label} labelA={label} labelB={label} valA={a ?? null} valB={b ?? null} unit={unit} />
-              ))}
-              <div className="grid grid-cols-3 items-center py-1.5 border-b last:border-0 text-sm gap-2">
-                <span className="text-right font-medium">{playerA.height || "—"}</span>
-                <span className="text-[10px] text-muted-foreground uppercase text-center">Altura</span>
-                <span className="font-medium">{playerB.height || "—"}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Physical */}
+            <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+                <User className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Físico</h3>
               </div>
-              <div className="grid grid-cols-3 items-center py-1.5 text-sm gap-2">
-                <span className="text-right font-medium">{playerA.handedness || "—"}</span>
-                <span className="text-[10px] text-muted-foreground uppercase text-center">Mano</span>
-                <span className="font-medium">{playerB.handedness || "—"}</span>
+              <div className="space-y-1">
+                {([["Edad", playerA.age, playerB.age, " años"], ["Peso", playerA.weight, playerB.weight, " kg"]] as [string, number | null | undefined, number | null | undefined, string][]).map(([label, a, b, unit]) => (
+                  <CompareBar key={label} labelA={label} labelB={label} valA={a ?? null} valB={b ?? null} unit={unit} />
+                ))}
+                <div className="grid grid-cols-3 items-center py-2.5 border-b border-border last:border-0 gap-3">
+                  <span className="text-right font-bold text-foreground">{playerA.height || "—"}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase text-center font-bold tracking-widest">Altura</span>
+                  <span className="font-bold text-foreground">{playerB.height || "—"}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center py-2.5 gap-3">
+                  <span className="text-right font-bold text-foreground">{playerA.handedness || "—"}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase text-center font-bold tracking-widest">Mano</span>
+                  <span className="font-bold text-foreground">{playerB.handedness || "—"}</span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Ratings */}
+            <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+                <Star className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Valoraciones (0–100)</h3>
+              </div>
+              <div className="space-y-1">
+                {([["Global", "overallRating"], ["Potencial", "potential"], ["Nivel actual", "currentLevel"]] as const).map(([label, key]) => (
+                  <CompareBar key={label} labelA={label} labelB={label}
+                    valA={parseNum(profileA[key])} valB={parseNum(profileB![key])} />
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* Stats */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-muted-foreground">Estadísticas</CardTitle></CardHeader>
-            <CardContent>
+          <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas</h3>
+            </div>
+            <div className="space-y-1">
               {statRows.map(([label, keyA, keyB, unit]) => (
                 <CompareBar key={label} labelA={label} labelB={label}
                   valA={parseNum(sA[keyA])} valB={sB ? parseNum(sB[keyB]) : null} unit={unit} />
               ))}
-            </CardContent>
-          </Card>
-
-          {/* Ratings */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-muted-foreground">Valoraciones (1–10)</CardTitle></CardHeader>
-            <CardContent>
-              {([["Valoración global", "overallRating"], ["Potencial", "potential"], ["Nivel actual", "currentLevel"]] as const).map(([label, key]) => (
-                <CompareBar key={label} labelA={label} labelB={label}
-                  valA={parseNum(profileA[key])} valB={parseNum(profileB![key])} />
-              ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* AI Summary */}
           {aiResult && (
-            <Card className="border-primary/30 bg-primary/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-primary" /> Resumen IA de scouting
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-2">
-                      Ventajas de {playerA.name}
-                    </div>
-                    {aiResult.advantagesA.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Sin ventajas estadísticas claras sobre el rival.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {aiResult.advantagesA.map((a, i) => (
-                          <li key={i} className="text-xs flex items-start gap-1.5">
-                            <ChevronRight className="h-3 w-3 text-emerald-500 mt-0.5 flex-shrink-0" />
-                            {a}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-primary/20 pb-3 mb-5">
+                <Zap className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Resumen IA de scouting</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-background/50 border border-border rounded-lg p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mb-3 flex items-center gap-1.5">
+                    <Check className="h-3 w-3" /> Ventajas de {playerA.name}
                   </div>
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-2">
-                      Ventajas de {playerB.name}
-                    </div>
-                    {aiResult.advantagesB.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Sin ventajas estadísticas claras sobre el rival.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {aiResult.advantagesB.map((a, i) => (
-                          <li key={i} className="text-xs flex items-start gap-1.5">
-                            <ChevronRight className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
-                            {a}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  {aiResult.advantagesA.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Sin ventajas estadísticas claras.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {aiResult.advantagesA.map((a, i) => (
+                        <li key={i} className="text-xs font-medium flex items-start gap-2 text-foreground/90">
+                          <ChevronRight className="h-3 w-3 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="bg-background/50 border border-border rounded-lg p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3 flex items-center gap-1.5">
+                    <Check className="h-3 w-3" /> Ventajas de {playerB.name}
                   </div>
+                  {aiResult.advantagesB.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Sin ventajas estadísticas claras.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {aiResult.advantagesB.map((a, i) => (
+                        <li key={i} className="text-xs font-medium flex items-start gap-2 text-foreground/90">
+                          <ChevronRight className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <div className="border-t pt-3">
-                  <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Recomendación de scouting</div>
-                  <p className="text-sm leading-relaxed">{aiResult.recommendation}</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              
+              <div className="bg-background/80 border border-primary/20 rounded-lg p-4">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Recomendación de scouting</div>
+                <p className="text-sm leading-relaxed font-medium text-foreground">{aiResult.recommendation}</p>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1012,82 +924,74 @@ function TabHistory({ player, reports }: {
   reports: Array<{ id: number; date?: string; scoutName: string; rating: number; summary?: string | null; strengths?: string | null; weaknesses?: string | null; gameName?: string | null }>;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="pt-5 text-center">
-            <div className="text-3xl font-bold text-primary">{reports.length}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Informes registrados</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 text-center">
-            <div className="text-3xl font-bold text-primary">
-              {reports.length > 0
-                ? (reports.reduce((acc, r) => acc + r.rating, 0) / reports.length).toFixed(1)
-                : "—"}
-            </div>
-            <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Rating medio</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 text-center">
-            <div className="text-3xl font-bold text-primary">
-              {reports.length > 0 ? reports[reports.length - 1].date : "—"}
-            </div>
-            <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Primer informe</div>
-          </CardContent>
-        </Card>
+    <div className="space-y-6 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+          <div className="text-4xl font-black text-primary">{reports.length}</div>
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Informes registrados</div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+          <div className="text-4xl font-black text-primary">
+            {reports.length > 0
+              ? (reports.reduce((acc, r) => acc + r.rating, 0) / reports.length).toFixed(1)
+              : "—"}
+          </div>
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Rating medio</div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+          <div className="text-2xl font-black text-primary truncate w-full px-2">
+            {reports.length > 0 ? reports[reports.length - 1].date : "—"}
+          </div>
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Primer informe</div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <History className="h-4 w-4 text-primary" /> Línea de tiempo de informes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {reports.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground text-sm">
-              Sin informes. Los informes son opcionales — el perfil funciona independientemente.
-            </div>
-          ) : (
-            <div className="relative pl-6 border-l-2 border-muted space-y-4">
-              {[...reports].reverse().map((r) => (
-                <Link key={r.id} href={`/reports/${r.id}`}>
-                  <div className="relative group cursor-pointer">
-                    <div className="absolute -left-[29px] w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                    <div className="bg-card border rounded-lg p-3 hover:border-primary transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-semibold text-sm group-hover:text-primary transition-colors">
-                            {r.date} — {r.scoutName}
-                          </div>
-                          {r.gameName && <div className="text-xs text-muted-foreground">{r.gameName}</div>}
-                          {(r.summary || r.strengths) && (
-                            <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                              {r.summary || r.strengths}
-                            </div>
-                          )}
+      <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border pb-3 mb-6">
+          <History className="h-4 w-4 text-primary" />
+          <h3 className="text-xs font-bold uppercase tracking-widest">Línea de tiempo de informes</h3>
+        </div>
+        
+        {reports.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground text-sm border border-dashed border-border rounded-xl bg-background/50">
+            Sin informes. Los informes son opcionales — el perfil funciona independientemente.
+          </div>
+        ) : (
+          <div className="relative pl-6 border-l-2 border-border space-y-6 ml-2">
+            {[...reports].reverse().map((r) => (
+              <Link key={r.id} href={`/reports/${r.id}`}>
+                <div className="relative group cursor-pointer">
+                  <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full bg-primary border-2 border-card group-hover:scale-125 transition-transform" />
+                  <div className="bg-background border border-border rounded-lg p-4 hover:border-primary/50 transition-colors shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                          {r.date} <span className="text-muted-foreground text-xs font-medium">— {r.scoutName}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-xl font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">
-                            {r.rating}
+                        {r.gameName && <div className="text-xs font-semibold text-muted-foreground mt-1">{r.gameName}</div>}
+                        {(r.summary || r.strengths) && (
+                          <div className="text-xs text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
+                            {r.summary || r.strengths}
                           </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-2xl font-black text-primary px-3 py-1 bg-primary/10 rounded-md">
+                          {r.rating}
                         </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="text-xs text-muted-foreground text-center pt-2">
-        Los informes son opcionales. Toda la información de la ficha se guarda automáticamente sin necesidad de generar informes.
+      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-center pt-2">
+        Los informes son opcionales. La ficha se guarda automáticamente.
       </div>
     </div>
   );
@@ -1100,7 +1004,7 @@ const TABS = [
   { id: "stats", label: "Estadísticas", icon: BarChart3 },
   { id: "scouting", label: "Scouting", icon: Target },
   { id: "videos", label: "Vídeos", icon: Video },
-  { id: "comparador", label: "Comparador", icon: GitCompare },
+  { id: "comparador", label: "Comparar", icon: GitCompare },
   { id: "historial", label: "Historial", icon: History },
 ] as const;
 
@@ -1155,136 +1059,165 @@ export default function PlayerDetail() {
   };
 
   if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-48 rounded-xl" />
-      <div className="grid grid-cols-6 gap-2">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 rounded" />)}</div>
-      <Skeleton className="h-64 rounded-xl" />
+    <div className="dark bg-[#0a0f1a] text-slate-50 min-h-[calc(100vh-4rem)] -m-4 sm:-m-8 p-4 sm:p-8 font-sans">
+      <div className="space-y-6">
+        <Skeleton className="h-56 rounded-2xl bg-white/5" />
+        <div className="grid grid-cols-6 gap-2"><Skeleton className="h-24 rounded-xl bg-white/5 col-span-6" /></div>
+        <Skeleton className="h-96 rounded-2xl bg-white/5" />
+      </div>
     </div>
   );
 
   if (!player) return (
-    <div className="text-center py-20 text-muted-foreground">Jugador no encontrado.</div>
+    <div className="dark bg-[#0a0f1a] text-slate-50 min-h-[calc(100vh-4rem)] -m-4 sm:-m-8 p-4 sm:p-8 flex items-center justify-center">
+      <div className="text-muted-foreground font-display text-2xl uppercase tracking-widest">Jugador no encontrado</div>
+    </div>
   );
 
   const initials = player.name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
 
+  // Compute stat bar values
+  const s = profile.seasonStats;
+  const totReb = (parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0);
+  const fgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
+    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1)
+    : "—";
+  const t3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
+    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1)
+    : "—";
+  const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
+    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1)
+    : "—";
+
+  const statBarItems = [
+    { label: "PPG", value: s.points, highlight: true },
+    { label: "RPG", value: totReb > 0 ? totReb.toFixed(1) : "—", highlight: false },
+    { label: "APG", value: s.assists, highlight: false },
+    { label: "FG%", value: fgPct !== "—" ? `${fgPct}%` : "—", highlight: false },
+    { label: "3P%", value: t3Pct !== "—" ? `${t3Pct}%` : "—", highlight: false },
+    { label: "FT%", value: ftPct !== "—" ? `${ftPct}%` : "—", highlight: false },
+  ];
+
   return (
-    <div className="space-y-0">
-      {/* ── Header banner ── */}
-      <div className="rounded-xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white mb-5">
-        <div className="p-5 md:p-6">
-          <div className="flex items-start gap-5">
-            {/* Back */}
-            <Link href="/jugadores">
-              <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10 flex-shrink-0 mt-1">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
+    <div className="dark flex flex-col font-sans -m-4 sm:-m-8 p-4 sm:p-8 bg-[#0a0f1a] text-slate-200 min-h-[calc(100vh-4rem)]">
+      
+      {/* ── Hero Section ── */}
+      <div className="flex flex-col md:flex-row gap-6 bg-card border border-border rounded-2xl p-6 mb-6 shadow-lg relative">
+        {/* Back Button (Absolute if we want it out of the flow, but let's put it on top) */}
+        <Link href="/jugadores" className="absolute top-4 left-4 z-10 md:hidden">
+          <Button variant="ghost" size="icon" className="text-white/70 hover:text-white bg-black/20 backdrop-blur">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
 
-            {/* Photo */}
-            <div className="flex-shrink-0">
-              <div className="h-20 w-20 rounded-full border-3 border-primary/50 overflow-hidden bg-primary/20 flex items-center justify-center relative">
-                {player.photoUrl ? (
-                  <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-bold text-2xl text-primary">{initials}</span>
-                )}
-                {player.jerseyNumber != null && (
-                  <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-slate-900">
-                    {player.jerseyNumber}
-                  </div>
-                )}
-              </div>
+        {/* Left: Photo */}
+        <div className="w-full md:w-56 shrink-0 relative rounded-xl overflow-hidden bg-background border border-border aspect-[3/4]">
+          {player.photoUrl ? (
+            <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-7xl font-black text-muted-foreground/20">{initials}</span>
+              {player.jerseyNumber != null && (
+                <span className="absolute bottom-3 right-3 text-5xl font-display text-primary/80 leading-none">
+                  #{player.jerseyNumber}
+                </span>
+              )}
             </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight">
-                    {player.name}
-                  </h1>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <Badge className="bg-primary text-primary-foreground font-mono">{player.position}</Badge>
-                    {profile.secondaryPosition && (
-                      <Badge variant="outline" className="border-white/30 text-white/80 text-xs">{profile.secondaryPosition}</Badge>
-                    )}
-                    <span className="text-white/60 text-sm">{player.teamName || "Agente libre"}</span>
-                  </div>
-                  <div className="flex gap-4 mt-2 text-sm text-white/70 flex-wrap">
-                    {player.age && <span>{player.age} años</span>}
-                    {player.height && <span>{player.height}</span>}
-                    {player.weight && <span>{player.weight} kg</span>}
-                    {player.nationality && <span>{player.nationality}</span>}
-                    {player.handedness && <span>{player.handedness}</span>}
-                  </div>
-                </div>
-
-                {/* Overall rating */}
-                <div className="flex-shrink-0 text-center">
-                  <div className="text-5xl font-black text-primary leading-none">
-                    {profile.overallRating || "—"}
-                  </div>
-                  <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1">Valoración</div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2 mt-4 flex-wrap items-center">
-                <Link href={`/players/${playerId}/edit`}>
-                  <Button size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10 font-display uppercase tracking-wide text-xs">
-                    <Pencil className="h-3 w-3 mr-1.5" /> Editar info básica
-                  </Button>
-                </Link>
-                <Link href={`/reports/new?playerId=${playerId}`}>
-                  <Button size="sm" className="font-display uppercase tracking-wide text-xs">
-                    <Plus className="h-3 w-3 mr-1.5" /> Informe
-                  </Button>
-                </Link>
-                <div className="ml-auto flex items-center gap-2">
-                  <SaveBadge saving={saving} savedAt={savedAt} />
-                  <Button
-                    size="sm" variant="ghost"
-                    className="text-red-400 hover:bg-red-400/10 hover:text-red-300 h-8 w-8 p-0"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Photo upload row */}
-          <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3">
+          )}
+          <div className="absolute top-2 right-2 z-10 opacity-70 hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm rounded-full">
             <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
-            <span className="text-xs text-white/40">Haz clic en la foto para actualizarla</span>
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex border-t border-white/10 overflow-x-auto">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap transition-colors flex-shrink-0 ${
-                activeTab === id
-                  ? "text-primary border-b-2 border-primary bg-white/5"
-                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
+        {/* Center: Info */}
+        <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase text-foreground truncate">{player.name}</h1>
+              <Badge className="bg-primary text-primary-foreground font-display text-lg uppercase tracking-wider px-3 py-1">
+                {player.position}
+              </Badge>
+              {profile.secondaryPosition && (
+                <Badge variant="outline" className="border-border text-muted-foreground uppercase text-xs font-bold tracking-widest px-2 py-1">
+                  {profile.secondaryPosition}
+                </Badge>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-4 mt-8">
+              <InfoPair icon={User} label="Edad" value={player.age ? `${player.age} años` : "—"} />
+              <InfoPair icon={Globe} label="Nacionalidad" value={player.nationality || "—"} />
+              <InfoPair icon={Ruler} label="Altura" value={player.height || "—"} />
+              <InfoPair icon={Scale} label="Peso" value={player.weight ? `${player.weight} kg` : "—"} />
+              <InfoPair icon={Hand} label="Mano" value={player.handedness || "—"} />
+              <InfoPair icon={Shield} label="Equipo" value={player.teamName || "Agente libre"} />
+              <InfoPair icon={Hash} label="Dorsal" value={player.jerseyNumber ? `#${player.jerseyNumber}` : "—"} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-border flex-wrap">
+            <Button variant="outline" className="border-border text-foreground hover:bg-muted font-display uppercase tracking-wide" onClick={() => setActiveTab('comparador')}>
+              <GitCompare className="h-4 w-4 mr-2" /> Comparar jugador
+            </Button>
+            <Button className="font-display uppercase tracking-wide text-primary-foreground" asChild>
+              <Link href={`/reports/new?playerId=${playerId}`}>
+                <Plus className="h-4 w-4 mr-2" /> Generar informe
+              </Link>
+            </Button>
+            <div className="ml-auto flex items-center gap-4">
+              <SaveBadge saving={saving} savedAt={savedAt} />
+              <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/20 h-10 w-10 shrink-0" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Gauge */}
+        <div className="w-full md:w-56 shrink-0 flex flex-col items-center justify-center bg-background border border-border rounded-xl p-6">
+          <CircularGauge value={profile.overallRating} />
         </div>
       </div>
 
-      {/* ── Tab content ── */}
-      <div className="pb-10">
+      {/* ── Key Stats Bar ── */}
+      <div className="grid grid-cols-3 md:grid-cols-6 border border-border bg-card rounded-2xl overflow-hidden mb-6 shadow-sm">
+        {statBarItems.map((item, i) => (
+          <div key={i} className={`flex flex-col items-center justify-center py-5 px-2 hover:bg-muted/30 transition-colors ${i > 0 ? 'border-l border-border' : ''}`}>
+            <span className={`text-3xl lg:text-4xl font-black ${item.highlight ? 'text-primary' : 'text-foreground'}`}>
+              {item.value || "—"}
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Tabs ── */}
+      <div className="flex border-b border-border overflow-x-auto mb-2 no-scrollbar bg-card rounded-t-xl px-2">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all flex-shrink-0 relative ${
+              activeTab === id
+                ? "text-primary bg-muted/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/10"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            {activeTab === id && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab Content ── */}
+      <div className="pb-10 flex-1">
         {activeTab === "general" && (
-          <TabGeneral player={player} playerId={playerId} profile={profile} onUpdate={update} />
+          <TabGeneral player={player} profile={profile} onUpdate={update} setActiveTab={setActiveTab} />
         )}
         {activeTab === "stats" && (
           <TabStats playerId={playerId} profile={profile} updateStats={updateStats} updateAdvanced={updateAdvanced} />
