@@ -30,7 +30,7 @@ import {
   Video, GitCompare, History, User, Target, Activity, 
   ExternalLink, ChevronRight, BarChart3, Zap, Shield, 
   Brain, Globe, Ruler, Scale, Hand, Hash,
-  Star, CalendarDays, MoreHorizontal
+  Star, CalendarDays, MoreHorizontal, BadgeCheck, FileText, Camera
 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
@@ -191,6 +191,21 @@ function InfoPair({ icon: Icon, label, value }: { icon: any, label: string, valu
       <div className="flex flex-col min-w-0">
         <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">{label}</span>
         <span className="text-sm font-semibold text-foreground truncate">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+// Hero info block — value prominent, label small below, icon to left
+function InfoStat({ icon: Icon, value, label }: { icon: any; value: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="h-8 w-8 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center shrink-0">
+        <Icon className="h-3.5 w-3.5 text-white/50" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-bold text-white truncate leading-tight">{value}</div>
+        <div className="text-[10px] text-white/40 font-medium mt-0.5 truncate">{label}</div>
       </div>
     </div>
   );
@@ -1152,89 +1167,118 @@ export default function PlayerDetail() {
       </div>
 
       {/* ── Hero Section ── */}
-      <div className="flex flex-col md:flex-row gap-0 bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-6 shadow-2xl relative">
-        {/* Left: Photo Panel */}
-        <div className="w-full md:w-56 shrink-0 relative bg-background border-r border-white/[0.07] aspect-[3/4] md:aspect-auto">
+      <div className="flex bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-6 shadow-2xl">
+
+        {/* ── LEFT: Photo panel ── */}
+        <div className="relative w-44 md:w-52 shrink-0 overflow-hidden bg-[#060c18] min-h-[220px]">
           {player.photoUrl ? (
-            <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
+            <img
+              src={player.photoUrl}
+              alt={player.name}
+              className="absolute inset-0 w-full h-full object-cover object-top"
+            />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-black/40">
-              <span className="text-7xl font-black text-white/5">{initials}</span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-7xl font-black text-white/5 select-none">{initials}</span>
             </div>
           )}
-          
+          {/* Jersey number — huge, left side, semi-transparent watermark */}
           {player.jerseyNumber != null && (
-            <span className="absolute bottom-1 right-2 text-8xl font-black text-white opacity-15 leading-none pointer-events-none">
+            <span
+              className="absolute left-0 top-1/2 -translate-y-1/2 font-black text-white/10 leading-none pointer-events-none select-none"
+              style={{ fontSize: "clamp(80px, 40%, 130px)" }}
+            >
               {player.jerseyNumber}
             </span>
           )}
-
-          <div className="absolute top-3 right-3 z-10 opacity-70 hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded-full">
-            <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
+          {/* Camera icon — bottom right */}
+          <div className="absolute bottom-3 right-3 z-10">
+            <div className="opacity-60 hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm rounded-full p-0.5">
+              <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
+            </div>
           </div>
         </div>
 
-        {/* Center: Info */}
-        <div className="flex-1 flex flex-col justify-between p-6 md:p-8 min-w-0">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase text-white truncate">{player.name}</h1>
-              <Badge className="bg-primary text-primary-foreground font-display text-lg uppercase tracking-wider px-3 py-1 border-0">
-                {player.position}
-              </Badge>
-              {profile.secondaryPosition && (
-                <Badge variant="outline" className="border-white/20 text-white/60 uppercase text-xs font-bold tracking-widest px-2 py-1">
-                  {profile.secondaryPosition}
-                </Badge>
-              )}
+        {/* ── CENTER: Name + info ── */}
+        <div className="flex-1 flex flex-col p-5 md:p-6 min-w-0 gap-4">
+
+          {/* Name row + buttons on same line */}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              {/* Name + verified badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-black text-white leading-tight">
+                  {player.name}
+                </h1>
+                <BadgeCheck className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+              </div>
+              {/* Positions */}
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-sm font-bold text-primary">{player.position}</span>
+                {profile.secondaryPosition && (
+                  <>
+                    <span className="text-white/25 font-bold">|</span>
+                    <span className="text-sm text-white/55 font-medium">{profile.secondaryPosition}</span>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-4 mt-8">
-              <InfoPair icon={CalendarDays} label="Edad" value={player.age ? `${player.age} años` : "—"} />
-              <InfoPair icon={CalendarDays} label="Nacimiento" value="—" />
-              <InfoPair icon={Globe} label="Nacionalidad" value={player.nationality || "—"} />
-              <InfoPair icon={Ruler} label="Altura" value={player.height || "—"} />
-              <InfoPair icon={Scale} label="Peso" value={player.weight ? `${player.weight} kg` : "—"} />
-              <InfoPair icon={Hand} label="Mano dominante" value={player.handedness || "—"} />
-              <InfoPair icon={Shield} label="Equipo actual" value={player.teamName || "Agente libre"} />
-              <InfoPair icon={Hash} label="Dorsal" value={player.jerseyNumber ? `#${player.jerseyNumber}` : "—"} />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-white/[0.07] flex-wrap">
-            <Button variant="outline" className="border-white/[0.15] text-white hover:bg-white/5 font-display uppercase tracking-wide bg-transparent" onClick={() => setActiveTab('comparador')}>
-              <GitCompare className="h-4 w-4 mr-2" /> Comparar
-            </Button>
-            <Button className="font-display uppercase tracking-wide text-primary-foreground bg-primary hover:bg-primary/90 border-0" asChild>
-              <Link href={`/reports/new?playerId=${playerId}`}>
-                <Plus className="h-4 w-4 mr-2" /> Generar informe
-              </Link>
-            </Button>
-            <div className="ml-auto flex items-center gap-4">
-              <SaveBadge saving={saving} savedAt={savedAt} />
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-white/[0.15] text-white hover:bg-white/5 bg-transparent text-xs font-semibold"
+                onClick={() => setActiveTab('comparador')}
+              >
+                <GitCompare className="h-3.5 w-3.5 mr-1.5" /> Comparar jugador
+              </Button>
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold" asChild>
+                <Link href={`/reports/new?playerId=${playerId}`}>
+                  <FileText className="h-3.5 w-3.5 mr-1.5" /> Generar informe
+                </Link>
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/10 h-10 w-10 shrink-0">
+                  <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[#0d1421] border-white/[0.07] text-slate-200">
-                  <DropdownMenuItem className="focus:bg-white/[0.05] focus:text-white cursor-pointer" onClick={() => setLocation(`/jugadores/${playerId}/editar`)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Editar jugador
+                  <DropdownMenuItem className="focus:bg-white/[0.05] cursor-pointer" onClick={() => setLocation(`/jugadores/${playerId}/editar`)}>
+                    <Pencil className="h-4 w-4 mr-2" /> Editar jugador
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer" onClick={handleDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar jugador
+                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar jugador
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Info grid — 2 rows × 4 cols */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-1">
+            <InfoStat icon={CalendarDays} value={player.age ? `${player.age} años` : "—"} label="Edad" />
+            <InfoStat icon={Globe} value={player.nationality || "—"} label="Nacionalidad" />
+            <InfoStat icon={Ruler} value={player.height || "—"} label="Altura" />
+            <InfoStat icon={Scale} value={player.weight ? `${player.weight} kg` : "—"} label="Peso" />
+            <InfoStat icon={Hand} value={player.handedness || "—"} label="Mano dominante" />
+            <InfoStat icon={Shield} value={player.teamName || "Agente libre"} label="Equipo actual" />
+            <InfoStat icon={Hash} value={player.jerseyNumber != null ? String(player.jerseyNumber) : "—"} label="Dorsal" />
+          </div>
+
+          {/* Save indicator */}
+          <div className="mt-auto pt-2">
+            <SaveBadge saving={saving} savedAt={savedAt} />
+          </div>
         </div>
 
-        {/* Right: Gauge */}
-        <div className="w-full md:w-48 shrink-0 flex flex-col items-center justify-center bg-black/20 border-l border-white/[0.07] p-6">
+        {/* ── RIGHT: Rating card ── */}
+        <div className="w-40 md:w-48 shrink-0 flex flex-col items-center justify-center bg-black/25 border-l border-white/[0.07] p-5 gap-1">
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/35 mb-2">
+            Valoración General
+          </span>
           <CircularGauge value={profile.overallRating} />
         </div>
       </div>
