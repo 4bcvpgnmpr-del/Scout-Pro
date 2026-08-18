@@ -30,7 +30,9 @@ import {
   Video, GitCompare, History, User, Target, Activity, 
   ExternalLink, ChevronRight, BarChart3, Zap, Shield, 
   Brain, Globe, Ruler, Scale, Hand, Hash,
-  Star, CalendarDays, MoreHorizontal, BadgeCheck, FileText, Camera
+  Star, CalendarDays, MoreHorizontal, BadgeCheck, FileText, Camera,
+  TrendingUp, BarChart2, ArrowLeftRight, Crosshair, CircleDot,
+  Download, Printer
 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
@@ -246,27 +248,45 @@ function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
   onUpdate: (p: Partial<typeof profile>) => void;
   setActiveTab: (id: string) => void;
 }) {
+  // Auto-fetch FEB season stats; fallback to manual entry
+  const { data: febRows } = useQuery<any[]>({
+    queryKey: ["player-stats-seasons", player.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/players/${player.id}/stats/seasons`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!player.id,
+  });
+  const feb = febRows?.[0] ?? null; // most recent FEB season
+
   const s = profile.seasonStats;
-  const games = parseNum(s.gamesPlayed) ?? 0;
-  const totReb = (parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0);
-  
-  const fmtTotal = (g: number, avg: string | undefined | null) => {
-    const a = parseNum(avg);
-    if (g > 0 && a !== null) return Math.round(g * a);
-    return "-";
-  };
 
-  const fgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
-    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1) + "%" : "—";
-  const t3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
-    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1) + "%" : "—";
-  const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
-    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—";
+  // Resolved display values: FEB first, then manual
+  const games   = feb ? feb.gamesPlayed : (parseNum(s.gamesPlayed) ?? 0);
+  const pts     = feb ? feb.pts : (parseNum(s.points) ?? 0);
+  const reb     = feb ? feb.reb : ((parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0));
+  const ast     = feb ? feb.ast : (parseNum(s.assists) ?? 0);
+  const stl     = feb ? feb.stl : (parseNum(s.steals) ?? 0);
+  const blk     = feb ? feb.blk : (parseNum(s.blocks) ?? 0);
+  const minAvg  = feb ? feb.min : (parseNum(s.minutes) ?? 0);
+  const trn     = feb ? null : parseNum(s.turnovers);
+  const fls     = feb ? null : parseNum(s.fouls);
 
-  // Compute Radar Data
-  const rPts = Math.min(100, Math.round(((parseNum(s.points) ?? 0) / 25) * 100));
-  const rReb = Math.min(100, Math.round((totReb / 12) * 100));
-  const rAst = Math.min(100, Math.round(((parseNum(s.assists) ?? 0) / 8) * 100));
+  const fgPct  = feb && feb.fgPct  != null ? `${(feb.fgPct  * 100).toFixed(1)}%`
+    : (parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
+        ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1) + "%" : "—");
+  const t3Pct  = feb && feb.fg3Pct != null ? `${(feb.fg3Pct * 100).toFixed(1)}%`
+    : (parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
+        ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1) + "%" : "—");
+  const ftPct  = feb && feb.ftPct  != null ? `${(feb.ftPct  * 100).toFixed(1)}%`
+    : (parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
+        ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—");
+
+  // Radar data (uses FEB averages when available)
+  const rPts = Math.min(100, Math.round((pts / 25) * 100));
+  const rReb = Math.min(100, Math.round((reb / 12) * 100));
+  const rAst = Math.min(100, Math.round((ast / 8) * 100));
   const rDef = parseNum(profile.defensiveRating) ?? 50;
   const rFis = parseNum(profile.athleticism) ?? 50;
   const rVis = parseNum(profile.bbIQ) ?? 50;
@@ -391,6 +411,12 @@ function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
             </Button>
           </div>
           
+          {feb && (
+            <div className="flex items-center gap-1.5 mb-3 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+              {feb.leagueShortName || feb.leagueName} {feb.seasonName}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead>
@@ -401,24 +427,26 @@ function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {[
-                  ['Partidos', games, '-'],
-                  ['Minutos', fmtTotal(games, s.minutes), s.minutes],
-                  ['Puntos', fmtTotal(games, s.points), s.points],
-                  ['Rebotes', games > 0 && totReb > 0 ? (games * totReb).toFixed(0) : '-', totReb > 0 ? totReb.toFixed(1) : '-'],
-                  ['Asistencias', fmtTotal(games, s.assists), s.assists],
-                  ['Robos', fmtTotal(games, s.steals), s.steals],
-                  ['Tapones', fmtTotal(games, s.blocks), s.blocks],
-                  ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers],
-                  ['Faltas', fmtTotal(games, s.fouls), s.fouls],
-                  ['FG%', '-', fgPct],
-                  ['3P%', '-', t3Pct],
-                  ['FT%', '-', ftPct],
-                ].map(([label, total, avg]) => (
+                {([
+                  ['Partidos',    games,                             '—'],
+                  ['Minutos',     games > 0 && minAvg > 0 ? Math.round(games * minAvg) : '—',  minAvg > 0 ? minAvg.toFixed(1) : '—'],
+                  ['Puntos',      games > 0 && pts > 0 ? Math.round(games * pts) : '—',   pts > 0 ? pts.toFixed(1) : '—'],
+                  ['Rebotes',     games > 0 && reb > 0 ? Math.round(games * reb) : '—',   reb > 0 ? reb.toFixed(1) : '—'],
+                  ['Asistencias', games > 0 && ast > 0 ? Math.round(games * ast) : '—',   ast > 0 ? ast.toFixed(1) : '—'],
+                  ['Robos',       games > 0 && stl > 0 ? Math.round(games * stl) : '—',   stl > 0 ? stl.toFixed(1) : '—'],
+                  ['Tapones',     games > 0 && blk > 0 ? Math.round(games * blk) : '—',   blk > 0 ? blk.toFixed(1) : '—'],
+                  ...(!feb ? [
+                    ['Pérdidas', trn != null && games > 0 ? Math.round(games * trn) : '—', trn != null ? trn.toFixed(1) : '—'],
+                    ['Faltas',   fls != null && games > 0 ? Math.round(games * fls) : '—', fls != null ? fls.toFixed(1) : '—'],
+                  ] : []),
+                  ['FG%', '—', fgPct],
+                  ['3P%', '—', t3Pct],
+                  ['FT%', '—', ftPct],
+                ] as [string, any, any][]).map(([label, total, avg]) => (
                   <tr key={label} className="hover:bg-muted/30 transition-colors">
                      <td className="py-2.5 text-muted-foreground font-semibold">{label}</td>
-                     <td className="py-2.5 text-center font-mono font-medium text-foreground/80">{total === 'NaN' || total === 0 ? '-' : total || '-'}</td>
-                     <td className="py-2.5 text-right font-mono font-bold text-foreground text-sm">{avg || '-'}</td>
+                     <td className="py-2.5 text-center font-mono font-medium text-foreground/80">{total}</td>
+                     <td className="py-2.5 text-right font-mono font-bold text-foreground text-sm">{avg}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1060,6 +1088,18 @@ export default function PlayerDetail() {
     query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId) }
   });
 
+  // FEB season rows for the General tab stats card
+  const { data: mainSeasonRows } = useQuery<any[]>({
+    queryKey: ["player-stats-seasons", playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/players/${playerId}/stats/seasons`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!playerId,
+  });
+  const mainFeb = mainSeasonRows?.[0] ?? null;
+
   const { data: gamesData } = useListGames({ 
     query: { queryKey: getListGamesQueryKey() } 
   });
@@ -1167,10 +1207,10 @@ export default function PlayerDetail() {
       </div>
 
       {/* ── Hero Section ── */}
-      <div className="flex bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-6 shadow-2xl">
+      <div className="flex bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-4 shadow-2xl">
 
         {/* ── LEFT: Photo panel ── */}
-        <div className="relative w-44 md:w-52 shrink-0 overflow-hidden bg-[#060c18] min-h-[220px]">
+        <div className="relative w-36 md:w-44 shrink-0 overflow-hidden bg-[#060c18]" style={{ minHeight: 178 }}>
           {player.photoUrl ? (
             <img
               src={player.photoUrl}
@@ -1182,72 +1222,65 @@ export default function PlayerDetail() {
               <span className="text-7xl font-black text-white/5 select-none">{initials}</span>
             </div>
           )}
-          {/* Jersey number — huge, left side, semi-transparent watermark */}
           {player.jerseyNumber != null && (
             <span
               className="absolute left-0 top-1/2 -translate-y-1/2 font-black text-white/10 leading-none pointer-events-none select-none"
-              style={{ fontSize: "clamp(80px, 40%, 130px)" }}
+              style={{ fontSize: "clamp(72px, 38%, 118px)" }}
             >
               {player.jerseyNumber}
             </span>
           )}
-          {/* Camera icon — bottom right */}
-          <div className="absolute bottom-3 right-3 z-10">
-            <div className="opacity-60 hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm rounded-full p-0.5">
+          <div className="absolute bottom-2 right-2 z-10">
+            <div className="opacity-55 hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm rounded-full p-0.5">
               <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
             </div>
           </div>
         </div>
 
         {/* ── CENTER: Name + info ── */}
-        <div className="flex-1 flex flex-col p-5 md:p-6 min-w-0 gap-4">
+        <div className="flex-1 flex flex-col p-4 md:p-5 min-w-0 gap-2.5">
 
-          {/* Name row + buttons on same line */}
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          {/* Name row + buttons */}
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              {/* Name + verified badge */}
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-black text-white leading-tight">
-                  {player.name}
-                </h1>
-                <BadgeCheck className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                <h1 className="text-xl md:text-2xl font-black text-white leading-tight">{player.name}</h1>
+                <BadgeCheck className="h-4.5 w-4.5 h-[18px] w-[18px] text-blue-400 shrink-0" />
               </div>
-              {/* Positions */}
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-sm font-bold text-primary">{player.position}</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs font-bold text-primary">{player.position}</span>
                 {profile.secondaryPosition && (
                   <>
-                    <span className="text-white/25 font-bold">|</span>
-                    <span className="text-sm text-white/55 font-medium">{profile.secondaryPosition}</span>
+                    <span className="text-white/20 font-bold text-xs">|</span>
+                    <span className="text-xs text-white/50 font-medium">{profile.secondaryPosition}</span>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-white/[0.15] text-white hover:bg-white/5 bg-transparent text-xs font-semibold"
-                onClick={() => setActiveTab('comparador')}
-              >
-                <GitCompare className="h-3.5 w-3.5 mr-1.5" /> Comparar jugador
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              <Button variant="outline" size="sm"
+                className="border-white/[0.15] text-white hover:bg-white/5 bg-transparent text-[11px] font-semibold h-7 px-2.5"
+                onClick={() => setActiveTab('comparador')}>
+                <GitCompare className="h-3 w-3 mr-1.5" /> Comparar
               </Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold" asChild>
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-semibold h-7 px-2.5" asChild>
                 <Link href={`/reports/new?playerId=${playerId}`}>
-                  <FileText className="h-3.5 w-3.5 mr-1.5" /> Generar informe
+                  <FileText className="h-3 w-3 mr-1.5" /> Generar informe
                 </Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/10 h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/10 h-7 w-7">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-[#0d1421] border-white/[0.07] text-slate-200">
                   <DropdownMenuItem className="focus:bg-white/[0.05] cursor-pointer" onClick={() => setLocation(`/jugadores/${playerId}/editar`)}>
                     <Pencil className="h-4 w-4 mr-2" /> Editar jugador
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="focus:bg-white/[0.05] cursor-pointer" onClick={() => window.print()}>
+                    <Printer className="h-4 w-4 mr-2" /> Exportar PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer" onClick={handleDelete}>
                     <Trash2 className="h-4 w-4 mr-2" /> Eliminar jugador
@@ -1257,45 +1290,62 @@ export default function PlayerDetail() {
             </div>
           </div>
 
-          {/* Info grid — 2 rows × 4 cols */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-1">
+          {/* Info grid — 4 cols × 2 rows, compact */}
+          <div className="grid grid-cols-4 gap-x-3 gap-y-1.5">
             <InfoStat icon={CalendarDays} value={player.age ? `${player.age} años` : "—"} label="Edad" />
-            <InfoStat icon={Globe} value={player.nationality || "—"} label="Nacionalidad" />
-            <InfoStat icon={Ruler} value={player.height || "—"} label="Altura" />
-            <InfoStat icon={Scale} value={player.weight ? `${player.weight} kg` : "—"} label="Peso" />
-            <InfoStat icon={Hand} value={player.handedness || "—"} label="Mano dominante" />
-            <InfoStat icon={Shield} value={player.teamName || "Agente libre"} label="Equipo actual" />
-            <InfoStat icon={Hash} value={player.jerseyNumber != null ? String(player.jerseyNumber) : "—"} label="Dorsal" />
-          </div>
-
-          {/* Save indicator */}
-          <div className="mt-auto pt-2">
-            <SaveBadge saving={saving} savedAt={savedAt} />
+            <InfoStat icon={Globe}        value={player.nationality || "—"}             label="Nacionalidad" />
+            <InfoStat icon={Ruler}        value={player.height || "—"}                  label="Altura" />
+            <InfoStat icon={Scale}        value={player.weight ? `${player.weight} kg` : "—"} label="Peso" />
+            <InfoStat icon={Hand}         value={player.handedness || "—"}              label="Mano dom." />
+            <InfoStat icon={Shield}       value={player.teamName || "Agente libre"}     label="Equipo actual" />
+            <InfoStat icon={Hash}         value={player.jerseyNumber != null ? String(player.jerseyNumber) : "—"} label="Dorsal" />
+            <div className="flex items-center">
+              <SaveBadge saving={saving} savedAt={savedAt} />
+            </div>
           </div>
         </div>
 
         {/* ── RIGHT: Rating card ── */}
-        <div className="w-40 md:w-48 shrink-0 flex flex-col items-center justify-center bg-black/25 border-l border-white/[0.07] p-5 gap-1">
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/35 mb-2">
-            Valoración General
+        <div className="w-36 md:w-40 shrink-0 flex flex-col items-center justify-center bg-black/25 border-l border-white/[0.07] p-4 gap-1">
+          <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/35 mb-1 text-center leading-tight">
+            Valoración<br/>General
           </span>
           <CircularGauge value={profile.overallRating} />
         </div>
       </div>
 
       {/* ── Key Stats Bar ── */}
-      <div className="grid grid-cols-3 md:grid-cols-6 border border-white/[0.07] bg-[#0d1421] rounded-xl overflow-hidden mb-6 shadow-md">
-        {statBarItems.map((item, i) => (
-          <div key={i} className={`flex flex-col items-center justify-center py-5 px-2 hover:bg-white/[0.02] transition-colors ${i > 0 ? 'border-l border-white/[0.07]' : ''}`}>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">
-              {item.label}
-            </span>
-            <span className={`text-3xl lg:text-4xl font-black ${item.highlight ? 'text-primary' : 'text-white'}`}>
-              {item.value}
-            </span>
+      {(() => {
+        const kpiMeta = [
+          { icon: TrendingUp,    color: "text-primary",    bg: "bg-primary/10"      },
+          { icon: BarChart2,     color: "text-blue-400",   bg: "bg-blue-400/10"     },
+          { icon: ArrowLeftRight,color: "text-purple-400", bg: "bg-purple-400/10"   },
+          { icon: Crosshair,     color: "text-emerald-400",bg: "bg-emerald-400/10"  },
+          { icon: CircleDot,     color: "text-amber-400",  bg: "bg-amber-400/10"    },
+          { icon: Target,        color: "text-cyan-400",   bg: "bg-cyan-400/10"     },
+        ];
+        return (
+          <div className="grid grid-cols-3 md:grid-cols-6 border border-white/[0.07] bg-[#0d1421] rounded-xl overflow-hidden mb-5 shadow-md">
+            {statBarItems.map((item, i) => {
+              const meta = kpiMeta[i];
+              const Icon = meta.icon;
+              return (
+                <div key={i} className={`flex flex-col p-4 hover:bg-white/[0.03] transition-colors ${i > 0 ? 'border-l border-white/[0.07]' : ''}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`h-6 w-6 rounded-md ${meta.bg} flex items-center justify-center shrink-0`}>
+                      <Icon className={`h-3 w-3 ${meta.color}`} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/35">{item.label}</span>
+                  </div>
+                  <span className={`text-3xl lg:text-4xl font-black leading-none ${item.highlight ? 'text-primary' : 'text-white'}`}>
+                    {item.value}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* ── Tabs ── */}
       <div className="sticky top-0 z-20 bg-[#0a0f1a]/95 backdrop-blur-sm pt-4 pb-0 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-white/[0.07] mb-6">
@@ -1336,39 +1386,62 @@ export default function PlayerDetail() {
                   </Button>
                 </div>
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead>
-                      <tr className="border-b border-white/[0.07] text-white/40 uppercase tracking-widest">
-                        <th className="pb-2.5 font-bold">Métrica</th>
-                        <th className="pb-2.5 text-center font-bold">Total</th>
-                        <th className="pb-2.5 text-right font-bold">Promedio</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.07]">
-                      {[
-                        ['Partidos', games, '-'],
-                        ['Minutos', fmtTotal(games, s.minutes), s.minutes],
-                        ['Puntos', fmtTotal(games, s.points), s.points],
-                        ['Rebotes', games > 0 && totReb > 0 ? (games * totReb).toFixed(0) : '-', totReb > 0 ? totReb.toFixed(1) : '-'],
-                        ['Asistencias', fmtTotal(games, s.assists), s.assists],
-                        ['Robos', fmtTotal(games, s.steals), s.steals],
-                        ['Tapones', fmtTotal(games, s.blocks), s.blocks],
-                        ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers],
-                        ['Faltas', fmtTotal(games, s.fouls), s.fouls],
-                        ['FG%', '-', manualFgPct],
-                        ['3P%', '-', manualT3Pct],
-                        ['FT%', '-', manualFtPct],
-                      ].map(([label, total, avg]) => (
-                        <tr key={label as string} className="hover:bg-white/[0.02] transition-colors">
-                           <td className="py-2.5 text-white/70 font-semibold">{label}</td>
-                           <td className="py-2.5 text-center font-mono font-medium text-white/50">{total === 'NaN' || total === 0 ? '-' : total || '-'}</td>
-                           <td className="py-2.5 text-right font-mono font-bold text-white text-sm">{avg || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {mainFeb && (
+                  <div className="flex items-center gap-1.5 mb-3 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
+                    {mainFeb.leagueShortName || mainFeb.leagueName} {mainFeb.seasonName}
+                  </div>
+                )}
+                {(() => {
+                  const gp   = mainFeb ? mainFeb.gamesPlayed : games;
+                  const pts  = mainFeb ? mainFeb.pts  : (parseNum(s.points)  ?? 0);
+                  const reb  = mainFeb ? mainFeb.reb  : totReb;
+                  const ast  = mainFeb ? mainFeb.ast  : (parseNum(s.assists) ?? 0);
+                  const stl  = mainFeb ? mainFeb.stl  : (parseNum(s.steals)  ?? 0);
+                  const blk  = mainFeb ? mainFeb.blk  : (parseNum(s.blocks)  ?? 0);
+                  const minA = mainFeb ? mainFeb.min  : (parseNum(s.minutes) ?? 0);
+                  const fg   = mainFeb && mainFeb.fgPct  != null ? `${(mainFeb.fgPct  * 100).toFixed(1)}%` : manualFgPct;
+                  const t3   = mainFeb && mainFeb.fg3Pct != null ? `${(mainFeb.fg3Pct * 100).toFixed(1)}%` : manualT3Pct;
+                  const ft   = mainFeb && mainFeb.ftPct  != null ? `${(mainFeb.ftPct  * 100).toFixed(1)}%` : manualFtPct;
+                  const fmt  = (g: number, v: number) => g > 0 && v > 0 ? Math.round(g * v) : '—';
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead>
+                          <tr className="border-b border-white/[0.07] text-white/40 uppercase tracking-widest">
+                            <th className="pb-2.5 font-bold">Métrica</th>
+                            <th className="pb-2.5 text-center font-bold">Total</th>
+                            <th className="pb-2.5 text-right font-bold">Promedio</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/[0.07]">
+                          {([
+                            ['Partidos',    gp,          '—'],
+                            ['Minutos',     fmt(gp, minA), minA > 0 ? minA.toFixed(1) : '—'],
+                            ['Puntos',      fmt(gp, pts),  pts > 0 ? pts.toFixed(1)  : '—'],
+                            ['Rebotes',     fmt(gp, reb),  reb > 0 ? reb.toFixed(1)  : '—'],
+                            ['Asistencias', fmt(gp, ast),  ast > 0 ? ast.toFixed(1)  : '—'],
+                            ['Robos',       fmt(gp, stl),  stl > 0 ? stl.toFixed(1)  : '—'],
+                            ['Tapones',     fmt(gp, blk),  blk > 0 ? blk.toFixed(1)  : '—'],
+                            ...(!mainFeb ? [
+                              ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers || '—'],
+                              ['Faltas',   fmtTotal(games, s.fouls),     s.fouls     || '—'],
+                            ] : []),
+                            ['FG%', '—', fg],
+                            ['3P%', '—', t3],
+                            ['FT%', '—', ft],
+                          ] as [string, any, any][]).map(([label, total, avg]) => (
+                            <tr key={label} className="hover:bg-white/[0.02] transition-colors">
+                               <td className="py-2.5 text-white/70 font-semibold">{label}</td>
+                               <td className="py-2.5 text-center font-mono font-medium text-white/50">{total}</td>
+                               <td className="py-2.5 text-right font-mono font-bold text-white text-sm">{avg}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
