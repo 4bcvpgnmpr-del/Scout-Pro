@@ -5,12 +5,20 @@ import {
   useGetPlayer, useListReports, useDeletePlayer,
   useUpdatePlayer, useListPlayers,
   getGetPlayerQueryKey, getListReportsQueryKey, getListPlayersQueryKey,
+  useGetPlayerStats, getGetPlayerStatsQueryKey,
+  useListGames, getListGamesQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { PhotoUpload } from "@/components/photo-upload";
 import {
@@ -22,7 +30,7 @@ import {
   Video, GitCompare, History, User, Target, Activity, 
   ExternalLink, ChevronRight, BarChart3, Zap, Shield, 
   Brain, Globe, Ruler, Scale, Hand, Hash,
-  Star
+  Star, CalendarDays, MoreHorizontal
 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
@@ -419,6 +427,7 @@ type SeasonRow = {
   gamesPlayed: number;
   pts: number; reb: number; ast: number; stl: number; blk: number; min: number;
   fgPct: number | null; fg3Pct: number | null; ftPct: number | null;
+  val?: number | null;
 };
 
 function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
@@ -439,10 +448,11 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
 
   const s = profile.seasonStats;
   const manual = profile.advancedStats;
+  const hasApiStats = seasonRows && seasonRows.length > 0;
 
   return (
     <div className="space-y-6 mt-6">
-      {seasonRows && seasonRows.length > 0 && (
+      {hasApiStats && (
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
             <Activity className="h-4 w-4 text-primary" />
@@ -461,6 +471,7 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
                   <th className="text-center px-2 pb-2 font-bold">AST</th>
                   <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">ROB</th>
                   <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">TAP</th>
+                  <th className="text-center px-2 pb-2 font-bold text-amber-400">VAL</th>
                   <th className="text-center px-2 pb-2 font-bold hidden sm:table-cell">MIN</th>
                   <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">TC%</th>
                   <th className="text-center px-2 pb-2 font-bold hidden md:table-cell">T3%</th>
@@ -482,6 +493,7 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
                     <td className="px-2 py-3 text-center tabular-nums">{row.ast.toFixed(1)}</td>
                     <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.stl.toFixed(1)}</td>
                     <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.blk.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center tabular-nums text-amber-400 font-bold">{row.val != null ? row.val.toFixed(1) : "—"}</td>
                     <td className="px-2 py-3 text-center tabular-nums hidden sm:table-cell">{row.min.toFixed(1)}</td>
                     <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fgPct != null ? `${(row.fgPct * 100).toFixed(1)}%` : "—"}</td>
                     <td className="px-2 py-3 text-center tabular-nums hidden md:table-cell">{row.fg3Pct != null ? `${(row.fg3Pct * 100).toFixed(1)}%` : "—"}</td>
@@ -494,33 +506,35 @@ function TabStats({ playerId, profile, updateStats, updateAdvanced }: {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-        <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas básicas <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">(entrada manual)</span></h3>
+      {!hasApiStats && (
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas básicas <span className="text-muted-foreground font-normal ml-2 lowercase tracking-normal">(entrada manual)</span></h3>
+          </div>
+          
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
+            <StatInput label="Partidos" value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
+            <StatInput label="Minutos" value={s.minutes} onChange={(v) => updateStats({ minutes: v })} />
+            <StatInput label="Puntos" value={s.points} onChange={(v) => updateStats({ points: v })} />
+            <StatInput label="Reb Of." value={s.offReb} onChange={(v) => updateStats({ offReb: v })} />
+            <StatInput label="Reb Def." value={s.defReb} onChange={(v) => updateStats({ defReb: v })} />
+            <StatInput label="Asist." value={s.assists} onChange={(v) => updateStats({ assists: v })} />
+            <StatInput label="Robos" value={s.steals} onChange={(v) => updateStats({ steals: v })} />
+            <StatInput label="Tapones" value={s.blocks} onChange={(v) => updateStats({ blocks: v })} />
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+            <StatInput label="Pérdidas" value={s.turnovers} onChange={(v) => updateStats({ turnovers: v })} />
+            <StatInput label="Faltas" value={s.fouls} onChange={(v) => updateStats({ fouls: v })} />
+            <StatInput label="TC Met." value={s.fgMade} onChange={(v) => updateStats({ fgMade: v })} />
+            <StatInput label="TC Int." value={s.fgAtt} onChange={(v) => updateStats({ fgAtt: v })} />
+            <StatInput label="T3 Met." value={s.t3Made} onChange={(v) => updateStats({ t3Made: v })} />
+            <StatInput label="T3 Int." value={s.t3Att} onChange={(v) => updateStats({ t3Att: v })} />
+            <StatInput label="TL Met." value={s.ftMade} onChange={(v) => updateStats({ ftMade: v })} />
+            <StatInput label="TL Int." value={s.ftAtt} onChange={(v) => updateStats({ ftAtt: v })} />
+          </div>
         </div>
-        
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-4">
-          <StatInput label="Partidos" value={s.gamesPlayed} onChange={(v) => updateStats({ gamesPlayed: v })} />
-          <StatInput label="Minutos" value={s.minutes} onChange={(v) => updateStats({ minutes: v })} />
-          <StatInput label="Puntos" value={s.points} onChange={(v) => updateStats({ points: v })} />
-          <StatInput label="Reb Of." value={s.offReb} onChange={(v) => updateStats({ offReb: v })} />
-          <StatInput label="Reb Def." value={s.defReb} onChange={(v) => updateStats({ defReb: v })} />
-          <StatInput label="Asist." value={s.assists} onChange={(v) => updateStats({ assists: v })} />
-          <StatInput label="Robos" value={s.steals} onChange={(v) => updateStats({ steals: v })} />
-          <StatInput label="Tapones" value={s.blocks} onChange={(v) => updateStats({ blocks: v })} />
-        </div>
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-          <StatInput label="Pérdidas" value={s.turnovers} onChange={(v) => updateStats({ turnovers: v })} />
-          <StatInput label="Faltas" value={s.fouls} onChange={(v) => updateStats({ fouls: v })} />
-          <StatInput label="TC Met." value={s.fgMade} onChange={(v) => updateStats({ fgMade: v })} />
-          <StatInput label="TC Int." value={s.fgAtt} onChange={(v) => updateStats({ fgAtt: v })} />
-          <StatInput label="T3 Met." value={s.t3Made} onChange={(v) => updateStats({ t3Made: v })} />
-          <StatInput label="T3 Int." value={s.t3Att} onChange={(v) => updateStats({ t3Att: v })} />
-          <StatInput label="TL Met." value={s.ftMade} onChange={(v) => updateStats({ ftMade: v })} />
-          <StatInput label="TL Int." value={s.ftAtt} onChange={(v) => updateStats({ ftAtt: v })} />
-        </div>
-      </div>
+      )}
 
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
@@ -1026,6 +1040,15 @@ export default function PlayerDetail() {
     { playerId },
     { query: { enabled: !!playerId, queryKey: getListReportsQueryKey({ playerId }) } },
   );
+  
+  const { data: apiStats } = useGetPlayerStats(playerId, {
+    query: { enabled: !!playerId, queryKey: getGetPlayerStatsQueryKey(playerId) }
+  });
+
+  const { data: gamesData } = useListGames({ 
+    query: { queryKey: getListGamesQueryKey() } 
+  });
+
   const updatePlayer = useUpdatePlayer();
   const deletePlayer = useDeletePlayer();
 
@@ -1079,145 +1102,283 @@ export default function PlayerDetail() {
   // Compute stat bar values
   const s = profile.seasonStats;
   const totReb = (parseNum(s.offReb) ?? 0) + (parseNum(s.defReb) ?? 0);
-  const fgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
-    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1)
-    : "—";
-  const t3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
-    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1)
-    : "—";
-  const ftPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
-    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1)
-    : "—";
+  
+  const manualFgPct = parseNum(s.fgMade) !== null && parseNum(s.fgAtt) && parseNum(s.fgAtt)! > 0
+    ? ((parseNum(s.fgMade)! / parseNum(s.fgAtt)!) * 100).toFixed(1) + "%" : "—";
+  const manualT3Pct = parseNum(s.t3Made) !== null && parseNum(s.t3Att) && parseNum(s.t3Att)! > 0
+    ? ((parseNum(s.t3Made)! / parseNum(s.t3Att)!) * 100).toFixed(1) + "%" : "—";
+  const manualFtPct = parseNum(s.ftMade) !== null && parseNum(s.ftAtt) && parseNum(s.ftAtt)! > 0
+    ? ((parseNum(s.ftMade)! / parseNum(s.ftAtt)!) * 100).toFixed(1) + "%" : "—";
+
+  const ppg = apiStats?.avgPoints != null ? Number(apiStats.avgPoints).toFixed(1) : (s.points || "—");
+  const rpg = apiStats?.avgRebounds != null ? Number(apiStats.avgRebounds).toFixed(1) : (totReb > 0 ? totReb.toFixed(1) : "—");
+  const apg = apiStats?.avgAssists != null ? Number(apiStats.avgAssists).toFixed(1) : (s.assists || "—");
+  const fgPct = apiStats?.avgFieldGoalPct != null ? `${(Number(apiStats.avgFieldGoalPct) * 100).toFixed(1)}%` : manualFgPct;
+  const t3Pct = apiStats?.avgThreePointPct != null ? `${(Number(apiStats.avgThreePointPct) * 100).toFixed(1)}%` : manualT3Pct;
+  const ftPct = apiStats?.avgFreeThrowPct != null ? `${(Number(apiStats.avgFreeThrowPct) * 100).toFixed(1)}%` : manualFtPct;
 
   const statBarItems = [
-    { label: "PPG", value: s.points, highlight: true },
-    { label: "RPG", value: totReb > 0 ? totReb.toFixed(1) : "—", highlight: false },
-    { label: "APG", value: s.assists, highlight: false },
-    { label: "FG%", value: fgPct !== "—" ? `${fgPct}%` : "—", highlight: false },
-    { label: "3P%", value: t3Pct !== "—" ? `${t3Pct}%` : "—", highlight: false },
-    { label: "FT%", value: ftPct !== "—" ? `${ftPct}%` : "—", highlight: false },
+    { label: "PPG", value: ppg, highlight: true },
+    { label: "RPG", value: rpg, highlight: false },
+    { label: "APG", value: apg, highlight: false },
+    { label: "FG%", value: fgPct, highlight: false },
+    { label: "3P%", value: t3Pct, highlight: false },
+    { label: "FT%", value: ftPct, highlight: false },
   ];
+
+  // Logic for General Tab additions
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const upcomingGames = (gamesData || [])
+    .filter(g => new Date(g.date) >= today)
+    .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const nextGame = upcomingGames[0];
+
+  const games = parseNum(s.gamesPlayed) ?? 0;
+  const fmtTotal = (g: number, avg: string | undefined | null) => {
+    const a = parseNum(avg);
+    if (g > 0 && a !== null) return Math.round(g * a);
+    return "-";
+  };
 
   return (
     <div className="dark flex flex-col font-sans -m-4 sm:-m-8 p-4 sm:p-8 bg-[#0a0f1a] text-slate-200 min-h-[calc(100vh-4rem)]">
       
-      {/* ── Hero Section ── */}
-      <div className="flex flex-col md:flex-row gap-6 bg-card border border-border rounded-2xl p-6 mb-6 shadow-lg relative">
-        {/* Back Button (Absolute if we want it out of the flow, but let's put it on top) */}
-        <Link href="/jugadores" className="absolute top-4 left-4 z-10 md:hidden">
-          <Button variant="ghost" size="icon" className="text-white/70 hover:text-white bg-black/20 backdrop-blur">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+      {/* ── Breadcrumb ── */}
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">
+        <Link href="/jugadores" className="hover:text-primary transition-colors">Jugadores</Link>
+        <ChevronRight className="h-3 w-3" />
+        <span className="text-foreground">{player.name}</span>
+      </div>
 
-        {/* Left: Photo */}
-        <div className="w-full md:w-56 shrink-0 relative rounded-xl overflow-hidden bg-background border border-border aspect-[3/4]">
+      {/* ── Hero Section ── */}
+      <div className="flex flex-col md:flex-row gap-0 bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-6 shadow-2xl relative">
+        {/* Left: Photo Panel */}
+        <div className="w-full md:w-56 shrink-0 relative bg-background border-r border-white/[0.07] aspect-[3/4] md:aspect-auto">
           {player.photoUrl ? (
             <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-7xl font-black text-muted-foreground/20">{initials}</span>
-              {player.jerseyNumber != null && (
-                <span className="absolute bottom-3 right-3 text-5xl font-display text-primary/80 leading-none">
-                  #{player.jerseyNumber}
-                </span>
-              )}
+            <div className="w-full h-full flex flex-col items-center justify-center bg-black/40">
+              <span className="text-7xl font-black text-white/5">{initials}</span>
             </div>
           )}
-          <div className="absolute top-2 right-2 z-10 opacity-70 hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm rounded-full">
+          
+          {player.jerseyNumber != null && (
+            <span className="absolute bottom-1 right-2 text-8xl font-black text-white opacity-15 leading-none pointer-events-none">
+              {player.jerseyNumber}
+            </span>
+          )}
+
+          <div className="absolute top-3 right-3 z-10 opacity-70 hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded-full">
             <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
           </div>
         </div>
 
         {/* Center: Info */}
-        <div className="flex-1 flex flex-col justify-between py-2 min-w-0">
+        <div className="flex-1 flex flex-col justify-between p-6 md:p-8 min-w-0">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase text-foreground truncate">{player.name}</h1>
-              <Badge className="bg-primary text-primary-foreground font-display text-lg uppercase tracking-wider px-3 py-1">
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase text-white truncate">{player.name}</h1>
+              <Badge className="bg-primary text-primary-foreground font-display text-lg uppercase tracking-wider px-3 py-1 border-0">
                 {player.position}
               </Badge>
               {profile.secondaryPosition && (
-                <Badge variant="outline" className="border-border text-muted-foreground uppercase text-xs font-bold tracking-widest px-2 py-1">
+                <Badge variant="outline" className="border-white/20 text-white/60 uppercase text-xs font-bold tracking-widest px-2 py-1">
                   {profile.secondaryPosition}
                 </Badge>
               )}
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-4 mt-8">
-              <InfoPair icon={User} label="Edad" value={player.age ? `${player.age} años` : "—"} />
+              <InfoPair icon={CalendarDays} label="Edad" value={player.age ? `${player.age} años` : "—"} />
+              <InfoPair icon={CalendarDays} label="Nacimiento" value="—" />
               <InfoPair icon={Globe} label="Nacionalidad" value={player.nationality || "—"} />
               <InfoPair icon={Ruler} label="Altura" value={player.height || "—"} />
               <InfoPair icon={Scale} label="Peso" value={player.weight ? `${player.weight} kg` : "—"} />
-              <InfoPair icon={Hand} label="Mano" value={player.handedness || "—"} />
-              <InfoPair icon={Shield} label="Equipo" value={player.teamName || "Agente libre"} />
+              <InfoPair icon={Hand} label="Mano dominante" value={player.handedness || "—"} />
+              <InfoPair icon={Shield} label="Equipo actual" value={player.teamName || "Agente libre"} />
               <InfoPair icon={Hash} label="Dorsal" value={player.jerseyNumber ? `#${player.jerseyNumber}` : "—"} />
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-border flex-wrap">
-            <Button variant="outline" className="border-border text-foreground hover:bg-muted font-display uppercase tracking-wide" onClick={() => setActiveTab('comparador')}>
-              <GitCompare className="h-4 w-4 mr-2" /> Comparar jugador
+          <div className="flex items-center gap-3 mt-8 pt-6 border-t border-white/[0.07] flex-wrap">
+            <Button variant="outline" className="border-white/[0.15] text-white hover:bg-white/5 font-display uppercase tracking-wide bg-transparent" onClick={() => setActiveTab('comparador')}>
+              <GitCompare className="h-4 w-4 mr-2" /> Comparar
             </Button>
-            <Button className="font-display uppercase tracking-wide text-primary-foreground" asChild>
+            <Button className="font-display uppercase tracking-wide text-primary-foreground bg-primary hover:bg-primary/90 border-0" asChild>
               <Link href={`/reports/new?playerId=${playerId}`}>
                 <Plus className="h-4 w-4 mr-2" /> Generar informe
               </Link>
             </Button>
             <div className="ml-auto flex items-center gap-4">
               <SaveBadge saving={saving} savedAt={savedAt} />
-              <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/20 h-10 w-10 shrink-0" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/10 h-10 w-10 shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#0d1421] border-white/[0.07] text-slate-200">
+                  <DropdownMenuItem className="focus:bg-white/[0.05] focus:text-white cursor-pointer" onClick={() => setLocation(`/jugadores/${playerId}/editar`)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar jugador
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer" onClick={handleDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar jugador
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
 
         {/* Right: Gauge */}
-        <div className="w-full md:w-56 shrink-0 flex flex-col items-center justify-center bg-background border border-border rounded-xl p-6">
+        <div className="w-full md:w-48 shrink-0 flex flex-col items-center justify-center bg-black/20 border-l border-white/[0.07] p-6">
           <CircularGauge value={profile.overallRating} />
         </div>
       </div>
 
       {/* ── Key Stats Bar ── */}
-      <div className="grid grid-cols-3 md:grid-cols-6 border border-border bg-card rounded-2xl overflow-hidden mb-6 shadow-sm">
+      <div className="grid grid-cols-3 md:grid-cols-6 border border-white/[0.07] bg-[#0d1421] rounded-xl overflow-hidden mb-6 shadow-md">
         {statBarItems.map((item, i) => (
-          <div key={i} className={`flex flex-col items-center justify-center py-5 px-2 hover:bg-muted/30 transition-colors ${i > 0 ? 'border-l border-border' : ''}`}>
-            <span className={`text-3xl lg:text-4xl font-black ${item.highlight ? 'text-primary' : 'text-foreground'}`}>
-              {item.value || "—"}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+          <div key={i} className={`flex flex-col items-center justify-center py-5 px-2 hover:bg-white/[0.02] transition-colors ${i > 0 ? 'border-l border-white/[0.07]' : ''}`}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">
               {item.label}
+            </span>
+            <span className={`text-3xl lg:text-4xl font-black ${item.highlight ? 'text-primary' : 'text-white'}`}>
+              {item.value}
             </span>
           </div>
         ))}
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex border-b border-border overflow-x-auto mb-2 no-scrollbar bg-card rounded-t-xl px-2">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all flex-shrink-0 relative ${
-              activeTab === id
-                ? "text-primary bg-muted/20"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/10"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-            {activeTab === id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        ))}
+      <div className="sticky top-0 z-20 bg-[#0a0f1a]/95 backdrop-blur-sm pt-4 pb-0 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-white/[0.07] mb-6">
+        <div className="flex overflow-x-auto no-scrollbar gap-8">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`pb-4 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all flex-shrink-0 relative ${
+                activeTab === id
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-white/40 hover:text-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Tab Content ── */}
       <div className="pb-10 flex-1">
         {activeTab === "general" && (
-          <TabGeneral player={player} profile={profile} onUpdate={update} setActiveTab={setActiveTab} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-4 [&>div]:!flex [&>div]:!flex-col [&>div>div:nth-child(3)]:!hidden">
+              <TabGeneral player={player} profile={profile} onUpdate={update} setActiveTab={setActiveTab} />
+            </div>
+            <div className="lg:col-span-8 flex flex-col gap-6 mt-6">
+              
+              <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between border-b border-white/[0.07] pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-white">Estadísticas Temporada</h3>
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] uppercase tracking-wider text-white/40 hover:text-white" onClick={() => setActiveTab('stats')}>
+                    Editar →
+                  </Button>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-white/[0.07] text-white/40 uppercase tracking-widest">
+                        <th className="pb-2.5 font-bold">Métrica</th>
+                        <th className="pb-2.5 text-center font-bold">Total</th>
+                        <th className="pb-2.5 text-right font-bold">Promedio</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.07]">
+                      {[
+                        ['Partidos', games, '-'],
+                        ['Minutos', fmtTotal(games, s.minutes), s.minutes],
+                        ['Puntos', fmtTotal(games, s.points), s.points],
+                        ['Rebotes', games > 0 && totReb > 0 ? (games * totReb).toFixed(0) : '-', totReb > 0 ? totReb.toFixed(1) : '-'],
+                        ['Asistencias', fmtTotal(games, s.assists), s.assists],
+                        ['Robos', fmtTotal(games, s.steals), s.steals],
+                        ['Tapones', fmtTotal(games, s.blocks), s.blocks],
+                        ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers],
+                        ['Faltas', fmtTotal(games, s.fouls), s.fouls],
+                        ['FG%', '-', manualFgPct],
+                        ['3P%', '-', manualT3Pct],
+                        ['FT%', '-', manualFtPct],
+                      ].map(([label, total, avg]) => (
+                        <tr key={label as string} className="hover:bg-white/[0.02] transition-colors">
+                           <td className="py-2.5 text-white/70 font-semibold">{label}</td>
+                           <td className="py-2.5 text-center font-mono font-medium text-white/50">{total === 'NaN' || total === 0 ? '-' : total || '-'}</td>
+                           <td className="py-2.5 text-right font-mono font-bold text-white text-sm">{avg || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-white/[0.07] pb-3 mb-4">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Próximo Partido</h3>
+                </div>
+                {nextGame ? (
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/[0.03] p-4 rounded-lg border border-white/[0.07]">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-widest text-white/50 font-bold">{new Date(nextGame.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      <span className="text-lg font-black uppercase mt-1 text-white">{nextGame.homeTeam} vs {nextGame.awayTeam}</span>
+                    </div>
+                    <Badge className="bg-primary/20 text-primary border-0">{nextGame.difficulty || 'Regular'}</Badge>
+                  </div>
+                ) : (
+                  <div className="text-sm text-white/40 italic">No hay partidos próximos programados.</div>
+                )}
+              </div>
+
+              <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between border-b border-white/[0.07] pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-white">Vídeos Recientes</h3>
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] uppercase tracking-wider text-white/40 hover:text-white" onClick={() => setActiveTab('videos')}>
+                    Ver todos →
+                  </Button>
+                </div>
+                {profile.videos.length === 0 ? (
+                  <div className="text-sm text-white/40 italic">No hay vídeos asociados a este jugador.</div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {profile.videos.slice(0, 3).map(v => {
+                      const thumb = getYtThumbnail(v.url);
+                      return (
+                        <button key={v.id} className="text-left group relative aspect-video bg-black/40 rounded-lg overflow-hidden border border-white/[0.07]" onClick={() => setActiveTab('videos')}>
+                          {thumb && <img src={thumb} alt={v.title} className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105" />}
+                          <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-3 opacity-90 group-hover:opacity-100 transition-opacity">
+                             <span className="text-xs font-bold text-white line-clamp-2 leading-tight">{v.title}</span>
+                          </div>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary flex items-center justify-center backdrop-blur-sm shadow-lg scale-0 group-hover:scale-100 transition-transform">
+                             <Video className="h-4 w-4 text-white ml-0.5" />
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
         )}
         {activeTab === "stats" && (
           <TabStats playerId={playerId} profile={profile} updateStats={updateStats} updateAdvanced={updateAdvanced} />

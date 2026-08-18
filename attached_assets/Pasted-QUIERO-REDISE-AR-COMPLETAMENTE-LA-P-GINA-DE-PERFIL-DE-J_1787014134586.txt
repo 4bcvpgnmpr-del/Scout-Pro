@@ -1,0 +1,617 @@
+QUIERO REDISEÑAR COMPLETAMENTE LA PÁGINA DE PERFIL DE JUGADOR DE SCOUTFLOW.
+
+UTILIZA COMO REFERENCIA VISUAL EXACTA LA IMAGEN QUE TE HE PROPORCIONADO.
+
+IMPORTANTE:
+NO QUIERO UNA PÁGINA PARECIDA.
+QUIERO RECREAR LA MISMA ESTRUCTURA, JERARQUÍA VISUAL, DISTRIBUCIÓN, ESTILO Y EXPERIENCIA DE USUARIO DE LA IMAGEN, ADAPTÁNDOLA A LOS DATOS REALES DE SCOUTFLOW.
+
+NO MODIFICAR EL DASHBOARD PRINCIPAL NI LOS DEMÁS MÓDULOS.
+
+SOLO REDISEÑAR Y MEJORAR EL PERFIL DE JUGADOR.
+
+====================================================
+1. ESTRUCTURA GENERAL
+====================================================
+
+Mantener el sidebar izquierdo de ScoutFlow.
+
+El menú "Jugadores" debe aparecer seleccionado con el color naranja corporativo de ScoutFlow.
+
+En la parte superior:
+
+Jugadores > [Nombre del jugador]
+
+Utilizar breadcrumb.
+
+La página debe ocupar todo el espacio disponible y utilizar una estructura de dashboard profesional.
+
+Tema:
+
+- Dark mode premium.
+- Fondo negro/azul muy oscuro.
+- Tarjetas ligeramente más claras.
+- Bordes sutiles.
+- Color naranja ScoutFlow como color principal.
+- Verde para datos positivos.
+- Rojo para datos negativos.
+- Amarillo para alertas.
+- Tipografía moderna y limpia.
+- Mucho espacio y buena jerarquía visual.
+
+NO utilizar colores chillones.
+
+====================================================
+2. CABECERA DEL JUGADOR
+====================================================
+
+Crear una gran tarjeta horizontal en la parte superior.
+
+A la izquierda:
+
+- Foto grande del jugador.
+- Imagen dentro de una tarjeta profesional.
+- Número del jugador grande y semitransparente detrás.
+- Icono para cambiar/subir foto.
+
+En el centro:
+
+Nombre completo grande.
+
+Debajo:
+
+Posición principal | Posición secundaria
+
+Debajo mostrar información mediante pequeños bloques:
+
+- Edad
+- Fecha de nacimiento
+- Nacionalidad
+- Altura
+- Peso
+- Mano dominante
+- Equipo actual
+- Número de dorsal
+
+Utilizar iconos profesionales para cada dato.
+
+Ejemplo:
+
+22 años
+14/03/2003
+
+España
+Nacionalidad
+
+1.92 m
+Altura
+
+84 kg
+Peso
+
+Derecha
+Mano dominante
+
+Valencia Basket
+Equipo actual
+
+23
+Dorsal
+
+====================================================
+3. BOTONES SUPERIORES
+====================================================
+
+En la parte superior derecha:
+
+BOTÓN:
+
+"Comparar jugador"
+
+BOTÓN PRINCIPAL:
+
+"Generar informe"
+
+IMPORTANTE:
+
+Generar informe NO debe ser obligatorio.
+
+El perfil debe funcionar perfectamente sin generar ningún informe.
+
+Añadir también menú de opciones "..."
+
+====================================================
+4. VALORACIÓN GENERAL
+====================================================
+
+A la derecha de la cabecera crear una tarjeta:
+
+VALORACIÓN GENERAL
+
+Mostrar un indicador circular grande:
+
+82 / 100
+
+Debajo:
+
+Jugador importante
+
+El indicador debe ser visual y profesional.
+
+El valor debe venir de los datos reales del jugador.
+
+NO utilizar siempre 82.
+
+====================================================
+5. TARJETAS DE ESTADÍSTICAS
+====================================================
+
+Debajo de la cabecera crear una fila horizontal de tarjetas.
+
+Mostrar:
+
+PPG
+RPG
+APG
+FG%
+3P%
+FT%
+
+Cada tarjeta debe incluir:
+
+- Nombre de estadística.
+- Valor principal grande.
+- Pequeño gráfico de evolución.
+- Comparación respecto al período anterior.
+
+Ejemplo:
+
+PPG
+14.8
+
+▲ 2.1 vs mes pasado
+
+Los valores deben proceder de la base de datos.
+
+NO utilizar datos hardcodeados.
+
+====================================================
+6. NAVEGACIÓN DEL PERFIL
+====================================================
+
+Crear pestañas:
+
+GENERAL
+ESTADÍSTICAS
+SCOUTING
+VÍDEOS
+HISTORIAL
+COMPARAR
+
+La pestaña activa debe utilizar el color naranja ScoutFlow.
+
+Cada pestaña debe funcionar realmente.
+
+====================================================
+7. PESTAÑA GENERAL
+====================================================
+
+Crear una cuadrícula de tarjetas.
+
+PRIMERA TARJETA:
+
+ROL EN EL EQUIPO
+
+Mostrar:
+
+- Rol
+- Descripción
+- Uso principal
+
+SEGUNDA SECCIÓN:
+
+ESTILO DE JUEGO
+
+Mostrar:
+
+- Perfil
+- Características
+- Descripción
+
+====================================================
+8. FORTALEZAS Y DEBILIDADES
+====================================================
+
+Crear dos tarjetas.
+
+FORTALEZAS
+
+Mostrar lista con checks verdes.
+
+Ejemplo:
+
+✓ Tiro exterior
+✓ Velocidad en transición
+✓ Movimiento sin balón
+✓ Lectura en penetración
+✓ Defensa en el perímetro
+
+DEBILIDADES
+
+Mostrar lista con indicadores rojos.
+
+Ejemplo:
+
+× Regularidad en el tiro
+× Fuerza en el contacto
+× Toma de decisiones bajo presión
+
+Estos datos deben ser editables desde el perfil.
+
+====================================================
+9. NOTAS DEL ENTRENADOR
+====================================================
+
+Crear una tarjeta:
+
+NOTAS DEL ENTRENADOR
+
+Área de texto profesional.
+
+Permitir editar las notas.
+
+Mostrar:
+
+- Contenido
+- Fecha de actualización
+- Usuario que realizó la actualización
+
+Guardar automáticamente.
+
+====================================================
+10. RADAR DE RENDIMIENTO
+====================================================
+
+Crear un gráfico radar profesional.
+
+Categorías:
+
+- Anotación
+- Tiro exterior
+- Defensa
+- Atletismo
+- Balón
+- Inteligencia
+
+Comparar:
+
+Jugador
+
+vs
+
+Media de su posición
+
+Los datos deben poder modificarse y proceder de la base de datos.
+
+====================================================
+11. ESTADÍSTICAS DE TEMPORADA
+====================================================
+
+Crear tarjeta:
+
+ESTADÍSTICAS TEMPORADA
+
+Mostrar tabla:
+
+Estadística | Total | Promedio
+
+Partidos
+Minutos
+Puntos
+Rebotes
+Asistencias
+Robos
+Tapones
+Pérdidas
+Faltas
+FG%
+3P%
+FT%
+
+Diseño muy limpio.
+
+====================================================
+12. ZONAS DE TIRO
+====================================================
+
+Crear visualización de cancha de baloncesto.
+
+Mostrar porcentajes por zonas:
+
+- Esquina izquierda
+- Ala izquierda
+- Centro
+- Ala derecha
+- Esquina derecha
+- Zona interior
+- Pintura
+
+Utilizar diferentes intensidades de color según eficiencia.
+
+Mostrar:
+
+- Porcentaje
+- Intentos
+- Aciertos
+
+Esta información debe poder actualizarse desde las estadísticas.
+
+====================================================
+13. VÍDEOS RECIENTES
+====================================================
+
+Mostrar una fila de vídeos.
+
+Cada tarjeta:
+
+- Thumbnail
+- Duración
+- Categoría
+- Fecha
+
+Ejemplos:
+
+Triple en transición
+Pick & Roll
+Defensa individual
+Corte sin balón
+1 vs 1
+
+Al hacer clic debe abrir el reproductor correspondiente.
+
+Los vídeos deben venir de la biblioteca real de ScoutFlow.
+
+====================================================
+14. PRÓXIMO PARTIDO
+====================================================
+
+Mostrar tarjeta:
+
+PRÓXIMO PARTIDO
+
+Escudo rival
+
+VS
+
+Escudo equipo
+
+Fecha
+Hora
+Competición
+
+Los datos deben venir del calendario real.
+
+====================================================
+15. PESTAÑA ESTADÍSTICAS
+====================================================
+
+Crear una página completa de análisis estadístico.
+
+Incluir:
+
+- Estadísticas básicas.
+- Estadísticas avanzadas.
+- Evolución temporal.
+- Gráficos.
+- Comparación con jugadores de la misma posición.
+- Comparación con media del equipo.
+
+====================================================
+16. PESTAÑA SCOUTING
+====================================================
+
+Crear:
+
+- Fortalezas.
+- Debilidades.
+- Tendencias ofensivas.
+- Tendencias defensivas.
+- Observaciones.
+- Notas del entrenador.
+- Valoración del jugador.
+
+Añadir posibilidad de utilizar IA para generar un resumen de scouting.
+
+La IA NO debe modificar datos automáticamente sin autorización.
+
+====================================================
+17. PESTAÑA VÍDEOS
+====================================================
+
+Mostrar todos los vídeos asociados al jugador.
+
+Filtros:
+
+- Ataque
+- Defensa
+- Tiro
+- Pick & Roll
+- Transición
+- 1x1
+- Otros
+
+====================================================
+18. PESTAÑA HISTORIAL
+====================================================
+
+Mostrar:
+
+- Equipos anteriores.
+- Temporadas.
+- Estadísticas históricas.
+- Partidos observados.
+- Informes generados.
+- Cambios importantes del perfil.
+
+====================================================
+19. COMPARAR
+====================================================
+
+Crear comparador profesional.
+
+Permitir seleccionar otro jugador.
+
+Comparar lado a lado:
+
+- Edad
+- Altura
+- Peso
+- Posición
+- Mano dominante
+- PPG
+- RPG
+- APG
+- FG%
+- 3P%
+- FT%
+- Estadísticas avanzadas
+- Fortalezas
+- Debilidades
+
+Mostrar:
+
+- Barras comparativas.
+- Radar.
+- Diferencias.
+- Ventajas de cada jugador.
+
+Añadir resumen:
+
+"Análisis comparativo"
+
+La IA puede generar una conclusión basada exclusivamente en los datos disponibles.
+
+====================================================
+20. BASE DE DATOS Y SINCRONIZACIÓN
+====================================================
+
+MUY IMPORTANTE:
+
+No crear datos independientes para esta pantalla.
+
+Utilizar la base de datos actual de ScoutFlow.
+
+Cada jugador debe tener una única ficha maestra.
+
+Cuando se edite un jugador:
+
+- Actualizar Equipos.
+- Actualizar Plantillas.
+- Actualizar Centro de Partido.
+- Actualizar Scouting.
+- Actualizar Comparador.
+- Actualizar Informes.
+
+No crear jugadores duplicados.
+
+====================================================
+21. AÑADIR JUGADOR
+====================================================
+
+El botón:
+
+"+ Añadir jugador"
+
+debe abrir un formulario profesional.
+
+Campos:
+
+- Foto
+- Nombre
+- Apellidos
+- Dorsal
+- Posición
+- Posición secundaria
+- Edad
+- Fecha nacimiento
+- Nacionalidad
+- Altura
+- Peso
+- Mano dominante
+- Equipo
+
+Después de guardar:
+
+El jugador debe aparecer automáticamente en:
+
+Jugadores
+Equipos
+Plantillas
+Centro de Partido
+Comparador
+
+====================================================
+22. INFORME
+====================================================
+
+El botón "Generar informe" debe ser OPCIONAL.
+
+No bloquear ninguna funcionalidad si el usuario no genera informe.
+
+Al pulsarlo:
+
+Generar un PDF profesional utilizando los datos reales del jugador.
+
+====================================================
+23. RESPONSIVE
+====================================================
+
+La pantalla debe funcionar perfectamente en:
+
+- Desktop
+- Laptop
+- Tablet
+
+Prioridad:
+
+Desktop.
+
+====================================================
+24. REGLA MUY IMPORTANTE
+====================================================
+
+NO CREAR UNA MOCKUP ESTÁTICA.
+
+IMPLEMENTAR REALMENTE LA INTERFAZ.
+
+Los datos deben estar conectados a la base de datos existente.
+
+Los botones deben funcionar.
+
+Los formularios deben guardar datos.
+
+Las pestañas deben funcionar.
+
+Los gráficos deben utilizar datos reales.
+
+Los vídeos deben utilizar los vídeos existentes.
+
+El próximo partido debe utilizar el calendario existente.
+
+====================================================
+RESULTADO FINAL
+====================================================
+
+QUIERO QUE EL PERFIL DE JUGADOR DE SCOUTFLOW SEA VISUALMENTE TAN PROFESIONAL COMO LA IMAGEN DE REFERENCIA Y QUE, AL MISMO TIEMPO, SEA TOTALMENTE FUNCIONAL Y CONECTADO CON EL RESTO DE LA APLICACIÓN.
+
+NO CAMBIAR EL DASHBOARD PRINCIPAL.
+
+NO ROMPER FUNCIONALIDADES EXISTENTES.
+
+NO DUPLICAR DATOS.
+
+NO CREAR INFORMACIÓN FICTICIA.
+
+PRIMERO ANALIZA LA ARQUITECTURA ACTUAL Y REUTILIZA LOS COMPONENTES, APIs, MODELOS Y DATOS EXISTENTES.
+
+DESPUÉS IMPLEMENTA EL REDISEÑO.

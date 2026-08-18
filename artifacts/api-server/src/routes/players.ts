@@ -167,6 +167,7 @@ router.get("/players/:id/stats/seasons", async (req, res): Promise<void> => {
       fg3Att:         playerStats.fg3Att,
       ftMade:         playerStats.ftMade,
       ftAtt:          playerStats.ftAtt,
+      pir:            playerStats.pir,
     })
     .from(playerStats)
     .innerJoin(syncPlayers, eq(syncPlayers.id, playerStats.playerId))
@@ -196,6 +197,7 @@ router.get("/players/:id/stats/seasons", async (req, res): Promise<void> => {
       fgPct:  fgAtt             > 0 ? fgMade          / fgAtt             : null,
       fg3Pct: (r.fg3Att ?? 0)   > 0 ? (r.fg3Made ?? 0) / (r.fg3Att ?? 0) : null,
       ftPct:  (r.ftAtt  ?? 0)   > 0 ? (r.ftMade  ?? 0) / (r.ftAtt  ?? 0) : null,
+      val:    gp > 0 && r.pir != null ? r.pir / gp : null,
     };
   });
 
