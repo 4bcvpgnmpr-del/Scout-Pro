@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlayerForm, type PlayerFormValues } from "@/components/forms/player-form";
 
 export default function PlayerEdit() {
-  const [, params] = useRoute("/players/:id/edit");
+  const [, params] = useRoute("/jugadores/:id/editar");
   const playerId = parseInt(params?.id || "0");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();

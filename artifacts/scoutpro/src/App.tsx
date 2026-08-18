@@ -173,7 +173,7 @@ function Router() {
           <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerNew /></SubLayout>
         </ProtectedRoute>
       </Route>
-      <Route path="/players/:id/edit">
+      <Route path="/jugadores/:id/editar">
         {() => (
           <ProtectedRoute>
             <SubLayout backTo="/jugadores" backLabel="Jugadores"><PlayerEdit /></SubLayout>
