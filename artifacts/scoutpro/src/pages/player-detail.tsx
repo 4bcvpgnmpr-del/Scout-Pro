@@ -438,9 +438,6 @@ function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
                     ['Pérdidas', trn != null && games > 0 ? Math.round(games * trn) : '—', trn != null ? trn.toFixed(1) : '—'],
                     ['Faltas',   fls != null && games > 0 ? Math.round(games * fls) : '—', fls != null ? fls.toFixed(1) : '—'],
                   ] : []),
-                  ['FG%', '—', fgPct],
-                  ['3P%', '—', t3Pct],
-                  ['FT%', '—', ftPct],
                 ] as [string, any, any][]).map(([label, total, avg]) => (
                   <tr key={label} className="hover:bg-muted/30 transition-colors">
                      <td className="py-2.5 text-muted-foreground font-semibold">{label}</td>
@@ -448,6 +445,43 @@ function TabGeneral({ player, profile, onUpdate, setActiveTab }: {
                      <td className="py-2.5 text-right font-mono font-bold text-foreground text-sm">{avg}</td>
                   </tr>
                 ))}
+                {/* Shot breakdown rows */}
+                {(() => {
+                  const shotRows = feb ? [
+                    {
+                      label: 'T2 (2 pts)',
+                      made: feb.fg2Made, att: feb.fg2Att,
+                      pct: feb.fg2Att > 0 && feb.fg2Made != null
+                        ? `${((feb.fg2Made / feb.fg2Att) * 100).toFixed(1)}%` : fgPct,
+                      color: 'text-blue-400',
+                    },
+                    {
+                      label: 'T3 (3 pts)',
+                      made: feb.fg3Made, att: feb.fg3Att,
+                      pct: fgPct !== '—' ? t3Pct : t3Pct,
+                      color: 'text-emerald-400',
+                    },
+                    {
+                      label: 'TL (libre)',
+                      made: feb.ftMade, att: feb.ftAtt,
+                      pct: ftPct,
+                      color: 'text-amber-400',
+                    },
+                  ] : [
+                    { label: 'TC%', made: null, att: null, pct: fgPct, color: 'text-blue-400' },
+                    { label: '3P%', made: null, att: null, pct: t3Pct, color: 'text-emerald-400' },
+                    { label: 'TL%', made: null, att: null, pct: ftPct, color: 'text-amber-400' },
+                  ];
+                  return shotRows.map(({ label, made, att, pct, color }) => (
+                    <tr key={label} className="hover:bg-muted/30 transition-colors">
+                      <td className={`py-2.5 font-semibold ${color}`}>{label}</td>
+                      <td className="py-2.5 text-center font-mono font-medium text-foreground/80">
+                        {made != null && att != null ? `${made}/${att}` : '—'}
+                      </td>
+                      <td className={`py-2.5 text-right font-mono font-bold text-sm ${color}`}>{pct}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
