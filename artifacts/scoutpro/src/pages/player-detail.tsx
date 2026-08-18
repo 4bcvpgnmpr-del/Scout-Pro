@@ -25,6 +25,7 @@ import {
   usePlayerProfile, getStoredProfile, computeAdvancedStats,
   type SeasonStats, type VideoEntry,
 } from "@/hooks/use-player-profile";
+import { PlayerProfilePdfButton } from "@/components/pdf/player-profile-pdf";
 import {
   ArrowLeft, Pencil, Trash2, Plus, Save, Check, X,
   Video, GitCompare, History, User, Target, Activity, 
@@ -800,6 +801,20 @@ function TabComparator({ playerId, playerA, profileA }: {
   const playerB = others.find((p) => p.id === selectedId) ?? null;
   const profileB = selectedId ? getStoredProfile(selectedId) : null;
 
+  // FEB season stats for both players
+  const { data: febRowsA } = useQuery<any[]>({
+    queryKey: ["player-stats-seasons", playerId],
+    queryFn: async () => { const r = await fetch(`/api/players/${playerId}/stats/seasons`); return r.ok ? r.json() : []; },
+    enabled: !!playerId,
+  });
+  const { data: febRowsB } = useQuery<any[]>({
+    queryKey: ["player-stats-seasons", selectedId],
+    queryFn: async () => { const r = await fetch(`/api/players/${selectedId}/stats/seasons`); return r.ok ? r.json() : []; },
+    enabled: !!selectedId,
+  });
+  const febA = febRowsA?.[0] ?? null;
+  const febB = febRowsB?.[0] ?? null;
+
   const sA = profileA.seasonStats;
   const sB = profileB?.seasonStats ?? null;
   const aiResult = playerB && profileB
@@ -810,15 +825,23 @@ function TabComparator({ playerId, playerA, profileA }: {
       )
     : null;
 
-  const statRows: [string, keyof SeasonStats, keyof SeasonStats, string][] = [
-    ["Puntos", "points", "points", "ppg"],
-    ["Rebotes of.", "offReb", "offReb", ""],
-    ["Rebotes def.", "defReb", "defReb", ""],
-    ["Asistencias", "assists", "assists", "apg"],
-    ["Robos", "steals", "steals", "rpg"],
-    ["Tapones", "blocks", "blocks", "bpg"],
-    ["Pérdidas", "turnovers", "turnovers", ""],
-    ["Minutos", "minutes", "minutes", "mpg"],
+  // Resolved stats: FEB first, manual fallback
+  const resolveA = (febVal: number | null | undefined, manualKey: keyof SeasonStats) =>
+    febVal != null ? febVal : parseNum(sA[manualKey]);
+  const resolveB = (febVal: number | null | undefined, manualKey: keyof SeasonStats) =>
+    febVal != null ? febVal : (sB ? parseNum(sB[manualKey]) : null);
+
+  type CompRow = { label: string; a: number | null; b: number | null; unit?: string };
+  const compStatRows: CompRow[] = [
+    { label: "Puntos",      a: resolveA(febA?.pts, "points"),   b: resolveB(febB?.pts, "points") },
+    { label: "Rebotes",     a: resolveA(febA?.reb, "offReb"),   b: resolveB(febB?.reb, "offReb") },
+    { label: "Asistencias", a: resolveA(febA?.ast, "assists"),  b: resolveB(febB?.ast, "assists") },
+    { label: "Robos",       a: resolveA(febA?.stl, "steals"),   b: resolveB(febB?.stl, "steals") },
+    { label: "Tapones",     a: resolveA(febA?.blk, "blocks"),   b: resolveB(febB?.blk, "blocks") },
+    { label: "Pérdidas",    a: parseNum(sA.turnovers),          b: sB ? parseNum(sB.turnovers) : null },
+    { label: "Minutos",     a: resolveA(febA?.min, "minutes"),  b: resolveB(febB?.min, "minutes") },
+    { label: "FG%",  unit: "%", a: febA?.fgPct  != null ? febA.fgPct  * 100 : null, b: febB?.fgPct  != null ? febB.fgPct  * 100 : null },
+    { label: "3P%",  unit: "%", a: febA?.fg3Pct != null ? febA.fg3Pct * 100 : null, b: febB?.fg3Pct != null ? febB.fg3Pct * 100 : null },
   ];
 
   return (
@@ -905,14 +928,22 @@ function TabComparator({ playerId, playerA, profileA }: {
 
           {/* Stats */}
           <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas</h3>
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Estadísticas</h3>
+              </div>
+              {(febA || febB) && (
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase tracking-wider">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                  Vía FEB
+                </div>
+              )}
             </div>
             <div className="space-y-1">
-              {statRows.map(([label, keyA, keyB, unit]) => (
+              {compStatRows.map(({ label, a, b, unit }) => (
                 <CompareBar key={label} labelA={label} labelB={label}
-                  valA={parseNum(sA[keyA])} valB={sB ? parseNum(sB[keyB]) : null} unit={unit} />
+                  valA={a} valB={b} unit={unit ?? ""} />
               ))}
             </div>
           </div>
@@ -1210,7 +1241,7 @@ export default function PlayerDetail() {
       <div className="flex bg-[#0d1421] border border-white/[0.07] rounded-2xl overflow-hidden mb-4 shadow-2xl">
 
         {/* ── LEFT: Photo panel ── */}
-        <div className="relative w-36 md:w-44 shrink-0 overflow-hidden bg-[#060c18]" style={{ minHeight: 178 }}>
+        <div className="group relative w-36 md:w-44 shrink-0 overflow-hidden bg-[#060c18]" style={{ minHeight: 178 }}>
           {player.photoUrl ? (
             <img
               src={player.photoUrl}
@@ -1230,8 +1261,9 @@ export default function PlayerDetail() {
               {player.jerseyNumber}
             </span>
           )}
-          <div className="absolute bottom-2 right-2 z-10">
-            <div className="opacity-55 hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-sm rounded-full p-0.5">
+          {/* Camera icon — only visible on hover */}
+          <div className="absolute bottom-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="bg-black/70 backdrop-blur-sm rounded-full p-0.5">
               <PhotoUpload value={player.photoUrl} onChange={handlePhotoChange} shape="circle" size="sm" />
             </div>
           </div>
@@ -1264,6 +1296,7 @@ export default function PlayerDetail() {
                 onClick={() => setActiveTab('comparador')}>
                 <GitCompare className="h-3 w-3 mr-1.5" /> Comparar
               </Button>
+              <PlayerProfilePdfButton player={player} profile={profile} febRow={mainFeb} />
               <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-semibold h-7 px-2.5" asChild>
                 <Link href={`/reports/new?playerId=${playerId}`}>
                   <FileText className="h-3 w-3 mr-1.5" /> Generar informe
@@ -1278,9 +1311,6 @@ export default function PlayerDetail() {
                 <DropdownMenuContent align="end" className="bg-[#0d1421] border-white/[0.07] text-slate-200">
                   <DropdownMenuItem className="focus:bg-white/[0.05] cursor-pointer" onClick={() => setLocation(`/jugadores/${playerId}/editar`)}>
                     <Pencil className="h-4 w-4 mr-2" /> Editar jugador
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-white/[0.05] cursor-pointer" onClick={() => window.print()}>
-                    <Printer className="h-4 w-4 mr-2" /> Exportar PDF
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer" onClick={handleDelete}>
                     <Trash2 className="h-4 w-4 mr-2" /> Eliminar jugador
@@ -1369,81 +1399,14 @@ export default function PlayerDetail() {
       {/* ── Tab Content ── */}
       <div className="pb-10 flex-1">
         {activeTab === "general" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-4 [&>div]:!flex [&>div]:!flex-col [&>div>div:nth-child(3)]:!hidden">
-              <TabGeneral player={player} profile={profile} onUpdate={update} setActiveTab={setActiveTab} />
-            </div>
-            <div className="lg:col-span-8 flex flex-col gap-6 mt-6">
-              
-              <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-white/[0.07] pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-primary" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-white">Estadísticas Temporada</h3>
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] uppercase tracking-wider text-white/40 hover:text-white" onClick={() => setActiveTab('stats')}>
-                    Editar →
-                  </Button>
-                </div>
-                
-                {mainFeb && (
-                  <div className="flex items-center gap-1.5 mb-3 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
-                    {mainFeb.leagueShortName || mainFeb.leagueName} {mainFeb.seasonName}
-                  </div>
-                )}
-                {(() => {
-                  const gp   = mainFeb ? mainFeb.gamesPlayed : games;
-                  const pts  = mainFeb ? mainFeb.pts  : (parseNum(s.points)  ?? 0);
-                  const reb  = mainFeb ? mainFeb.reb  : totReb;
-                  const ast  = mainFeb ? mainFeb.ast  : (parseNum(s.assists) ?? 0);
-                  const stl  = mainFeb ? mainFeb.stl  : (parseNum(s.steals)  ?? 0);
-                  const blk  = mainFeb ? mainFeb.blk  : (parseNum(s.blocks)  ?? 0);
-                  const minA = mainFeb ? mainFeb.min  : (parseNum(s.minutes) ?? 0);
-                  const fg   = mainFeb && mainFeb.fgPct  != null ? `${(mainFeb.fgPct  * 100).toFixed(1)}%` : manualFgPct;
-                  const t3   = mainFeb && mainFeb.fg3Pct != null ? `${(mainFeb.fg3Pct * 100).toFixed(1)}%` : manualT3Pct;
-                  const ft   = mainFeb && mainFeb.ftPct  != null ? `${(mainFeb.ftPct  * 100).toFixed(1)}%` : manualFtPct;
-                  const fmt  = (g: number, v: number) => g > 0 && v > 0 ? Math.round(g * v) : '—';
-                  return (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-left">
-                        <thead>
-                          <tr className="border-b border-white/[0.07] text-white/40 uppercase tracking-widest">
-                            <th className="pb-2.5 font-bold">Métrica</th>
-                            <th className="pb-2.5 text-center font-bold">Total</th>
-                            <th className="pb-2.5 text-right font-bold">Promedio</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.07]">
-                          {([
-                            ['Partidos',    gp,          '—'],
-                            ['Minutos',     fmt(gp, minA), minA > 0 ? minA.toFixed(1) : '—'],
-                            ['Puntos',      fmt(gp, pts),  pts > 0 ? pts.toFixed(1)  : '—'],
-                            ['Rebotes',     fmt(gp, reb),  reb > 0 ? reb.toFixed(1)  : '—'],
-                            ['Asistencias', fmt(gp, ast),  ast > 0 ? ast.toFixed(1)  : '—'],
-                            ['Robos',       fmt(gp, stl),  stl > 0 ? stl.toFixed(1)  : '—'],
-                            ['Tapones',     fmt(gp, blk),  blk > 0 ? blk.toFixed(1)  : '—'],
-                            ...(!mainFeb ? [
-                              ['Pérdidas', fmtTotal(games, s.turnovers), s.turnovers || '—'],
-                              ['Faltas',   fmtTotal(games, s.fouls),     s.fouls     || '—'],
-                            ] : []),
-                            ['FG%', '—', fg],
-                            ['3P%', '—', t3],
-                            ['FT%', '—', ft],
-                          ] as [string, any, any][]).map(([label, total, avg]) => (
-                            <tr key={label} className="hover:bg-white/[0.02] transition-colors">
-                               <td className="py-2.5 text-white/70 font-semibold">{label}</td>
-                               <td className="py-2.5 text-center font-mono font-medium text-white/50">{total}</td>
-                               <td className="py-2.5 text-right font-mono font-bold text-white text-sm">{avg}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </div>
+          <div className="flex flex-col gap-6">
+            {/* Row 1 — Full width: Perfil & Rol | Radar | Estadísticas (3 cols) */}
+            <TabGeneral player={player} profile={profile} onUpdate={update} setActiveTab={setActiveTab} />
 
+            {/* Row 2 — Próximo Partido | Vídeos Recientes */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Próximo Partido */}
               <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
                 <div className="flex items-center gap-2 border-b border-white/[0.07] pb-3 mb-4">
                   <CalendarDays className="h-4 w-4 text-primary" />
@@ -1452,7 +1415,9 @@ export default function PlayerDetail() {
                 {nextGame ? (
                   <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/[0.03] p-4 rounded-lg border border-white/[0.07]">
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase tracking-widest text-white/50 font-bold">{new Date(nextGame.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      <span className="text-[10px] uppercase tracking-widest text-white/50 font-bold">
+                        {new Date(nextGame.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
                       <span className="text-lg font-black uppercase mt-1 text-white">{nextGame.homeTeam} vs {nextGame.awayTeam}</span>
                     </div>
                     <Badge className="bg-primary/20 text-primary border-0">{nextGame.difficulty || 'Regular'}</Badge>
@@ -1462,6 +1427,7 @@ export default function PlayerDetail() {
                 )}
               </div>
 
+              {/* Vídeos Recientes */}
               <div className="bg-[#0d1421] border border-white/[0.07] rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between border-b border-white/[0.07] pb-3 mb-4">
                   <div className="flex items-center gap-2">
@@ -1482,13 +1448,13 @@ export default function PlayerDetail() {
                         <button key={v.id} className="text-left group relative aspect-video bg-black/40 rounded-lg overflow-hidden border border-white/[0.07]" onClick={() => setActiveTab('videos')}>
                           {thumb && <img src={thumb} alt={v.title} className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105" />}
                           <div className="absolute inset-0 bg-black/40 flex flex-col justify-end p-3 opacity-90 group-hover:opacity-100 transition-opacity">
-                             <span className="text-xs font-bold text-white line-clamp-2 leading-tight">{v.title}</span>
+                            <span className="text-xs font-bold text-white line-clamp-2 leading-tight">{v.title}</span>
                           </div>
                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-primary flex items-center justify-center backdrop-blur-sm shadow-lg scale-0 group-hover:scale-100 transition-transform">
-                             <Video className="h-4 w-4 text-white ml-0.5" />
+                            <Video className="h-4 w-4 text-white ml-0.5" />
                           </div>
                         </button>
-                      )
+                      );
                     })}
                   </div>
                 )}
