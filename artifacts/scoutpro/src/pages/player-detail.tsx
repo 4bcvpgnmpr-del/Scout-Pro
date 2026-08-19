@@ -770,7 +770,7 @@ function TabVideos({ profile, addVideo, removeVideo }: {
           <Plus className="h-4 w-4 mr-2" /> Añadir vídeo
         </Button>
       ) : (
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm max-w-2xl">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm w-full">
           <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
             <div className="flex items-center gap-2">
               <Video className="h-4 w-4 text-primary" />
@@ -946,7 +946,7 @@ function TabComparator({ playerId, playerA, profileA }: {
 
   return (
     <div className="space-y-6 mt-6">
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm max-w-2xl">
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm w-full">
         <div className="flex items-center gap-3">
           <GitCompare className="h-5 w-5 text-primary shrink-0" />
           <div className="flex-1">

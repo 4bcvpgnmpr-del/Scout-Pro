@@ -67,7 +67,7 @@ export default function ReportEdit() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/reports/${reportId}`}><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>

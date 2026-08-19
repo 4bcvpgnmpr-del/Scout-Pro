@@ -186,7 +186,7 @@ function FullEditorModal({ play, onClose }: { play: Play; onClose: () => void })
         </div>
       </div>
       <div className="flex-1 p-4 lg:p-8 flex items-start justify-center overflow-y-auto">
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full">
           <CourtEditor 
             play={play} 
             onSave={(frames) => updateFramesMutation.mutate(frames)} 
@@ -354,7 +354,7 @@ export default function Jugadas() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="space-y-6 w-full pb-10">
       {showAdd && (
         <PlayDialog
           onClose={() => setShowAdd(false)}

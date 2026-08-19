@@ -85,7 +85,7 @@ export default function Players() {
   const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

@@ -25,7 +25,7 @@ export function SubLayout({ children, backTo, backLabel = "Volver" }: SubLayoutP
           </button>
         </Link>
       </div>
-      <div className="flex-1 p-8 max-w-3xl w-full mx-auto">
+      <div className="flex-1 w-full p-6 md:p-8">
         {children}
       </div>
     </div>

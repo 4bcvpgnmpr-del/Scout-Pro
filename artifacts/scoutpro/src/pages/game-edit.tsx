@@ -41,7 +41,7 @@ export default function GameEdit() {
   };
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/games"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>

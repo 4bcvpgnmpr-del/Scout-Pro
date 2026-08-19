@@ -27,7 +27,7 @@ export default function Ajustes() {
   const save = () => toast({ title: "Ajustes guardados" });
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 w-full">
       <div>
         <h1 className="text-4xl font-display tracking-wide">Ajustes</h1>
         <p className="text-muted-foreground text-sm">Personaliza la apariencia de ScoutFlow.</p>

@@ -120,7 +120,7 @@ export default function ReportDetail() {
   const notes = loadScoutingNotes(report.gameId);
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="w-full space-y-4">
       {/* Action bar */}
       <div className="flex items-center justify-between gap-4">
         <Link href="/reports"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>

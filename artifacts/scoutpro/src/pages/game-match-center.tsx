@@ -1266,7 +1266,7 @@ function TabTareas({ gameId, checklist, onChange }: {
     saveChecklist(gameId, next);
   };
   return (
-    <div className="max-w-xl mx-auto space-y-4">
+    <div className="w-full space-y-4">
       <MCard className="text-center">
         <SLabel icon={CheckCircle2} label="Estado de Preparación" color="text-green-400" />
         <div className="flex flex-col items-center gap-3 py-4">

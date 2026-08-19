@@ -11,7 +11,7 @@ const DEMO_USERS = [
 
 export default function Usuarios() {
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6 w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-4xl font-display tracking-wide">Usuarios</h1>

@@ -236,7 +236,7 @@ export default function ScoutingHub() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <div className="border-b border-border bg-card sticky top-0 z-20">
-        <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <div className="w-full px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center">
               <Columns className="h-[18px] w-[18px] text-primary" />

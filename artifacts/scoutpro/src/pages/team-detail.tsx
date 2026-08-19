@@ -128,7 +128,7 @@ export default function TeamDetail() {
   const initials = team.name.slice(0, 2).toUpperCase();
 
   return (
-    <div className="space-y-6 max-w-[1100px]">
+    <div className="space-y-6 w-full">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">

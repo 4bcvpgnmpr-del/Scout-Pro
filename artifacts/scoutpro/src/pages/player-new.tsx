@@ -128,7 +128,7 @@ export default function PlayerNew() {
   const isPending = createPlayer.isPending || createReport.isPending;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/jugadores"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div>

@@ -28,7 +28,7 @@ export default function MiCuenta() {
   };
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-4xl">Mi Cuenta</h1>
         <p className="text-muted-foreground">Gestiona tu perfil y plan de suscripción.</p>

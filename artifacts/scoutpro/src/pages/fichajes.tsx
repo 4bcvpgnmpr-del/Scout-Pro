@@ -177,7 +177,7 @@ export default function Fichajes() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
