@@ -47,4 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
-\n# Runtime cache - FEB stats live data\nartifacts/data/feb-stats.json
+
+# Runtime cache - FEB stats live data
+artifacts/data/feb-stats.json
