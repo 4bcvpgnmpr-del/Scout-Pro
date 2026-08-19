@@ -1,0 +1,1599 @@
+Quiero que desarrolles y mejores mi aplicación actual **ScoutPro**, creando un **Professional Scouting Report Builder** completamente integrado con la arquitectura y funcionalidades que ya existen.
+
+IMPORTANTE:
+
+NO quiero crear una aplicación nueva.
+
+NO quiero duplicar jugadores, equipos, partidos ni estadísticas.
+
+NO quiero crear un segundo sistema de estadísticas.
+
+Quiero ampliar ScoutPro y convertir el sistema de scouting en una herramienta profesional de análisis de baloncesto.
+
+Antes de escribir código, analiza completamente el proyecto actual.
+
+---
+
+# 1. ANALIZA PRIMERO EL PROYECTO
+
+Antes de modificar nada:
+
+1. Analiza toda la estructura actual de ScoutPro.
+2. Identifica frontend y backend.
+3. Identifica las rutas existentes.
+4. Identifica componentes reutilizables.
+5. Identifica las tablas de PostgreSQL.
+6. Identifica el sistema actual de equipos.
+7. Identifica el sistema actual de jugadores.
+8. Identifica el sistema actual de partidos.
+9. Identifica el sistema actual de estadísticas automatizadas.
+10. Identifica las APIs/endpoints existentes.
+11. Identifica cómo se calculan y almacenan las estadísticas.
+12. Identifica el sistema actual de vídeos.
+13. Identifica el sistema actual de scouting.
+14. Identifica el sistema actual de generación de PDF.
+
+NO reemplaces funcionalidades existentes si pueden reutilizarse.
+
+Primero comprende la arquitectura y después implementa.
+
+---
+
+# 2. OBJETIVO PRINCIPAL
+
+Quiero convertir ScoutPro en un software profesional de scouting de baloncesto.
+
+El flujo principal debe ser:
+
+EQUIPOS
+↓
+JUGADORES
+↓
+PARTIDOS
+↓
+ESTADÍSTICAS AUTOMATIZADAS
+↓
+CENTRO DE PARTIDO
+↓
+SCOUTING
+↓
+SCOUTING REPORT BUILDER
+↓
+ANÁLISIS TÁCTICO
+↓
+VÍDEOS
+↓
+JUGADAS
+↓
+GAME PLAN
+↓
+PDF PROFESIONAL
+
+El nuevo sistema debe estar completamente integrado.
+
+---
+
+# 3. NUEVO MÓDULO
+
+Crear:
+
+## SCOUTING REPORT BUILDER
+
+Ruta sugerida:
+
+/scouting/reports
+
+o adaptarla a la arquitectura actual de ScoutPro.
+
+Debe existir:
+
+NEW REPORT
+
+Al crear un informe:
+
+SELECT TEAM
+SELECT OPPONENT
+SELECT MATCH
+
+Una vez seleccionado el partido, ScoutPro debe cargar automáticamente todos los datos disponibles.
+
+---
+
+# 4. INFORMACIÓN AUTOMÁTICA
+
+El informe debe utilizar automáticamente los datos existentes en ScoutPro.
+
+No volver a pedir al usuario:
+
+* Nombre del equipo
+* Jugadores
+* Estadísticas
+* Datos del partido
+* Resultados
+* Estadísticas individuales
+
+si esa información ya existe en la base de datos.
+
+---
+
+# 5. PORTADA DEL INFORME
+
+Crear una portada profesional.
+
+Mostrar:
+
+SCOUTPRO
+
+PROFESSIONAL SCOUTING REPORT
+
+[TEAM LOGO]
+
+TEAM NAME
+
+VS
+
+[OPPONENT LOGO]
+
+OPPONENT NAME
+
+Competition
+
+Date
+
+Home / Away
+
+Scout
+
+Season
+
+Permitir cambiar:
+
+* Imagen
+* Logo
+* Colores
+* Título
+* Información
+
+---
+
+# 6. TEAM OVERVIEW
+
+Crear:
+
+## TEAM OVERVIEW
+
+Mostrar automáticamente:
+
+* Games
+* Wins
+* Losses
+* Win %
+* Points per game
+* Points allowed
+* Point differential
+* FG%
+* 2P%
+* 3P%
+* FT%
+* Offensive rebounds
+* Defensive rebounds
+* Total rebounds
+* Assists
+* Turnovers
+* Steals
+* Blocks
+* Fouls
+* PIR / Efficiency
+
+Estos datos deben proceder directamente del sistema de estadísticas existente.
+
+---
+
+# 7. MATCH STATISTICS
+
+Crear:
+
+## MATCH STATISTICS
+
+Cargar automáticamente las estadísticas del partido seleccionado.
+
+Mostrar:
+
+TEAM A
+VS
+TEAM B
+
+Puntos
+
+FG
+2P
+3P
+FT
+REB
+AST
+TOV
+STL
+BLK
+FOULS
+
+También:
+
+Q1
+Q2
+Q3
+Q4
+
+Crear gráficos comparativos.
+
+---
+
+# 8. PLAYER STATISTICS
+
+Cada jugador existente en ScoutPro debe poder utilizarse automáticamente dentro del informe.
+
+Al seleccionar un jugador:
+
+mostrar:
+
+PHOTO
+
+NAME
+
+NUMBER
+
+POSITION
+
+HEIGHT
+
+AGE
+
+HAND
+
+MIN
+
+PTS
+
+REB
+
+AST
+
+STL
+
+BLK
+
+TOV
+
+FG%
+
+2P%
+
+3P%
+
+FT%
+
+PIR
+
+Permitir seleccionar:
+
+LAST GAME
+LAST 5 GAMES
+LAST 10 GAMES
+SEASON
+
+---
+
+# 9. PLAYER SCOUTING
+
+Crear una ficha profesional:
+
+## PLAYER SCOUTING
+
+### PROFILE
+
+Foto
+
+Nombre
+
+Número
+
+Posición
+
+Altura
+
+Edad
+
+Mano dominante
+
+### STATISTICS
+
+Datos automáticos.
+
+### SCOUTING RATING
+
+Permitir valorar:
+
+Shooting
+Ball Handling
+Passing
+Finishing
+Pick & Roll
+Defense
+Rebounding
+Athleticism
+Basketball IQ
+Physicality
+
+Escala:
+
+1–10
+
+Mostrar RADAR CHART.
+
+### STRENGTHS
+
+Campos editables.
+
+### WEAKNESSES
+
+Campos editables.
+
+### TENDENCIES
+
+Campos editables.
+
+---
+
+# 10. AUTOMATED INSIGHTS
+
+Crear:
+
+## AUTOMATED INSIGHTS
+
+Utilizar los datos existentes para detectar tendencias.
+
+Ejemplos:
+
+"Opponent averages 87.4 points over the last 5 games."
+
+"Opponent attempts 38% of shots from three-point range."
+
+"Opponent has exceeded 12 turnovers in 4 of the last 6 games."
+
+Los insights deben estar identificados claramente como:
+
+AUTOMATED INSIGHT
+
+El entrenador puede:
+
+ACCEPT
+
+EDIT
+
+DELETE
+
+NO modificar los datos originales.
+
+---
+
+# 11. COACH ANALYSIS
+
+Separar:
+
+### AUTOMATED DATA
+
+de
+
+### COACH ANALYSIS
+
+Ejemplo:
+
+3P%
+38.2%
+
+COACH ANALYSIS:
+
+"Do not help from the strong-side corner."
+
+Esto es muy importante.
+
+Las estadísticas son automáticas.
+
+Las conclusiones son del entrenador.
+
+---
+
+# 12. IMÁGENES
+
+Crear:
+
+## ADD IMAGE
+
+Permitir subir:
+
+JPG
+PNG
+WEBP
+
+Después de subir una imagen permitir:
+
+* Resize
+* Crop
+* Rotate
+* Move
+* Caption
+* Text
+* Arrows
+* Circles
+* Lines
+* Draw
+
+Las imágenes deben poder utilizarse dentro de cualquier sección del informe.
+
+---
+
+# 13. PLAY DIAGRAM EDITOR
+
+Crear:
+
+## ADD PLAY
+
+Editor de cancha de baloncesto.
+
+Permitir:
+
+* Añadir jugadores
+* Añadir números
+* Mover jugadores
+* Flechas
+* Líneas
+* Pases
+* Bloqueos
+* Cortes
+* Dribbles
+* Movimiento defensivo
+* Texto
+* Zonas
+
+Crear frames:
+
+FRAME 1
+FRAME 2
+FRAME 3
+FRAME 4
+
+Permitir reproducir la jugada paso a paso.
+
+Botones:
+
+SAVE PLAY
+DUPLICATE
+EDIT
+DELETE
+
+---
+
+# 14. PLAY LIBRARY
+
+Crear:
+
+## PLAY LIBRARY
+
+Categorías:
+
+OFFENSE
+
+* Pick & Roll
+* Horns
+* Spain P&R
+* Motion
+* Flex
+* Stagger
+* Floppy
+* Transition
+* ATO
+
+DEFENSE
+
+* Man to Man
+* Zone
+* Press
+* Switch
+* Hedge
+* Drop
+* Trap
+
+SPECIAL SITUATIONS
+
+* BLOB
+* SLOB
+* ATO
+* Last Shot
+* End Game
+
+Cada jugada debe poder reutilizarse en diferentes informes.
+
+---
+
+# 15. VIDEO SYSTEM
+
+Crear:
+
+## ADD VIDEO
+
+Permitir:
+
+* Upload video
+* Video URL
+* Associate with player
+* Associate with play
+* Associate with match
+* Associate with report
+
+Formatos:
+
+MP4
+MOV
+WEBM
+
+Crear reproductor profesional.
+
+---
+
+# 16. VIDEO CLIPS
+
+Crear clips dentro de los vídeos.
+
+Ejemplo:
+
+VIDEO
+
+Real Madrid vs Barcelona
+
+CLIPS:
+
+00:12:31
+Pick & Roll
+
+00:14:22
+Transition
+
+00:18:40
+Closeout
+
+00:21:15
+Spain P&R
+
+Cada clip debe tener:
+
+* Start time
+* End time
+* Title
+* Description
+* Category
+* Player
+* Play
+* Match
+
+Al hacer clic en un clip:
+
+el vídeo debe reproducirse desde ese momento.
+
+---
+
+# 17. CONNECTION:
+
+## PLAY + VIDEO + IMAGE + NOTE
+
+Debe poder conectarse todo.
+
+Ejemplo:
+
+PLAY
+
+HORNS
+
+[DIAGRAM]
+
+IMAGE
+
+[TACTICAL IMAGE]
+
+VIDEO
+
+[VIDEO CLIP]
+
+NOTE
+
+"Defender must go over the screen."
+
+El usuario debe poder crear estas conexiones.
+
+---
+
+# 18. OFFENSIVE SCOUTING
+
+Crear:
+
+## OFFENSIVE SCOUTING
+
+Subsecciones:
+
+Transition
+
+Early Offense
+
+Half Court
+
+Pick & Roll
+
+Post Up
+
+Off Ball
+
+Spacing
+
+Special Situations
+
+Cada sección debe permitir:
+
+Text
+
+Image
+
+Video
+
+Clip
+
+Play
+
+Statistics
+
+Chart
+
+Coach Note
+
+---
+
+# 19. DEFENSIVE SCOUTING
+
+Crear:
+
+## DEFENSIVE SCOUTING
+
+Subsecciones:
+
+Pick & Roll Defense
+
+Ball Screen Defense
+
+Closeouts
+
+Help Defense
+
+Post Defense
+
+Transition Defense
+
+Zone Defense
+
+Press
+
+Switching
+
+Cada sección debe permitir:
+
+Text
+
+Image
+
+Video
+
+Clip
+
+Play
+
+Statistics
+
+Chart
+
+Coach Note
+
+---
+
+# 20. SHOT CHART
+
+Si existen datos de tiro en ScoutPro:
+
+crear automáticamente:
+
+## SHOT CHART
+
+Mostrar:
+
+* Attempts
+* Makes
+* Percentage
+* Location
+
+Permitir:
+
+TEAM
+PLAYER
+
+LAST GAME
+LAST 5
+LAST 10
+SEASON
+
+No duplicar datos.
+
+---
+
+# 21. STATISTICAL TRENDS
+
+Crear:
+
+## STATISTICAL TRENDS
+
+Mostrar gráficos:
+
+Points
+
+FG%
+
+3P%
+
+Rebounds
+
+Assists
+
+Turnovers
+
+Wins/Losses
+
+Permitir seleccionar:
+
+LAST 5
+LAST 10
+SEASON
+
+---
+
+# 22. TEAM VS LEAGUE
+
+Si ScoutPro dispone de estadísticas de liga:
+
+crear:
+
+## TEAM VS LEAGUE
+
+Ejemplo:
+
+```
+             TEAM      LEAGUE
+```
+
+PPG              84.6       79.2
+
+3P%              37.2       34.5
+
+REB              36.4       34.8
+
+AST              18.7       16.2
+
+TOV              12.1       13.4
+
+Mostrar visualmente:
+
+ABOVE AVERAGE
+
+BELOW AVERAGE
+
+---
+
+# 23. KEY MATCHUPS
+
+Crear:
+
+## KEY MATCHUPS
+
+Ejemplo:
+
+PLAYER A
+
+VS
+
+PLAYER B
+
+Mostrar:
+
+Fotos
+
+Posición
+
+Altura
+
+Estadísticas
+
+Scouting rating
+
+Strengths
+
+Weaknesses
+
+Tactical instructions
+
+Botón:
+
+ADD MATCHUP
+
+---
+
+# 24. GAME PLAN
+
+Crear:
+
+# GAME PLAN
+
+### OFFENSIVE GAME PLAN
+
+¿Qué queremos atacar?
+
+### DEFENSIVE GAME PLAN
+
+¿Cómo queremos defender?
+
+### KEY MATCHUPS
+
+### STATISTICAL PRIORITIES
+
+### 5 KEY POINTS
+
+Ejemplo:
+
+1. Stop transition
+2. No middle
+3. Tag roller
+4. Defensive rebound
+5. Attack closeouts
+
+Todo editable.
+
+---
+
+# 25. VISUAL REPORT EDITOR
+
+El editor debe funcionar de forma similar a:
+
+Canva + Notion + software profesional de scouting.
+
+Layout:
+
+LEFT SIDEBAR
+
+ELEMENTS
+
+* Text
+* Heading
+* Image
+* Video
+* Player
+* Statistics
+* Chart
+* Shot Chart
+* Table
+* Play
+* Court
+* Notes
+* Divider
+
+CENTER
+
+REPORT CANVAS
+
+RIGHT SIDEBAR
+
+PROPERTIES
+
+---
+
+# 26. DRAG & DROP
+
+Todo debe poder organizarse mediante Drag & Drop.
+
+Permitir:
+
+* Move
+* Resize
+* Duplicate
+* Delete
+* Reorder
+
+Añadir:
+
+UNDO
+
+REDO
+
+AUTOSAVE
+
+---
+
+# 27. CUSTOM SECTIONS
+
+Botón:
+
+## + ADD SECTION
+
+Opciones:
+
+Text
+
+Image
+
+Video
+
+Play
+
+Statistics
+
+Player
+
+Chart
+
+Table
+
+Notes
+
+Custom
+
+El usuario puede cambiar el orden de todas las secciones.
+
+---
+
+# 28. PLANTILLAS
+
+Crear:
+
+FULL GAME SCOUT
+
+PLAYER SCOUT
+
+OPPONENT SCOUT
+
+GAME PLAN
+
+QUICK SCOUT
+
+RECRUITING REPORT
+
+El usuario puede crear sus propias plantillas.
+
+---
+
+# 29. PDF PROFESIONAL
+
+Crear exportación a PDF de alta calidad.
+
+El PDF debe parecer creado por un departamento profesional de análisis de un club.
+
+Debe incluir:
+
+* Professional cover
+* Headers
+* Footers
+* Page numbers
+* Team logo
+* ScoutPro logo
+* Club colors
+* Tables
+* Charts
+* Player photos
+* Play diagrams
+* Shot charts
+* Videos as thumbnails
+* QR code opcional para vídeos
+
+MUY IMPORTANTE:
+
+El PDF debe respetar el diseño del informe creado en el editor.
+
+---
+
+# 30. REPORT SNAPSHOT
+
+Cuando el usuario finaliza un informe:
+
+crear un snapshot de los datos utilizados.
+
+Esto significa:
+
+Si hoy el informe utiliza:
+
+PPG = 84.6
+
+y mañana cambia a:
+
+PPG = 86.2
+
+el informe histórico debe seguir mostrando:
+
+84.6
+
+No modificar informes históricos automáticamente.
+
+---
+
+# 31. REFRESH DATA
+
+Añadir:
+
+## REFRESH DATA
+
+Actualizar las estadísticas del informe.
+
+Pero nunca eliminar:
+
+* Coach Notes
+* Images
+* Videos
+* Clips
+* Plays
+* Tactical Analysis
+
+---
+
+# 32. DATA SOURCE INDICATOR
+
+Los bloques automáticos deben mostrar:
+
+LIVE DATA
+
+o:
+
+DATA UPDATED:
+19/08/2026
+
+Esto permite saber qué información procede de ScoutPro.
+
+---
+
+# 33. DATABASE
+
+Si es necesario ampliar la base de datos, crear tablas relacionadas con:
+
+Reports
+
+ReportSections
+
+ReportBlocks
+
+PlayerEvaluations
+
+Plays
+
+PlayFrames
+
+Videos
+
+VideoClips
+
+ReportImages
+
+Matchups
+
+ReportTemplates
+
+ReportSnapshots
+
+Pero antes comprueba qué tablas ya existen.
+
+NO dupliques información existente.
+
+Utiliza relaciones con:
+
+Teams
+
+Players
+
+Matches
+
+Statistics
+
+---
+
+# 34. ARQUITECTURA DE DATOS
+
+La arquitectura conceptual debe ser:
+
+POSTGRESQL
+
+↓
+
+EXISTING STATISTICS ENGINE
+
+↓
+
+EXISTING API
+
+↓
+
+SCOUTING REPORT BUILDER
+
+↓
+
+COACH ANALYSIS
+
+↓
+
+VIDEO / PLAYS / IMAGES
+
+↓
+
+GAME PLAN
+
+↓
+
+REPORT SNAPSHOT
+
+↓
+
+PDF
+
+---
+
+# 35. INTEGRACIÓN CON EL CENTRO DE PARTIDO
+
+El sistema debe integrarse con:
+
+EQUIPOS
+
+→ PLANTILLA
+
+→ ESTADÍSTICAS
+
+→ VÍDEOS
+
+→ SISTEMAS
+
+→ CENTRO DE PARTIDO
+
+→ SCOUTING
+
+→ INFORME
+
+Cuando el usuario entre en:
+
+MATCH CENTER
+
+debe existir una opción:
+
+## CREATE SCOUTING REPORT
+
+Al pulsarla:
+
+el informe se crea automáticamente utilizando el partido seleccionado.
+
+---
+
+# 36. DASHBOARD DEL INFORME
+
+Mostrar:
+
+SCOUTING REPORT
+
+Team
+
+Opponent
+
+Match
+
+Date
+
+Status
+
+Progress
+
+Sections
+
+Players
+
+Plays
+
+Videos
+
+Clips
+
+Images
+
+Statistics
+
+Botones:
+
+EDIT REPORT
+
+PREVIEW
+
+REFRESH DATA
+
+EXPORT PDF
+
+SHARE
+
+DUPLICATE
+
+---
+
+# 37. PREVIEW
+
+Crear:
+
+## PREVIEW MODE
+
+Mostrar exactamente cómo quedará el PDF.
+
+Botones:
+
+Previous Page
+
+Next Page
+
+Zoom
+
+Fullscreen
+
+Export PDF
+
+---
+
+# 38. SHARING
+
+Crear:
+
+## SHARE REPORT
+
+Opciones:
+
+Anyone with link
+
+Team Staff Only
+
+Password Protected
+
+Permisos:
+
+VIEW ONLY
+
+CAN EDIT
+
+---
+
+# 39. DISEÑO
+
+Quiero un diseño:
+
+Professional
+
+Modern
+
+Minimal
+
+Premium
+
+Sports Analytics
+
+No quiero una interfaz amateur.
+
+No saturar con colores.
+
+Utilizar una jerarquía visual clara.
+
+Debe parecer software utilizado por un club profesional.
+
+Responsive:
+
+Desktop
+
+Laptop
+
+Tablet
+
+---
+
+# 40. TECNOLOGÍA
+
+Utiliza el stack existente de ScoutPro.
+
+Si el proyecto utiliza:
+
+React
+Vite
+Tailwind
+Shadcn/UI
+Radix
+TanStack Router
+TanStack Query
+React Hook Form
+Zod
+Node.js
+Express
+Drizzle
+PostgreSQL
+
+mantén esa arquitectura.
+
+NO cambies el stack sin necesidad.
+
+Si necesitas una librería adicional para:
+
+* PDF
+* Drag & Drop
+* Canvas
+* Diagramas
+* Video
+* Charts
+
+elige una librería moderna, estable y compatible con el proyecto.
+
+---
+
+# 41. SEGURIDAD Y ARCHIVOS
+
+Los vídeos e imágenes deben almacenarse correctamente.
+
+No guardar archivos grandes directamente en PostgreSQL.
+
+Utilizar almacenamiento adecuado si ya existe en el proyecto.
+
+Mantener:
+
+* Authentication
+* Authorization
+* Team permissions
+* Report permissions
+
+Un entrenador solo debe poder acceder a los informes que tenga permiso para ver.
+
+---
+
+# 42. PERFORMANCE
+
+MUY IMPORTANTE:
+
+No cargar todos los vídeos e imágenes de golpe.
+
+Utilizar:
+
+Lazy Loading
+
+Pagination
+
+Thumbnails
+
+Optimized Images
+
+Video Streaming cuando sea posible.
+
+El editor debe seguir funcionando rápido incluso con informes grandes.
+
+---
+
+# 43. AUTOSAVE
+
+Guardar automáticamente.
+
+Mostrar:
+
+Saving...
+
+Saved
+
+Last saved:
+19:42
+
+No perder información si el navegador se cierra.
+
+---
+
+# 44. PRUEBAS
+
+Antes de terminar prueba completamente:
+
+### TEST 1
+
+Crear nuevo informe.
+
+### TEST 2
+
+Seleccionar equipo.
+
+### TEST 3
+
+Seleccionar rival.
+
+### TEST 4
+
+Seleccionar partido.
+
+### TEST 5
+
+Comprobar que las estadísticas aparecen automáticamente.
+
+### TEST 6
+
+Añadir jugador.
+
+### TEST 7
+
+Añadir imagen.
+
+### TEST 8
+
+Crear jugada.
+
+### TEST 9
+
+Crear varios frames.
+
+### TEST 10
+
+Añadir vídeo.
+
+### TEST 11
+
+Crear clip.
+
+### TEST 12
+
+Relacionar vídeo con jugador.
+
+### TEST 13
+
+Relacionar vídeo con jugada.
+
+### TEST 14
+
+Añadir coach note.
+
+### TEST 15
+
+Reordenar secciones.
+
+### TEST 16
+
+Guardar.
+
+### TEST 17
+
+Cerrar.
+
+### TEST 18
+
+Abrir nuevamente.
+
+### TEST 19
+
+Comprobar que todo permanece.
+
+### TEST 20
+
+Refresh Data.
+
+### TEST 21
+
+Comprobar que las notas no desaparecen.
+
+### TEST 22
+
+Crear Report Snapshot.
+
+### TEST 23
+
+Preview.
+
+### TEST 24
+
+Export PDF.
+
+### TEST 25
+
+Comprobar el PDF página por página.
+
+---
+
+# 45. REGLA MÁS IMPORTANTE
+
+ScoutPro debe funcionar con esta filosofía:
+
+## DATA + VIDEO + TACTICAL ANALYSIS
+
+Los datos automáticos proporcionan:
+
+WHAT IS HAPPENING?
+
+El vídeo proporciona:
+
+SHOW ME.
+
+El scouting proporciona:
+
+WHY IS IT HAPPENING?
+
+El game plan proporciona:
+
+WHAT ARE WE GOING TO DO?
+
+Por tanto:
+
+STATISTICS
++
+VIDEO
++
+PLAYS
++
+COACH ANALYSIS
++
+GAME PLAN
+
+deben formar un único sistema.
+
+---
+
+# 46. RESULTADO FINAL
+
+Quiero que ScoutPro sea capaz de generar un informe profesional completo desde un partido.
+
+El entrenador selecciona:
+
+TEAM
++
+OPPONENT
++
+MATCH
+
+ScoutPro automáticamente obtiene:
+
+TEAM DATA
+PLAYER DATA
+MATCH DATA
+STATISTICS
+SHOT CHART
+TRENDS
+
+Después el entrenador añade:
+
+COACH NOTES
+IMAGES
+PLAYS
+DIAGRAMS
+VIDEOS
+VIDEO CLIPS
+TACTICAL ANALYSIS
+KEY MATCHUPS
+GAME PLAN
+
+Finalmente:
+
+## EXPORT PROFESSIONAL PDF
+
+El resultado debe ser un informe de scouting que un entrenador profesional pueda utilizar directamente antes de un partido.
+
+NO quiero una plantilla genérica.
+
+Quiero un verdadero:
+
+# SCOUTPRO PROFESSIONAL SCOUTING REPORT BUILDER
+
+Primero analiza mi aplicación actual.
+
+Después crea un plan de implementación.
+
+Después implementa la funcionalidad por módulos.
+
+No rompas funcionalidades existentes.
+
+No dupliques datos.
+
+No crees sistemas paralelos.
+
+Reutiliza al máximo la arquitectura actual de ScoutPro.
