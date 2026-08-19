@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import { eq, isNotNull, and, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
+import { requireAuth } from "../lib/auth.middleware.js";
 import {
   usersTable, teamsTable, leagues, syncTeams,
   syncPlayers, playersTable, playerStats, seasons,
@@ -22,6 +23,32 @@ function safeUser(u: typeof usersTable.$inferSelect) {
     selectedLeagueShortName: u.selectedLeagueShortName,
   };
 }
+
+function establishSession(
+  req: any,
+  user: typeof usersTable.$inferSelect,
+): Promise<void> {
+  const safe = safeUser(user);
+
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((regenerateError: Error | null) => {
+      if (regenerateError) {
+        reject(regenerateError);
+        return;
+      }
+
+      req.session.userId = user.id;
+      req.session.user = safe;
+      req.session.save((saveError: Error | null) => {
+        if (saveError) reject(saveError);
+        else resolve();
+      });
+    });
+  });
+}
+
+router.use("/me", requireAuth);
+router.use("/select-team", requireAuth);
 
 // ─── POST /api/auth/register ─────────────────────────────────────────────────
 
@@ -52,11 +79,15 @@ router.post("/register", async (req, res): Promise<void> => {
     name:     name ?? null,
   }).returning();
 
-  const safe = safeUser(user);
-  req.session.userId = user.id;
-  req.session.user   = safe;
+  try {
+    await establishSession(req, user);
+  } catch (error) {
+    req.log?.error({ err: error }, "failed to establish registration session");
+    res.status(500).json({ error: "No se pudo iniciar la sesión" });
+    return;
+  }
 
-  res.status(201).json(safe);
+  res.status(201).json(safeUser(user));
 });
 
 // ─── POST /api/auth/login ────────────────────────────────────────────────────
@@ -81,11 +112,15 @@ router.post("/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const safe = safeUser(user);
-  req.session.userId = user.id;
-  req.session.user   = safe;
+  try {
+    await establishSession(req, user);
+  } catch (error) {
+    req.log?.error({ err: error }, "failed to establish login session");
+    res.status(500).json({ error: "No se pudo iniciar la sesión" });
+    return;
+  }
 
-  res.json(safe);
+  res.json(safeUser(user));
 });
 
 // ─── POST /api/auth/logout ───────────────────────────────────────────────────

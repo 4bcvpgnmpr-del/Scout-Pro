@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportForm, type ReportFormValues } from "@/components/forms/report-form";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ReportNew() {
+  const { user } = useAuth();
   const search = useSearch();
   const defaultPlayerId = new URLSearchParams(search).get("playerId") || "";
 
@@ -75,7 +77,12 @@ export default function ReportNew() {
         </div>
       </div>
       <ReportForm
-        defaultValues={{ playerId: defaultPlayerId, gameId: "", date: today }}
+        defaultValues={{
+          playerId: defaultPlayerId,
+          gameId: "",
+          date: today,
+          scoutName: user?.name ?? user?.email ?? "",
+        }}
         onSubmit={onSubmit}
         submitting={createReport.isPending}
         submitLabel="Guardar Informe"

@@ -8,6 +8,7 @@ import {
   RequestUploadUrlBody,
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { requireAuth } from "../lib/auth.middleware.js";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -19,6 +20,11 @@ const ALLOWED_MIME_TYPES = new Set([
   "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo",
   "application/pdf",
 ]);
+
+// Public objects are intentionally left below without a guard. Upload slots
+// and private object entities must only be usable by an authenticated scout.
+router.use("/storage/uploads", requireAuth);
+router.use("/storage/objects", requireAuth);
 
 async function ensureUploadsDir() {
   await fsp.mkdir(LOCAL_UPLOADS_DIR, { recursive: true });

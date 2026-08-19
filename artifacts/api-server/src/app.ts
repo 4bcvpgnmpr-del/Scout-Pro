@@ -12,6 +12,12 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+if (process.env["NODE_ENV"] === "production") {
+  // The deployment proxy terminates TLS before forwarding to this service.
+  // Express must trust that proxy before it will issue secure session cookies.
+  app.set("trust proxy", 1);
+}
+
 app.use(
   pinoHttp({
     logger,

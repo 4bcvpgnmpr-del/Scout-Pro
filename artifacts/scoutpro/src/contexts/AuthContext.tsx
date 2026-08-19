@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export function useAuth(): AuthContextValue {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const refreshUser = useCallback(async () => {
     try {
@@ -45,11 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(await res.json());
       } else {
         setUser(null);
+        queryClient.clear();
       }
     } catch {
       setUser(null);
+      queryClient.clear();
     }
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     refreshUser().finally(() => setIsLoading(false));
@@ -66,8 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json().catch(() => ({ error: "Error de inicio de sesión" }));
       throw new Error(err.error ?? "Error de inicio de sesión");
     }
+    queryClient.clear();
     setUser(await res.json());
-  }, []);
+  }, [queryClient]);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
     const res = await fetch("/api/auth/register", {
@@ -80,13 +85,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json().catch(() => ({ error: "Error al registrarse" }));
       throw new Error(err.error ?? "Error al registrarse");
     }
+    queryClient.clear();
     setUser(await res.json());
-  }, []);
+  }, [queryClient]);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    setUser(null);
-  }, []);
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      setUser(null);
+      queryClient.clear();
+    }
+  }, [queryClient]);
 
   const updateSelectedTeam = useCallback((teamId: string | null) => {
     setUser((prev) => prev ? { ...prev, selectedTeamId: teamId } : prev);

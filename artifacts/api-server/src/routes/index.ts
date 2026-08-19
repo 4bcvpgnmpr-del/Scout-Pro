@@ -15,12 +15,19 @@ import ligasRouter from "./ligas.js";
 import imageProxyRouter from "./image-proxy.js";
 import scoutingReportsRouter from "./scouting-reports.routes.js";
 import playsRouter from "./plays.js";
+import { requireAuth } from "../lib/auth.middleware.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(imageProxyRouter);
 router.use(storageRouter);
+router.use("/auth", authRouter);
+
+// Everything below this line is application data. Keep only health, explicitly
+// public object assets, and basic authentication above this guard.
+router.use(requireAuth);
+
+router.use(imageProxyRouter);
 router.use(dashboardRouter);
 router.use(ligasRouter);
 router.use(teamsRouter);
@@ -33,6 +40,5 @@ router.use(playsRouter);
 router.use(febRouter);
 router.use(seasonsRouter);
 router.use("/admin/sync", adminSyncRouter);
-router.use("/auth", authRouter);
 
 export default router;

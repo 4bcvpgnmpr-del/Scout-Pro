@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useListPlayers, useListGames } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type ReportFormValues = {
   playerId: string;
@@ -77,7 +78,13 @@ export function ReportForm({
   cancelTo: string;
 }) {
   const { toast } = useToast();
-  const { register, handleSubmit, setValue, watch } = useForm<ReportFormValues>({ defaultValues });
+  const { user } = useAuth();
+  const { register, handleSubmit, setValue, watch } = useForm<ReportFormValues>({
+    defaultValues: {
+      scoutName: user?.name ?? user?.email ?? "",
+      ...defaultValues,
+    },
+  });
   const { data: players } = useListPlayers();
   const { data: games } = useListGames();
 
