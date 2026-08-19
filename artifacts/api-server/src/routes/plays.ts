@@ -8,7 +8,21 @@ const router: IRouter = Router();
 router.use("/plays", requireAuth);
 
 const CATEGORY_VALUES = ["ataque", "defensa", "especiales"] as const;
-const ELEMENT_TYPES = ["token", "arrow", "dashedArrow", "curve", "screen", "zone", "text"] as const;
+const ELEMENT_TYPES = [
+  "token",
+  "arrow",
+  "dashedArrow",
+  "curve",
+  "screen",
+  "zone",
+  "text",
+  // Legacy editor names are accepted so existing diagrams remain editable.
+  "attacker",
+  "defender",
+  "ball",
+  "move",
+  "pass",
+] as const;
 
 const elementSchema = z.object({
   id: z.string().min(1).max(100),

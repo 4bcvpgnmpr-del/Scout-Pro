@@ -32,9 +32,11 @@ const CAT_LABEL: Record<PlayCategory, string> = {
 function PlayDialog({
   play,
   onClose,
+  onCreated,
 }: {
   play?: Play;
   onClose: () => void;
+  onCreated?: (play: Play) => void;
 }) {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -48,9 +50,10 @@ function PlayDialog({
   const mutation = useMutation({
     mutationFn: (data: Partial<Play>) => 
       isEditing ? playsApi.update(play.id, data) : playsApi.create({ ...data, isLibrary: true }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ["plays"] });
       toast({ title: isEditing ? "Jugada actualizada" : "Jugada creada" });
+      if (!isEditing) onCreated?.(created);
       onClose();
     },
     onError: (err: Error) => {
@@ -352,7 +355,12 @@ export default function Jugadas() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {showAdd && <PlayDialog onClose={() => setShowAdd(false)} />}
+      {showAdd && (
+        <PlayDialog
+          onClose={() => setShowAdd(false)}
+          onCreated={(created) => setDrawingPlay(created)}
+        />
+      )}
       {editingPlay && <PlayDialog play={editingPlay} onClose={() => setEditingPlay(null)} />}
       {drawingPlay && <FullEditorModal play={drawingPlay} onClose={() => setDrawingPlay(null)} />}
 

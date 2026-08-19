@@ -144,6 +144,11 @@ function Router() {
           <Layout><Jugadas /></Layout>
         </ProtectedRoute>
       </Route>
+      <Route path="/scouting/plays">
+        <ProtectedRoute>
+          <Layout><Jugadas /></Layout>
+        </ProtectedRoute>
+      </Route>
       <Route path="/usuarios">
         <ProtectedRoute>
           <Layout><Usuarios /></Layout>
