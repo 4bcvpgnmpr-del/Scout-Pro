@@ -7,6 +7,7 @@ import {
   scoutingReportsTable,
   reportSectionsTable,
   reportBlocksTable,
+  playsTable,
   teamsTable,
   gamesTable,
 } from "@workspace/db";
@@ -297,6 +298,17 @@ const BlockPatchBody = z.object({
   content: z.record(z.string(), z.unknown()).optional(),
 });
 
+async function validatePlayReference(
+  blockType: string,
+  content: Record<string, unknown> | undefined,
+): Promise<string | null> {
+  if (blockType !== "play_ref") return null;
+  const parsed = z.object({ playId: z.string().uuid() }).safeParse(content);
+  if (!parsed.success) return "El bloque de jugada necesita un playId válido";
+  const [play] = await db.select({ id: playsTable.id }).from(playsTable).where(eq(playsTable.id, parsed.data.playId));
+  return play ? null : "La jugada seleccionada no existe";
+}
+
 async function findScopedSection(reportId: string, sectionId: string) {
   const [section] = await db
     .select()
@@ -316,6 +328,11 @@ router.post("/scouting-reports/:id/sections/:sectionId/blocks", async (req, res)
   const section = await findScopedSection(reportId, sectionId);
   if (!section) {
     res.status(404).json({ error: "Section not found" });
+    return;
+  }
+  const playReferenceError = await validatePlayReference(parsed.data.blockType, parsed.data.content);
+  if (playReferenceError) {
+    res.status(400).json({ error: playReferenceError });
     return;
   }
   const [{ maxPos }] = await db
@@ -346,6 +363,24 @@ router.patch("/scouting-reports/:id/sections/:sectionId/blocks/:blockId", async 
   const section = await findScopedSection(reportId, sectionId);
   if (!section) {
     res.status(404).json({ error: "Section not found" });
+    return;
+  }
+  const [existingBlock] = await db
+    .select()
+    .from(reportBlocksTable)
+    .where(
+      and(
+        eq(reportBlocksTable.id, req.params["blockId"] as string),
+        eq(reportBlocksTable.sectionId, sectionId),
+      ),
+    );
+  if (!existingBlock) {
+    res.status(404).json({ error: "Block not found" });
+    return;
+  }
+  const playReferenceError = await validatePlayReference(existingBlock.blockType, parsed.data.content);
+  if (playReferenceError) {
+    res.status(400).json({ error: playReferenceError });
     return;
   }
   const [updated] = await db

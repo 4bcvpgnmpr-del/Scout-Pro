@@ -14,6 +14,7 @@ import seasonsRouter from "./seasons.js";
 import ligasRouter from "./ligas.js";
 import imageProxyRouter from "./image-proxy.js";
 import scoutingReportsRouter from "./scouting-reports.routes.js";
+import playsRouter from "./plays.js";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ router.use(playersRouter);
 router.use(gamesRouter);
 router.use(reportsRouter);
 router.use(scoutingReportsRouter);
+router.use(playsRouter);
 router.use(febRouter);
 router.use(seasonsRouter);
 router.use("/admin/sync", adminSyncRouter);

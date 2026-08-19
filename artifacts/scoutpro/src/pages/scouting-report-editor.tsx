@@ -18,6 +18,7 @@ import {
   Zap,
   Users,
   FileText,
+  Search,
 } from "lucide-react";
 import {
   scoutingReportsApi,
@@ -26,6 +27,7 @@ import {
   type ScoutingReportFull,
   type ReportSectionDto,
 } from "@/lib/scouting-reports-api";
+import { playsApi, Play } from "@/lib/plays-api";
 import { useToast } from "@/hooks/use-toast";
 import {
   TeamOverviewBlock,
@@ -37,6 +39,7 @@ import {
   ShotChartBlock,
   CoachAnalysis,
 } from "@/components/scouting/stat-blocks";
+import { CourtEditor } from "@/components/scouting/court-editor";
 
 interface PlayerRow {
   id: number;
@@ -66,7 +69,135 @@ function LiveBadge() {
   );
 }
 
-function SectionPreview({ section, report }: { section: ReportSectionDto; report: ScoutingReportFull; players: PlayerRow[] }) {
+// ── Plays Block Manager ────────────────────────────────────────────────────────
+function PlaysBlockManager({ reportId, section }: { reportId: string; section: ReportSectionDto }) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  
+  const [showPicker, setShowPicker] = useState(false);
+  const [search, setSearch] = useState("");
+  
+  const { data: plays = [] } = useQuery({
+    queryKey: ["plays", "todos", ""],
+    queryFn: () => playsApi.list("todos", ""),
+    enabled: showPicker
+  });
+  
+  // Need to fetch full play data for the references
+  const playRefs = section.blocks.filter(b => b.blockType === "play_ref");
+  
+  const removeBlock = useMutation({
+    mutationFn: (blockId: string) => scoutingReportsApi.removeBlock(reportId, section.id, blockId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["scouting-report", reportId] }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+  
+  const addBlock = useMutation({
+    mutationFn: (playId: string) => scoutingReportsApi.createBlock(reportId, section.id, { 
+      blockType: "play_ref", 
+      content: { playId } 
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scouting-report", reportId] });
+      setShowPicker(false);
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const filteredPlays = plays.filter(p => 
+    p.isLibrary && p.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4 mt-4">
+      {/* Existing Plays */}
+      {playRefs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {playRefs.map(block => (
+            <div key={block.id} className="relative group rounded-xl border border-border bg-background overflow-hidden">
+              <PlayRenderer playId={block.content?.playId as string} />
+              <button
+                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 hover:bg-destructive transition"
+                onClick={() => removeBlock.mutate(block.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Button / Picker */}
+      {!showPicker ? (
+        <Button variant="outline" size="sm" className="w-full border-dashed" onClick={() => setShowPicker(true)}>
+          <Plus className="h-4 w-4 mr-2" /> Añadir jugada de la biblioteca
+        </Button>
+      ) : (
+        <div className="border border-border rounded-xl bg-card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-sm">Seleccionar jugada</h4>
+            <Button variant="ghost" size="sm" onClick={() => setShowPicker(false)}>Cancelar</Button>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar jugada..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+            {filteredPlays.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-4">No se encontraron jugadas.</p>
+            ) : (
+              filteredPlays.map(play => (
+                <div 
+                  key={play.id} 
+                  className="flex items-center justify-between p-2 rounded-lg border border-border hover:border-primary/50 cursor-pointer"
+                  onClick={() => addBlock.mutate(play.id)}
+                >
+                  <div>
+                    <div className="font-medium text-sm">{play.title}</div>
+                    <div className="text-xs text-muted-foreground capitalize">{play.category}</div>
+                  </div>
+                  <Button size="sm" variant="ghost">Insertar</Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Component to fetch and render a single play
+function PlayRenderer({ playId }: { playId: string }) {
+  const { data: play, isLoading } = useQuery({
+    queryKey: ["play", playId],
+    queryFn: () => playsApi.get(playId),
+    enabled: !!playId
+  });
+  
+  if (isLoading) return <div className="aspect-video bg-muted animate-pulse" />;
+  if (!play) return <div className="aspect-video bg-muted flex items-center justify-center text-xs text-muted-foreground">Jugada no encontrada</div>;
+  
+  return (
+    <div className="flex flex-col h-full">
+      <div className="bg-muted p-2 border-b border-border">
+        <h4 className="font-bold text-sm">{play.title}</h4>
+      </div>
+      <div className="flex-1 pointer-events-none">
+        <CourtEditor play={play} readOnly={true} />
+      </div>
+    </div>
+  );
+}
+
+function SectionPreview({ section, report, reportId }: { section: ReportSectionDto; report: ScoutingReportFull; players: PlayerRow[], reportId: string }) {
   switch (section.type) {
     case "team_overview":
       return <TeamOverviewBlock report={report} />;
@@ -82,6 +213,8 @@ function SectionPreview({ section, report }: { section: ReportSectionDto; report
       return <InsightsBlock report={report} section={section} />;
     case "shot_chart":
       return <ShotChartBlock report={report} />;
+    case "plays":
+      return <PlaysBlockManager reportId={reportId} section={section} />;
     default:
       return (
         <p className="text-sm text-muted-foreground italic">
@@ -355,9 +488,12 @@ export default function ScoutingReportEditor() {
                 <h3 className="font-display text-lg">{s.title}</h3>
                 {LIVE_DATA_TYPES.has(s.type) && <LiveBadge />}
               </div>
-              <SectionPreview section={s} report={report} players={players ?? []} />
+              
+              <SectionPreview section={s} report={report} reportId={id} players={players ?? []} />
+              
               {LIVE_DATA_TYPES.has(s.type) && <CoachAnalysis reportId={id} section={s} />}
-              {/* Blocks */}
+              
+              {/* Text Blocks */}
               {s.blocks.filter((b) => b.blockType === "text").length > 0 && (
                 <div className="mt-4 space-y-2">
                   {s.blocks.filter((b) => b.blockType === "text").map((b) => (
@@ -388,12 +524,13 @@ export default function ScoutingReportEditor() {
                   ))}
                 </div>
               )}
+              
               <button
-                className="mt-3 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition"
+                className="mt-4 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition font-medium"
                 onClick={(e) => { e.stopPropagation(); addBlock.mutate({ sectionId: s.id }); }}
                 data-testid={`button-add-block-${s.id}`}
               >
-                <Plus className="h-3 w-3" /> Añadir bloque de texto
+                <Plus className="h-3.5 w-3.5" /> Añadir bloque de texto
               </button>
             </div>
           ))}
@@ -415,7 +552,7 @@ export default function ScoutingReportEditor() {
           ) : (
             <div className="rounded-xl border bg-card p-4 space-y-4">
               <div>
-                <label className="text-xs text-muted-foreground">Título</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">Título</label>
                 <Input
                   key={selected.id}
                   defaultValue={selected.title}
@@ -431,7 +568,7 @@ export default function ScoutingReportEditor() {
                 </p>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Nota del entrenador</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">Nota del entrenador</label>
                 <Textarea
                   key={`note-${selected.id}`}
                   defaultValue={selected.coachNote ?? ""}
@@ -446,9 +583,9 @@ export default function ScoutingReportEditor() {
                   data-testid="textarea-coach-note"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm flex items-center gap-1.5">
-                  {selected.isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />} Visible
+              <div className="flex items-center justify-between py-2 border-t border-border">
+                <span className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground">
+                  {selected.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />} Visible
                 </span>
                 <Switch
                   checked={selected.isVisible}
@@ -459,7 +596,7 @@ export default function ScoutingReportEditor() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-destructive hover:text-destructive"
+                className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive border-dashed"
                 onClick={() => {
                   if (confirm(`¿Eliminar la sección "${selected.title}"?`)) removeSection.mutate(selected.id);
                 }}
