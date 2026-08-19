@@ -1428,6 +1428,14 @@ export default function GameMatchCenter() {
                 {daysLeft(game.date) === 0 ? "HOY" : `${daysLeft(game.date)}d`}
               </span>
             )}
+            <Link href={`/scouting/reports/new?gameId=${gameId}`}>
+              <button
+                data-testid="button-create-scouting-report"
+                className="text-[11px] font-black text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 px-2.5 py-1 rounded-full transition"
+              >
+                Crear Informe Pro
+              </button>
+            </Link>
             <GameReportExportButton gameProps={{
               gameId,
               homeTeam: game.homeTeam,

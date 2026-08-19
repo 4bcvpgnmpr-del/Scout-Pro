@@ -38,6 +38,9 @@ import ReportDetail from "@/pages/report-detail";
 import GameMatchCenter from "@/pages/game-match-center";
 import MatchCenterHub from "@/pages/match-center-hub";
 import ScoutingHub from "@/pages/scouting-hub";
+import ScoutingReports from "@/pages/scouting-reports";
+import ScoutingReportNew from "@/pages/scouting-report-new";
+import ScoutingReportEditor from "@/pages/scouting-report-editor";
 import SyncPage from "@/pages/admin/sync";
 import AdminSeasonsPage from "@/pages/admin/seasons";
 import MiCuenta from "@/pages/mi-cuenta";
@@ -212,6 +215,23 @@ function Router() {
       <Route path="/match-center">
         <ProtectedRoute>
           <Layout><MatchCenterHub /></Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/scouting/reports/new">
+        <ProtectedRoute>
+          <SubLayout backTo="/scouting/reports" backLabel="Informes Pro"><ScoutingReportNew /></SubLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/scouting/reports/:id">
+        {() => (
+          <ProtectedRoute>
+            <SubLayout backTo="/scouting/reports" backLabel="Informes Pro"><ScoutingReportEditor /></SubLayout>
+          </ProtectedRoute>
+        )}
+      </Route>
+      <Route path="/scouting/reports">
+        <ProtectedRoute>
+          <Layout><ScoutingReports /></Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/scouting">

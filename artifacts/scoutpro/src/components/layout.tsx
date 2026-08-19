@@ -5,6 +5,7 @@ import {
   Star, Video, BookOpen, UserCog, Settings, Menu, X, Crosshair,
   Swords, RefreshCw, LogOut, Zap, Plus,
   CheckCircle2, ChevronDown, ChevronUp, Trash2, Database,
+  ClipboardList,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,8 @@ const navGroups = [
   {
     label: "Análisis",
     items: [
-      { name: "Hub de Scouting", href: "/scouting", icon: Swords },
+      { name: "Hub de Scouting", href: "/scouting", icon: Swords, exact: true },
+      { name: "Informes Pro",    href: "/scouting/reports", icon: ClipboardList },
       { name: "Informes",        href: "/reports",  icon: FileText },
     ],
   },
