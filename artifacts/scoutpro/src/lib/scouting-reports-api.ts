@@ -158,6 +158,18 @@ export const SECTION_TYPE_LABELS: Record<string, string> = {
   videos: "Vídeos",
   game_plan: "Game Plan",
   custom: "Sección Personalizada",
+  trends: "Tendencias",
+  team_vs_league: "Equipo vs Liga",
+  insights: "Insights Automáticos",
+  shot_chart: "Carta de Tiro",
 };
 
-export const LIVE_DATA_TYPES = new Set(["team_overview", "match_stats", "player_stats"]);
+export const LIVE_DATA_TYPES = new Set([
+  "team_overview",
+  "match_stats",
+  "player_stats",
+  "trends",
+  "team_vs_league",
+  "insights",
+  "shot_chart",
+]);

@@ -391,6 +391,171 @@ router.delete("/scouting-reports/:id/sections/:sectionId/blocks/:blockId", async
   res.sendStatus(204);
 });
 
+// ─── Statistical data panels ─────────────────────────────────────────────────
+import {
+  getTeamOverview,
+  getTeamPlayerStats,
+  getTeamGameTrends,
+  getTeamVsLeague,
+  generateInsights,
+} from "../lib/scouting-stats.js";
+
+async function loadReportOr404(req: { params: Record<string, string | undefined> }, res: { status: (n: number) => { json: (b: unknown) => void } }) {
+  const [report] = await db
+    .select()
+    .from(scoutingReportsTable)
+    .where(eq(scoutingReportsTable.id, req.params["id"] as string));
+  if (!report) {
+    res.status(404).json({ error: "Scouting report not found" });
+    return null;
+  }
+  return report;
+}
+
+/**
+ * Resolves the team the stats panels refer to. An optional ?teamId override is
+ * only honored when it matches one of the report's own teams (own team or
+ * opponent) — it must never become an arbitrary-team stats endpoint.
+ */
+function resolvePanelTeamId(
+  report: { teamId: number | null; opponentId: number | null },
+  raw: unknown,
+): { teamId: number | null; error?: string } {
+  if (raw == null || raw === "") return { teamId: report.opponentId };
+  const parsed = parseInt(String(raw), 10);
+  if (!Number.isInteger(parsed)) return { teamId: null, error: "teamId inválido" };
+  if (parsed !== report.opponentId && parsed !== report.teamId) {
+    return { teamId: null, error: "teamId no pertenece a este informe" };
+  }
+  return { teamId: parsed };
+}
+
+router.get("/scouting-reports/:id/team-overview", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  const resolvedTeam = resolvePanelTeamId(report, req.query["teamId"]);
+  if (resolvedTeam.error) {
+    res.status(400).json({ error: resolvedTeam.error });
+    return;
+  }
+  const teamId = resolvedTeam.teamId;
+  if (!teamId) {
+    res.status(400).json({ error: "El informe no tiene equipo rival asignado" });
+    return;
+  }
+  const overview = await getTeamOverview(teamId);
+  if (!overview) {
+    res.status(404).json({ error: "Equipo no encontrado" });
+    return;
+  }
+  res.json(overview);
+});
+
+router.get("/scouting-reports/:id/match-stats", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  if (!report.gameId) {
+    res.json({ game: null, teamA: null, teamB: null });
+    return;
+  }
+  const [game] = await db.select().from(gamesTable).where(eq(gamesTable.id, report.gameId));
+  if (!game) {
+    res.json({ game: null, teamA: null, teamB: null });
+    return;
+  }
+  // Team season profiles for each side when they exist as scouting teams
+  const allTeams = await db.select().from(teamsTable);
+  const homeTeam = allTeams.find((t) => t.name.toLowerCase() === game.homeTeam.toLowerCase());
+  const awayTeam = allTeams.find((t) => t.name.toLowerCase() === game.awayTeam.toLowerCase());
+  const [teamA, teamB] = await Promise.all([
+    homeTeam ? getTeamOverview(homeTeam.id) : Promise.resolve(null),
+    awayTeam ? getTeamOverview(awayTeam.id) : Promise.resolve(null),
+  ]);
+  res.json({ game, teamA, teamB });
+});
+
+router.get("/scouting-reports/:id/player-stats", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  const resolvedTeam = resolvePanelTeamId(report, req.query["teamId"]);
+  if (resolvedTeam.error) {
+    res.status(400).json({ error: resolvedTeam.error });
+    return;
+  }
+  const teamId = resolvedTeam.teamId;
+  if (!teamId) {
+    res.status(400).json({ error: "El informe no tiene equipo rival asignado" });
+    return;
+  }
+  const range = String(req.query["range"] ?? "season");
+  const data = await getTeamPlayerStats(teamId);
+  // Per-game splits are not available in the data source; season aggregates are
+  // served for every range with an explicit flag so the UI can inform the user.
+  res.json({ ...data, range, rangeApplied: "season" });
+});
+
+router.get("/scouting-reports/:id/trends", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  const resolvedTeam = resolvePanelTeamId(report, req.query["teamId"]);
+  if (resolvedTeam.error) {
+    res.status(400).json({ error: resolvedTeam.error });
+    return;
+  }
+  const teamId = resolvedTeam.teamId;
+  if (!teamId) {
+    res.status(400).json({ error: "El informe no tiene equipo rival asignado" });
+    return;
+  }
+  const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, teamId));
+  if (!team) {
+    res.status(404).json({ error: "Equipo no encontrado" });
+    return;
+  }
+  const rawRange = String(req.query["range"] ?? "last10");
+  const range = rawRange === "last5" || rawRange === "season" ? rawRange : "last10";
+  const games = await getTeamGameTrends(team.name, range);
+  res.json({ teamName: team.name, range, games });
+});
+
+router.get("/scouting-reports/:id/team-vs-league", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  const resolvedTeam = resolvePanelTeamId(report, req.query["teamId"]);
+  if (resolvedTeam.error) {
+    res.status(400).json({ error: resolvedTeam.error });
+    return;
+  }
+  const teamId = resolvedTeam.teamId;
+  if (!teamId) {
+    res.status(400).json({ error: "El informe no tiene equipo rival asignado" });
+    return;
+  }
+  const data = await getTeamVsLeague(teamId);
+  if (!data) {
+    res.status(404).json({ error: "El equipo no tiene datos de liga vinculados" });
+    return;
+  }
+  res.json(data);
+});
+
+router.get("/scouting-reports/:id/insights", async (req, res): Promise<void> => {
+  const report = await loadReportOr404(req, res);
+  if (!report) return;
+  const resolvedTeam = resolvePanelTeamId(report, req.query["teamId"]);
+  if (resolvedTeam.error) {
+    res.status(400).json({ error: resolvedTeam.error });
+    return;
+  }
+  const teamId = resolvedTeam.teamId;
+  if (!teamId) {
+    res.status(400).json({ error: "El informe no tiene equipo rival asignado" });
+    return;
+  }
+  const insights = await generateInsights(teamId);
+  res.json({ insights });
+});
+
 // ─── Refresh live data (re-stamps report; live sections re-fetch on render) ──
 router.post("/scouting-reports/:id/refresh-data", async (req, res): Promise<void> => {
   const [updated] = await db

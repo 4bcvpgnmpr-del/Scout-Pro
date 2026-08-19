@@ -15,9 +15,7 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  Shield,
   Zap,
-  Trophy,
   Users,
   FileText,
 } from "lucide-react";
@@ -29,6 +27,16 @@ import {
   type ReportSectionDto,
 } from "@/lib/scouting-reports-api";
 import { useToast } from "@/hooks/use-toast";
+import {
+  TeamOverviewBlock,
+  MatchStatsBlock,
+  PlayerStatsBlock,
+  TrendsBlock,
+  TeamVsLeagueBlock,
+  InsightsBlock,
+  ShotChartBlock,
+  CoachAnalysis,
+} from "@/components/scouting/stat-blocks";
 
 interface PlayerRow {
   id: number;
@@ -39,6 +47,10 @@ interface PlayerRow {
 }
 
 const ADDABLE_SECTIONS: Array<{ type: string; title: string }> = [
+  { type: "trends", title: "Tendencias" },
+  { type: "team_vs_league", title: "Equipo vs Liga" },
+  { type: "insights", title: "Insights Automáticos" },
+  { type: "shot_chart", title: "Carta de Tiro" },
   { type: "tactical", title: "Análisis Táctico" },
   { type: "plays", title: "Jugadas" },
   { type: "videos", title: "Vídeos" },
@@ -54,59 +66,29 @@ function LiveBadge() {
   );
 }
 
-function SectionPreview({ section, report, players }: { section: ReportSectionDto; report: ScoutingReportFull; players: PlayerRow[] }) {
-  if (section.type === "team_overview") {
-    const t = report.opponent;
-    return (
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
-          {t?.logoUrl ? <img src={t.logoUrl} alt="" className="h-full w-full object-contain" /> : <Shield className="h-6 w-6 text-muted-foreground" />}
-        </div>
-        <div>
-          <div className="font-semibold">{t?.name ?? "Rival sin definir"}</div>
-          <div className="text-xs text-muted-foreground">
-            {[t?.league, t?.city].filter(Boolean).join(" · ") || "Sin datos de liga"}
-          </div>
-        </div>
-      </div>
-    );
+function SectionPreview({ section, report }: { section: ReportSectionDto; report: ScoutingReportFull; players: PlayerRow[] }) {
+  switch (section.type) {
+    case "team_overview":
+      return <TeamOverviewBlock report={report} />;
+    case "match_stats":
+      return <MatchStatsBlock report={report} />;
+    case "player_stats":
+      return <PlayerStatsBlock report={report} />;
+    case "trends":
+      return <TrendsBlock report={report} />;
+    case "team_vs_league":
+      return <TeamVsLeagueBlock report={report} />;
+    case "insights":
+      return <InsightsBlock report={report} section={section} />;
+    case "shot_chart":
+      return <ShotChartBlock report={report} />;
+    default:
+      return (
+        <p className="text-sm text-muted-foreground italic">
+          {section.coachNote || "Sección vacía — añade una nota del entrenador en el panel derecho."}
+        </p>
+      );
   }
-  if (section.type === "match_stats") {
-    const g = report.game;
-    if (!g) return <p className="text-sm text-muted-foreground">Sin partido vinculado.</p>;
-    return (
-      <div className="flex items-center gap-4">
-        <Trophy className="h-5 w-5 text-muted-foreground shrink-0" />
-        <div>
-          <div className="font-semibold text-sm">
-            {g.homeTeam} {g.homeScore != null && g.awayScore != null ? `${g.homeScore} - ${g.awayScore}` : "vs"} {g.awayTeam}
-          </div>
-          <div className="text-xs text-muted-foreground">{g.date}{g.location ? ` · ${g.location}` : ""}</div>
-        </div>
-      </div>
-    );
-  }
-  if (section.type === "player_stats") {
-    const roster = players.filter((p) => p.teamId != null && p.teamId === report.opponentId);
-    if (roster.length === 0) return <p className="text-sm text-muted-foreground">No hay jugadoras registradas del rival.</p>;
-    return (
-      <div className="space-y-1">
-        {roster.slice(0, 8).map((p) => (
-          <div key={p.id} className="flex items-center gap-2 text-sm">
-            <span className="font-mono text-xs text-muted-foreground w-6 text-right">{p.jerseyNumber ?? "–"}</span>
-            <span className="font-medium">{p.name}</span>
-            {p.position && <span className="text-xs text-muted-foreground">{p.position}</span>}
-          </div>
-        ))}
-        {roster.length > 8 && <p className="text-xs text-muted-foreground">+{roster.length - 8} más…</p>}
-      </div>
-    );
-  }
-  return (
-    <p className="text-sm text-muted-foreground italic">
-      {section.coachNote || "Sección vacía — añade una nota del entrenador en el panel derecho."}
-    </p>
-  );
 }
 
 export default function ScoutingReportEditor() {
@@ -374,15 +356,11 @@ export default function ScoutingReportEditor() {
                 {LIVE_DATA_TYPES.has(s.type) && <LiveBadge />}
               </div>
               <SectionPreview section={s} report={report} players={players ?? []} />
-              {s.coachNote && LIVE_DATA_TYPES.has(s.type) && (
-                <div className="mt-3 border-l-2 border-primary/40 pl-3 text-sm text-muted-foreground italic">
-                  {s.coachNote}
-                </div>
-              )}
+              {LIVE_DATA_TYPES.has(s.type) && <CoachAnalysis reportId={id} section={s} />}
               {/* Blocks */}
-              {s.blocks.length > 0 && (
+              {s.blocks.filter((b) => b.blockType === "text").length > 0 && (
                 <div className="mt-4 space-y-2">
-                  {s.blocks.map((b) => (
+                  {s.blocks.filter((b) => b.blockType === "text").map((b) => (
                     <div key={b.id} className="group/block relative rounded-lg border border-border/60 bg-background/40 p-2">
                       <Textarea
                         key={`${b.id}-${b.updatedAt}`}
