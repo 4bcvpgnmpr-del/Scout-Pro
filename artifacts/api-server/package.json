@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:scouting-stats": "node --import tsx --test src/lib/scouting-stats-availability.test.ts"
+    "test:scouting-stats": "node --import tsx --test src/lib/scouting-stats-availability.test.ts",
+    "test:access-control": "NODE_ENV=test node --import tsx --test src/routes/access-control.integration.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.21.0",
