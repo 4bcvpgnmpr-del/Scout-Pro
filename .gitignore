@@ -50,3 +50,9 @@ Thumbs.db
 
 # Runtime cache - FEB stats live data
 artifacts/data/feb-stats.json
+
+# Environment variables
+.env
+.env.*
+*.env
+.pnpm-store-local/
