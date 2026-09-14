@@ -56,3 +56,4 @@ artifacts/data/feb-stats.json
 .env.*
 *.env
 .pnpm-store-local/
+.pnpm-store-local/
